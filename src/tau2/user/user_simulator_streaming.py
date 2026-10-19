@@ -1,4 +1,6 @@
+import os
 import random
+import re
 import time
 from copy import deepcopy
 from pathlib import Path
@@ -57,12 +59,251 @@ from tau2.voice.synthesis.audio_effects.speech_generator import (
     OutOfTurnSpeechGenerator,
     create_streaming_audio_generators,
 )
+from tau2.voice.utils.audio_preprocessing import resample_audio
 from tau2.voice.utils.audio_tap import AudioTap
 from tau2.voice_config import (
     BACKCHANNEL_PHRASES,
     resolve_background_noise_path,
     resolve_burst_noise_paths,
 )
+
+INTERRUPTION_EXPERIMENT_TYPE_ENV = "TAU2_INTERRUPT_EXPERIMENT_TYPE"
+INTERRUPTION_EXPERIMENT_SEQUENCE_ENV = "TAU2_INTERRUPT_EXPERIMENT_SEQUENCE"
+INTERRUPTION_EXPERIMENT_RATE_ENV = "TAU2_INTERRUPT_EXPERIMENT_RATE"
+INTERRUPTION_EXPERIMENT_FORCE_ENV = "TAU2_INTERRUPT_EXPERIMENT_FORCE"
+INTERRUPTION_EXPERIMENT_MIN_AGENT_WORDS_ENV = (
+    "TAU2_INTERRUPT_EXPERIMENT_MIN_AGENT_WORDS"
+)
+INTERRUPTION_EXPERIMENT_MIN_USER_TURNS_ENV = "TAU2_INTERRUPT_EXPERIMENT_MIN_USER_TURNS"
+INTERRUPTION_EXPERIMENT_MIN_ELAPSED_SECONDS_ENV = (
+    "TAU2_INTERRUPT_EXPERIMENT_MIN_ELAPSED_SECONDS"
+)
+INTERRUPTION_EXPERIMENT_MIN_SECONDS_SINCE_LAST_EVENT_ENV = (
+    "TAU2_INTERRUPT_EXPERIMENT_MIN_SECONDS_SINCE_LAST_EVENT"
+)
+INTERRUPTION_EXPERIMENT_MAX_EVENTS_ENV = "TAU2_INTERRUPT_EXPERIMENT_MAX_EVENTS"
+CONTEXTUAL_TURN_TAKING_PLAN_ENV = "TAU2_CONTEXTUAL_TURN_TAKING_PLAN"
+FREE_CONVERSATION_USER_INSTRUCTIONS_ENV = "TAU2_FREE_CONVERSATION_USER_INSTRUCTIONS"
+INTERRUPTION_EXPERIMENT_INFO = "Callback decided to interrupt."
+
+FREE_CONVERSATION_USER_GUIDELINES_VOICE = """
+You are playing the role of a person having a natural VOICE conversation with an
+assistant.
+
+Core principles:
+- Speak like a real person on a call, using concise conversational language.
+- Discuss the provided topic directly; do not behave like a customer service
+  case, do not ask for account/order lookup, and do not use tools.
+- Ask practical follow-up questions and share ordinary preferences or constraints
+  when useful for the topic.
+- If you interrupt, do it at a plausible point after the assistant has provided
+  enough substance, ask a related side question, and then return to the main
+  topic once the assistant answers.
+- Do not use bracketed sound tags such as [sneeze], [cough], or [pause].
+- When the discussion feels complete, generate ###STOP###.
+
+<PERSONA_GUIDELINES>
+""".strip()
+
+INTERRUPTION_TYPE_ALIASES = {
+    "follow_up": "follow_up",
+    "follow-up": "follow_up",
+    "question": "follow_up",
+    "追问": "follow_up",
+    "denial": "denial",
+    "correction": "denial",
+    "否定": "denial",
+    "repeat_request": "repeat_request",
+    "repeat-request": "repeat_request",
+    "repeat": "repeat_request",
+    "重复请求": "repeat_request",
+    "topic_switch": "topic_switch",
+    "topic-switch": "topic_switch",
+    "switch": "topic_switch",
+    "话题切换": "topic_switch",
+    "silence_stop": "silence_stop",
+    "silence-stop": "silence_stop",
+    "stop": "silence_stop",
+    "静默或停止": "silence_stop",
+    "静默": "silence_stop",
+    "停止": "silence_stop",
+}
+
+INTERRUPTION_DECISION_INSTRUCTIONS = {
+    "follow_up": (
+        "Experiment condition: follow_up. Prefer interrupting when the agent has "
+        "said enough for the user to ask a clarifying or follow-up question about "
+        "the agent's current statement."
+    ),
+    "denial": (
+        "Experiment condition: denial. Prefer interrupting when the user can "
+        "naturally reject, push back on, express skepticism about, or disagree "
+        "with something the agent just said. The agent does not need to be wrong: "
+        "the user may knowingly resist a reasonable suggestion because it feels "
+        "unrealistic, inconvenient, costly, boring, or mismatched with their "
+        "preferences and constraints."
+    ),
+    "repeat_request": (
+        "Experiment condition: repeat_request. Prefer interrupting when the user "
+        "can naturally repeat the original request because the agent appears to be "
+        "missing it, delaying it, or discussing the wrong detail."
+    ),
+    "topic_switch": (
+        "Experiment condition: topic_switch. Prefer interrupting when the user can "
+        "naturally switch to another scenario-relevant question or related concern."
+    ),
+    "silence_stop": (
+        "Experiment condition: silence_stop. Prefer interrupting when the user can "
+        "naturally ask the agent to pause, stop, hold on, or wait before continuing."
+    ),
+}
+
+INTERRUPTION_GENERATION_INSTRUCTIONS = {
+    "follow_up": (
+        "You are interrupting the agent. Generate one short, spoken follow-up or "
+        "clarifying question about what the agent is currently saying. Keep it "
+        "casual and ask only one concrete point. Do not introduce facts that are "
+        "not in your scenario."
+    ),
+    "denial": (
+        "You are interrupting the agent. Generate a short, natural pushback, "
+        "skeptical objection, or disagreement with what the agent just said. The "
+        "agent does not have to be factually wrong; you can knowingly reject a "
+        "reasonable suggestion because it feels unrealistic, inconvenient, costly, "
+        "boring, or mismatched with your preferences. It is okay to say something "
+        "like 'I get that, but...' or 'That makes sense, but I still don't think "
+        "that would work for me.' Do not invent account/order details."
+    ),
+    "repeat_request": (
+        "You are interrupting the agent. Briefly repeat your original request or "
+        "the key thing you need handled, because the agent has not addressed it yet."
+    ),
+    "topic_switch": (
+        "You are interrupting the agent. Switch to another scenario-relevant "
+        "question, constraint, or related concern. Keep it concise and natural."
+    ),
+    "silence_stop": (
+        "You are interrupting the agent. Ask them to pause, stop, wait, or hold on "
+        "for a moment. This should be speakable audio such as 'wait, hold on a "
+        "second', not ###STOP### unless the whole scenario is complete."
+    ),
+}
+
+
+def get_interruption_experiment_type() -> Optional[str]:
+    """Return the configured interruption experiment type, if any."""
+    configured_type = os.getenv(INTERRUPTION_EXPERIMENT_TYPE_ENV, "").strip()
+    if not configured_type:
+        return None
+    return INTERRUPTION_TYPE_ALIASES.get(configured_type, configured_type)
+
+
+def get_interruption_experiment_sequence() -> list[str]:
+    """Return the configured ordered interruption sequence, if any."""
+    configured_sequence = os.getenv(INTERRUPTION_EXPERIMENT_SEQUENCE_ENV, "").strip()
+    if not configured_sequence:
+        return []
+    sequence = []
+    for raw_type in configured_sequence.split(","):
+        raw_type = raw_type.strip()
+        if not raw_type:
+            continue
+        sequence.append(INTERRUPTION_TYPE_ALIASES.get(raw_type, raw_type))
+    return sequence
+
+
+def get_interruption_experiment_type_for_event(
+    state: "UserStreamingState",
+) -> Optional[str]:
+    """Return the configured interruption type for the next event."""
+    sequence = get_interruption_experiment_sequence()
+    if sequence:
+        event_idx = getattr(state, "_interruption_experiment_count", 0)
+        if event_idx >= len(sequence):
+            return None
+        return sequence[event_idx]
+    return get_interruption_experiment_type()
+
+
+def get_interruption_experiment_rate() -> Optional[float]:
+    """Return the configured interruption sampling rate, if any."""
+    configured_rate = os.getenv(INTERRUPTION_EXPERIMENT_RATE_ENV, "").strip()
+    if not configured_rate:
+        return None
+    try:
+        return max(0.0, min(1.0, float(configured_rate)))
+    except ValueError:
+        logger.warning(
+            f"Invalid {INTERRUPTION_EXPERIMENT_RATE_ENV}={configured_rate!r}; ignoring"
+        )
+        return None
+
+
+def should_force_interruption_experiment() -> bool:
+    """Return whether typed interruption experiments should force timing."""
+    return os.getenv(INTERRUPTION_EXPERIMENT_FORCE_ENV, "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def get_interruption_experiment_min_agent_words() -> int:
+    """Return minimum current agent words before forced interruption."""
+    configured_words = os.getenv(
+        INTERRUPTION_EXPERIMENT_MIN_AGENT_WORDS_ENV, ""
+    ).strip()
+    if not configured_words:
+        return 20
+    try:
+        return max(1, int(configured_words))
+    except ValueError:
+        logger.warning(
+            f"Invalid {INTERRUPTION_EXPERIMENT_MIN_AGENT_WORDS_ENV}={configured_words!r}; using 20"
+        )
+        return 20
+
+
+def estimate_spoken_word_count(text: str) -> int:
+    """Estimate natural word count from possibly chunk-fragmented streaming text."""
+    words_by_spaces = len(text.split())
+    alpha_chars = sum(len(match) for match in re.findall(r"[A-Za-z]+", text))
+    words_by_chars = int(alpha_chars / 4.5)
+    return max(1, min(words_by_spaces, words_by_chars))
+
+
+def get_contextual_turn_taking_plan() -> str:
+    """Return the contextual topic plan for a sample, if present."""
+    return os.getenv(CONTEXTUAL_TURN_TAKING_PLAN_ENV, "").strip()
+
+
+def is_free_conversation_mode() -> bool:
+    """Return whether the simulator should ignore task/domain service framing."""
+    return bool(os.getenv(FREE_CONVERSATION_USER_INSTRUCTIONS_ENV, "").strip())
+
+
+def _get_int_env(name: str, default: int, minimum: int = 0) -> int:
+    value = os.getenv(name, "").strip()
+    if not value:
+        return default
+    try:
+        return max(minimum, int(value))
+    except ValueError:
+        logger.warning(f"Invalid {name}={value!r}; using {default}")
+        return default
+
+
+def _get_float_env(name: str, default: float, minimum: float = 0.0) -> float:
+    value = os.getenv(name, "").strip()
+    if not value:
+        return default
+    try:
+        return max(minimum, float(value))
+    except ValueError:
+        logger.warning(f"Invalid {name}={value!r}; using {default}")
+        return default
+
 
 # Prompt for interruption decision.
 # Note: Experimented with multiple sentences in the "Consider" section on 3 tasks. Below setting was best.
@@ -276,15 +517,128 @@ def user_interruption_policy(
     if not linearized_messages and not state.input_turn_taking_buffer:
         return ListenerReactionDecision(decision=False)
 
+    sequence = get_interruption_experiment_sequence()
+    current_events = getattr(state, "_interruption_experiment_count", 0)
+    if sequence and current_events >= len(sequence):
+        state._pending_interruption_type = None
+        return ListenerReactionDecision(decision=False)
+
+    if get_contextual_turn_taking_plan():
+        max_events = _get_int_env(INTERRUPTION_EXPERIMENT_MAX_EVENTS_ENV, 2)
+        if current_events >= max_events:
+            state._pending_interruption_type = None
+            return ListenerReactionDecision(decision=False)
+
+        min_user_turns = _get_int_env(INTERRUPTION_EXPERIMENT_MIN_USER_TURNS_ENV, 2)
+        if getattr(state, "user_utterance_count", 0) < min_user_turns:
+            return ListenerReactionDecision(decision=False)
+
+        min_elapsed_seconds = _get_float_env(
+            INTERRUPTION_EXPERIMENT_MIN_ELAPSED_SECONDS_ENV, 20.0
+        )
+        elapsed_samples = getattr(state, "elapsed_samples", 0)
+        if elapsed_samples:
+            elapsed_seconds = elapsed_samples / PCM_SAMPLE_RATE
+            if elapsed_seconds < min_elapsed_seconds:
+                return ListenerReactionDecision(decision=False)
+
+            min_seconds_since_last_event = _get_float_env(
+                INTERRUPTION_EXPERIMENT_MIN_SECONDS_SINCE_LAST_EVENT_ENV,
+                0.0,
+            )
+            last_event_seconds = getattr(
+                state, "_last_interruption_event_seconds", None
+            )
+            if (
+                last_event_seconds is not None
+                and elapsed_seconds - last_event_seconds < min_seconds_since_last_event
+            ):
+                return ListenerReactionDecision(decision=False)
+
     # Format conversation history
     formatted_history = _format_conversation_history(linearized_messages)
 
     logger.info(f"CHECKING INTERRUPTION:\nSent to LLM:\n{formatted_history}\n\n\n")
 
+    interruption_type = get_interruption_experiment_type_for_event(state)
+    if interruption_type is not None and should_force_interruption_experiment():
+        current_agent_words = 0
+        for msg in reversed(linearized_messages):
+            if isinstance(msg, AssistantMessage) and msg.content:
+                current_agent_words = estimate_spoken_word_count(msg.content)
+                break
+        should_interrupt = (
+            current_agent_words >= get_interruption_experiment_min_agent_words()
+        )
+        interruption_rate = get_interruption_experiment_rate()
+        if should_interrupt and interruption_rate is not None:
+            should_interrupt = random.random() < interruption_rate
+        if should_interrupt:
+            state._pending_interruption_type = interruption_type
+            state._interruption_experiment_count = (
+                getattr(state, "_interruption_experiment_count", 0) + 1
+            )
+            elapsed_samples = getattr(state, "elapsed_samples", 0)
+            if elapsed_samples:
+                state._last_interruption_event_seconds = (
+                    elapsed_samples / PCM_SAMPLE_RATE
+                )
+        else:
+            state._pending_interruption_type = None
+        return ListenerReactionDecision(decision=should_interrupt)
+
     # Build the prompt for interruption decision using template
     interruption_prompt = INTERRUPTION_DECISION_PROMPT.format(
         conversation_history=formatted_history
     )
+    topic_plan = get_contextual_turn_taking_plan()
+    if topic_plan:
+        if sequence:
+            sequence_text = " -> ".join(sequence)
+            sequence_instruction = f"""
+This test has an ordered interruption sequence:
+{sequence_text}
+
+The next required interruption is #{current_events + 1}: {interruption_type}.
+Answer YES only if there is a natural opportunity for this exact next
+interruption type. If the agent has not yet said enough for a natural
+{interruption_type}, answer NO and keep listening. Do not skip ahead in the
+sequence.
+"""
+            if interruption_type == "denial":
+                sequence_instruction += """
+For denial, the assistant does not need to be wrong. A natural opportunity
+exists when the assistant has offered a concrete suggestion that the user could
+plausibly resist because it feels inconvenient, boring, too expensive, too much
+work, or mismatched with the user's preferences.
+"""
+        else:
+            sequence_instruction = """
+For a contextual turn-taking test, one well-timed side-topic interruption is
+expected after the conversation has a concrete main topic. If the agent is now
+giving a long explanation, listing requirements, confirming details, or moving
+through next steps, answer YES when the user can naturally ask one specific
+related question from the topic plan.
+"""
+
+        interruption_prompt += f"""
+
+Contextual topic plan for this test:
+{topic_plan}
+
+Only answer YES when the interruption would be natural for the current required
+interruption type inside this plan. Prefer waiting until the agent has said
+enough substantive content to make the interruption specific. Do not interrupt
+just to satisfy the experiment condition.
+
+{sequence_instruction}
+"""
+    if interruption_type is not None:
+        type_instruction = INTERRUPTION_DECISION_INSTRUCTIONS.get(interruption_type)
+        if type_instruction is None:
+            logger.warning(f"Unknown interruption experiment type: {interruption_type}")
+        else:
+            interruption_prompt += f"\n\n{type_instruction}\n"
 
     # Create messages for LLM call
     decision_messages = [UserMessage(role="user", content=interruption_prompt)]
@@ -298,6 +652,21 @@ def user_interruption_policy(
 
         decision_text = response.content.strip().upper()
         should_interrupt = decision_text == "YES"
+        interruption_rate = get_interruption_experiment_rate()
+        if should_interrupt and interruption_rate is not None:
+            should_interrupt = random.random() < interruption_rate
+        if should_interrupt and (topic_plan or sequence):
+            state._pending_interruption_type = interruption_type
+            state._interruption_experiment_count = (
+                getattr(state, "_interruption_experiment_count", 0) + 1
+            )
+            elapsed_samples = getattr(state, "elapsed_samples", 0)
+            if elapsed_samples:
+                state._last_interruption_event_seconds = (
+                    elapsed_samples / PCM_SAMPLE_RATE
+                )
+        elif not should_interrupt:
+            state._pending_interruption_type = None
 
         logger.debug(f"Interruption decision: {decision_text}")
 
@@ -310,6 +679,7 @@ def user_interruption_policy(
     except Exception as e:
         logger.error(f"Error in interruption decision: {e}")
         # Default to not interrupting on error
+        state._pending_interruption_type = None
         return ListenerReactionDecision(decision=False)
 
 
@@ -619,6 +989,8 @@ class VoiceStreamingUserSimulator(
     @property
     def global_simulation_guidelines(self) -> str:
         """The voice-specific simulation guidelines for the user simulator."""
+        if is_free_conversation_mode():
+            return FREE_CONVERSATION_USER_GUIDELINES_VOICE
         use_tools = self.tools is not None
         return get_global_user_sim_guidelines_voice(use_tools=use_tools)
 
@@ -644,6 +1016,26 @@ class VoiceStreamingUserSimulator(
             global_user_sim_guidelines_with_persona=guidelines_with_persona,
             instructions=self.instructions,
         )
+        topic_plan = get_contextual_turn_taking_plan()
+        if topic_plan:
+            system_prompt += f"""
+
+<contextual_turn_taking_plan>
+{topic_plan}
+</contextual_turn_taking_plan>
+
+Follow this topic plan during the conversation:
+- Treat the main topic as the anchor of the call.
+- Ask concrete, scenario-consistent questions instead of generic filler.
+- If you briefly shift to a related side topic, return to the main topic after
+  the assistant addresses it.
+- Do not repeatedly ask the same vague clarification.
+- You are the person seeking input, not the assistant. Never greet the other
+  party with phrases like "thanks for calling" or "how can I assist you."
+  Start by stating your own concrete situation.
+- Do not use bracketed sound tags such as [sneeze], [cough], or [pause] as a
+  planned interruption.
+"""
         return system_prompt
 
     @classmethod
@@ -713,6 +1105,10 @@ class VoiceStreamingUserSimulator(
 
         synthesis_config = self.voice_settings.synthesis_config
         speech_env = self.voice_settings.speech_environment
+        if get_contextual_turn_taking_plan():
+            synthesis_config.speech_effects_config.speech_insert_events_per_minute = 0.0
+            synthesis_config.speech_effects_config.enable_vocal_tics = False
+            synthesis_config.speech_effects_config.enable_non_directed_phrases = False
 
         # Resolve filenames to full paths
         background_noise_file = resolve_background_noise_path(
@@ -1075,10 +1471,23 @@ class VoiceStreamingUserSimulator(
             state.output_streaming_queue = []
             state.is_backchanneling = False
         elif action.action == "generate_message":
+            interruption_type = None
+            if action.info == INTERRUPTION_EXPERIMENT_INFO:
+                interruption_type = getattr(state, "_pending_interruption_type", None)
+                if interruption_type is None:
+                    interruption_type = get_interruption_experiment_type_for_event(
+                        state
+                    )
+                action.interruption_type = interruption_type
+                state._pending_interruption_type = None
+            state._active_interruption_type = interruption_type
             merged_message = merge_homogeneous_chunks(state.input_turn_taking_buffer)
-            full_message, new_state = self._generate_full_duplex_voice_message(
-                merged_message, state
-            )
+            try:
+                full_message, new_state = self._generate_full_duplex_voice_message(
+                    merged_message, state
+                )
+            finally:
+                state._active_interruption_type = None
             state.input_turn_taking_buffer = []
             if full_message.is_tool_call():
                 logger.debug("Generating message: Tool call detected")
@@ -1256,11 +1665,48 @@ class VoiceStreamingUserSimulator(
         messages = state.system_messages + flipped_messages
 
         # Add a role identity reminder as a system message to help the LLM stay in character
-        role_reminder = SystemMessage(
-            role="system",
-            content="REMINDER: You are the CUSTOMER calling for help. Respond as the customer would - with questions, requests, or information about your issue. Do NOT respond as the customer service agent.",
-        )
+        if is_free_conversation_mode():
+            reminder_text = (
+                "REMINDER: You are the person discussing the topic with the "
+                "assistant. Respond with your own questions, preferences, "
+                "constraints, or interruptions. Do NOT respond as the assistant."
+            )
+        else:
+            reminder_text = (
+                "REMINDER: You are the CUSTOMER calling for help. Respond as the "
+                "customer would - with questions, requests, or information about "
+                "your issue. Do NOT respond as the customer service agent."
+            )
+        role_reminder = SystemMessage(role="system", content=reminder_text)
         messages = messages + [role_reminder]
+
+        interruption_type = getattr(state, "_active_interruption_type", None)
+        if interruption_type is not None:
+            generation_instruction = INTERRUPTION_GENERATION_INSTRUCTIONS.get(
+                interruption_type
+            )
+            if generation_instruction is not None:
+                messages = messages + [
+                    SystemMessage(role="system", content=generation_instruction)
+                ]
+
+        topic_plan = get_contextual_turn_taking_plan()
+        if topic_plan:
+            messages = messages + [
+                SystemMessage(
+                    role="system",
+                    content=(
+                        "Contextual topic plan for this test:\n"
+                        f"{topic_plan}\n\n"
+                        "When you interrupt, produce one concise utterance that "
+                        "matches the current interruption type and is tightly "
+                        "connected to this plan. "
+                        "Do not use bracketed sound tags such as [sneeze], [cough], "
+                        "or [pause] as the interruption. After the assistant answers, "
+                        "return to the main topic."
+                    ),
+                )
+            ]
 
         # Generate response (timing is captured in llm_utils.generate)
         assistant_message = generate(
@@ -1322,6 +1768,7 @@ class VoiceStreamingUserSimulator(
             add_telephony_format=False,
             add_channel_effects=False,
         )
+        user_message = self._normalize_streaming_audio_rate(user_message)
         tts_synthesis_seconds = time.perf_counter() - tts_start
 
         # Store TTS timing on state for later use
@@ -1408,7 +1855,7 @@ class VoiceStreamingUserSimulator(
             is_final_chunk=True,
         )
         state.user_utterance_count += 1
-        return self.synthesize_voice(
+        user_message = self.synthesize_voice(
             message=user_message,
             state=state,
             effects_turn_idx=effects_turn_idx,
@@ -1417,6 +1864,30 @@ class VoiceStreamingUserSimulator(
             add_telephony_format=False,
             add_channel_effects=False,
         )
+        return self._normalize_streaming_audio_rate(user_message)
+
+    def _normalize_streaming_audio_rate(self, message: UserMessage) -> UserMessage:
+        """Normalize synthesized speech to the simulator's streaming sample rate."""
+        if not message.has_audio_content() or message.audio_format is None:
+            return message
+        if message.audio_format.sample_rate == PCM_SAMPLE_RATE:
+            return message
+
+        original_rate = message.audio_format.sample_rate
+        audio_data = AudioData(
+            data=message.get_audio_bytes(),
+            format=deepcopy(message.audio_format),
+            audio_path=message.audio_path,
+        )
+        audio_data = resample_audio(audio_data, PCM_SAMPLE_RATE)
+        message.audio_content = audio_bytes_to_string(audio_data.data)
+        message.audio_format = audio_data.format
+        message.audio_path = None
+        logger.debug(
+            "Resampled user TTS audio for streaming: "
+            f"{original_rate} Hz -> {PCM_SAMPLE_RATE} Hz"
+        )
+        return message
 
 
 def _format_conversation_history(messages: list[Message]) -> str:

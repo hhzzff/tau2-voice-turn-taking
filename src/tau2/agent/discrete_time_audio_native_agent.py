@@ -39,6 +39,7 @@ See docs/architecture/discrete_time_audio_native_agent.md for design details.
 """
 
 import base64
+import os
 from pathlib import Path
 from typing import TYPE_CHECKING, List, Literal, Optional, Tuple, Union
 
@@ -105,6 +106,23 @@ You are a customer service agent handling a VOICE CALL with a customer.
 1. When collecting customer information (e.g. names, emails, IDs), ask the customer to spell it out letter by letter (e.g. "J, O, H, N") to ensure you have the correct information and accomodate for customer audio being unclear or background noise.
 
 2. If authenticating the user fails based on user provided information, ALWAYS explicitly ask the customer to SPELL THINGS OUT or provide information LETTER BY LETTER (e.g. "first name J, O, H, N last name S, M, I, T, H").
+""".strip()
+
+FREE_CONVERSATION_VOICE_INSTRUCTION = """
+You are an assistant in a natural VOICE conversation.
+
+# Important Voice Conversation Considerations
+
+1. Respond naturally and conversationally as you would in a real call.
+
+2. This is a turn-taking and interruption test, not a customer-service task. Do
+not ask for account details, order IDs, authentication details, or private data.
+
+3. Do not use tools. Discuss the user's topic directly, with concrete reasoning,
+tradeoffs, and practical suggestions.
+
+4. If the user interrupts with a related side question, yield promptly, answer
+that side question, then return to the original topic when appropriate.
 """.strip()
 
 CASCADED_MODEL_INSTRUCTION = """
@@ -345,7 +363,9 @@ class DiscreteTimeAudioNativeAgent(FullDuplexAgent[DiscreteTimeAgentState]):
         # Use CASCADED_MODEL_INSTRUCTION for cascaded models (e.g., livekit)
         # which work with transcribed speech rather than native audio
         provider_type = AUDIO_NATIVE_PROVIDER_TYPES.get(self.provider, "audio_native")
-        if provider_type == "cascaded":
+        if os.getenv("TAU2_FREE_CONVERSATION_AGENT_POLICY", "").strip():
+            agent_instruction = FREE_CONVERSATION_VOICE_INSTRUCTION
+        elif provider_type == "cascaded":
             agent_instruction = CASCADED_MODEL_INSTRUCTION
         else:
             agent_instruction = AUDIO_NATIVE_VOICE_INSTRUCTION

@@ -6,7 +6,7 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field, computed_field
 
-from tau2.config import DEFAULT_SEED
+from tau2.config import DEFAULT_OPENAI_OUTPUT_SAMPLE_RATE, DEFAULT_SEED
 from tau2.data_model.audio import AudioEncoding, AudioFormat
 from tau2.data_model.audio_effects import (
     ChannelEffectsConfig,
@@ -60,7 +60,7 @@ class TranscriptionResult(BaseModel):
 
 
 # ============================================================================
-# ElevenLabs TTS Models
+# TTS Models
 # ============================================================================
 
 if ElevenLabsVoiceSettings is not None:
@@ -98,7 +98,58 @@ class ElevenLabsTTSConfig(BaseModel):
     seed: Optional[int] = Field(default=None)
 
 
-ProviderConfig = ElevenLabsTTSConfig
+VOLCENGINE_AUDIO_FORMAT = AudioFormat(
+    encoding=AudioEncoding.PCM_S16LE,
+    sample_rate=16000,
+)
+
+
+class VolcengineTTSConfig(BaseModel):
+    """Configuration for Volcengine OpenSpeech TTS."""
+
+    url: str = Field(
+        default="https://openspeech.bytedance.com/api/v3/tts/unidirectional"
+    )
+    api_key: Optional[str] = Field(default=None)
+    resource_id: str = Field(default="seed-tts-2.0")
+    speaker: str = Field(default="zh_female_vv_uranus_bigtts")
+    voice_id: Optional[str] = Field(default=None)
+    audio_format: str = Field(default="pcm")
+    sample_rate: int = Field(default=16000)
+    enable_subtitle: bool = Field(default=False)
+    additions: dict[str, Any] = Field(default_factory=dict)
+
+    @property
+    def output_audio_format(self) -> AudioFormat:
+        return AudioFormat(
+            encoding=AudioEncoding.PCM_S16LE,
+            sample_rate=self.sample_rate,
+        )
+
+
+OPENAI_TTS_AUDIO_FORMAT = AudioFormat(
+    encoding=AudioEncoding.PCM_S16LE,
+    sample_rate=DEFAULT_OPENAI_OUTPUT_SAMPLE_RATE,
+)
+
+
+class OpenAITTSConfig(BaseModel):
+    """Configuration for OpenAI text-to-speech."""
+
+    model: str = Field(default="gpt-4o-mini-tts")
+    voice: str = Field(default="nova")
+    voice_id: Optional[str] = Field(default=None)
+    api_key: Optional[str] = Field(default=None)
+    instructions: Optional[str] = Field(default=None)
+    response_format: str = Field(default="pcm")
+    speed: float = Field(default=1.0)
+
+    @property
+    def output_audio_format(self) -> AudioFormat:
+        return OPENAI_TTS_AUDIO_FORMAT
+
+
+ProviderConfig = ElevenLabsTTSConfig | VolcengineTTSConfig | OpenAITTSConfig
 
 
 # ============================================================================
@@ -110,7 +161,9 @@ class SynthesisConfig(BaseModel):
     """Voice synthesis configuration with 3-tier effect taxonomy."""
 
     provider: str = Field(default="elevenlabs")
-    provider_config: Optional[ProviderConfig] = Field(default=ElevenLabsTTSConfig())
+    provider_config: Optional[ProviderConfig] = Field(
+        default_factory=ElevenLabsTTSConfig
+    )
     channel_effects_config: ChannelEffectsConfig = Field(
         default_factory=ChannelEffectsConfig
     )

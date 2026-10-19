@@ -3,13 +3,13 @@
 from dotenv import load_dotenv
 
 from tau2.data_model.audio import AudioData
-from tau2.data_model.voice import ElevenLabsTTSConfig
+from tau2.data_model.voice import ProviderConfig
 from tau2.utils.retry import tts_retry
 from tau2.voice.utils.elevenlabs_utils import tts_elevenlabs
+from tau2.voice.utils.openai_tts_utils import tts_openai
+from tau2.voice.utils.volcengine_tts_utils import tts_volcengine
 
 load_dotenv()
-
-ProviderConfig = ElevenLabsTTSConfig
 
 
 @tts_retry
@@ -21,6 +21,10 @@ def synthesize_voice(
     """Synthesize voice from text using the specified configuration."""
     if provider == "elevenlabs":
         audio_data = tts_elevenlabs(text=text, config=provider_config)
+    elif provider == "volcengine":
+        audio_data = tts_volcengine(text=text, config=provider_config)
+    elif provider == "openai":
+        audio_data = tts_openai(text=text, config=provider_config)
     else:
         raise ValueError(f"Unsupported synthesis provider: {provider}")
 

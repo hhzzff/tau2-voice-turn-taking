@@ -34,7 +34,12 @@ from tau2.data_model.simulation import (
     VoiceRunConfig,
 )
 from tau2.data_model.tasks import Task
-from tau2.data_model.voice import SynthesisConfig, VoiceSettings
+from tau2.data_model.voice import (
+    OpenAITTSConfig,
+    SynthesisConfig,
+    VoiceSettings,
+    VolcengineTTSConfig,
+)
 from tau2.data_model.voice_personas import warn_if_non_official_voices
 from tau2.evaluator.evaluator import EvaluationType
 from tau2.evaluator.reviewer import check_hallucination, format_hallucination_feedback
@@ -531,9 +536,19 @@ def run_tasks(
     user_voice_settings = None
     user_persona_config = None
     if is_voice:
+        tts_provider = os.getenv("TAU2_TTS_PROVIDER", "elevenlabs")
+        provider_config = None
+        if tts_provider == "volcengine":
+            provider_config = VolcengineTTSConfig()
+        elif tts_provider == "openai":
+            provider_config = OpenAITTSConfig()
         user_voice_settings = VoiceSettings(
             transcription_config=None,
-            synthesis_config=SynthesisConfig(),
+            synthesis_config=(
+                SynthesisConfig(provider=tts_provider, provider_config=provider_config)
+                if provider_config is not None
+                else SynthesisConfig(provider=tts_provider)
+            ),
         )
         complexity_config = COMPLEXITY_CONFIGS[config.speech_complexity]
         user_persona_config = PersonaConfig(
@@ -545,6 +560,11 @@ def run_tasks(
 
     # Warm knowledge base cache for banking_knowledge domain
     policy_override = None
+    free_conversation_policy = os.getenv(
+        "TAU2_FREE_CONVERSATION_AGENT_POLICY", ""
+    ).strip()
+    if free_conversation_policy:
+        policy_override = free_conversation_policy
     if config.domain == "banking_knowledge":
         from tau2.domains.banking_knowledge.environment import get_knowledge_base
         from tau2.domains.banking_knowledge.retrieval import get_info_policy_override
@@ -564,9 +584,10 @@ def run_tasks(
             )
         warm_kb_cache(embedder_configs)
         knowledge_base = get_knowledge_base()
-        policy_override = get_info_policy_override(
-            retrieval_config, knowledge_base, **kwargs
-        )
+        if not free_conversation_policy:
+            policy_override = get_info_policy_override(
+                retrieval_config, knowledge_base, **kwargs
+            )
 
     # Build Info and initial Results
     info = get_info(

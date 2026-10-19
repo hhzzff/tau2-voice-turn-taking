@@ -6,6 +6,7 @@ Uses the registry for name resolution. Callers who want full control can skip
 this layer and construct instances directly.
 """
 
+import os
 import uuid
 from copy import deepcopy
 from pathlib import Path
@@ -22,7 +23,13 @@ from tau2.data_model.simulation import (
     VoiceRunConfig,
 )
 from tau2.data_model.tasks import Task
-from tau2.data_model.voice import SpeechComplexity, SynthesisConfig, VoiceSettings
+from tau2.data_model.voice import (
+    OpenAITTSConfig,
+    SpeechComplexity,
+    SynthesisConfig,
+    VoiceSettings,
+    VolcengineTTSConfig,
+)
 from tau2.environment.environment import Environment
 from tau2.orchestrator.full_duplex_orchestrator import FullDuplexOrchestrator
 from tau2.orchestrator.orchestrator import Orchestrator
@@ -32,6 +39,31 @@ from tau2.user.user_simulator_base import FullDuplexUser, HalfDuplexUser
 from tau2.user_simulation_voice_presets import (
     get_or_load_task_voice_config,
 )
+
+DISABLE_DOMAIN_TOOLS_ENV = "TAU2_DISABLE_DOMAIN_TOOLS"
+FREE_CONVERSATION_AGENT_POLICY_ENV = "TAU2_FREE_CONVERSATION_AGENT_POLICY"
+FREE_CONVERSATION_USER_INSTRUCTIONS_ENV = "TAU2_FREE_CONVERSATION_USER_INSTRUCTIONS"
+
+
+def _disable_domain_tools() -> bool:
+    return os.getenv(DISABLE_DOMAIN_TOOLS_ENV, "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _free_conversation_agent_policy() -> Optional[str]:
+    value = os.getenv(FREE_CONVERSATION_AGENT_POLICY_ENV, "").strip()
+    return value or None
+
+
+def _task_user_instructions(task: Task) -> str:
+    return os.getenv(FREE_CONVERSATION_USER_INSTRUCTIONS_ENV, "").strip() or str(
+        task.user_scenario
+    )
+
 
 # =============================================================================
 # Low-level build functions (no RunConfig needed)
@@ -62,7 +94,11 @@ def build_environment(
     kwargs = dict(env_kwargs or {})
     if solo_mode:
         kwargs["solo_mode"] = True
-    return env_constructor(**kwargs)
+    environment = env_constructor(**kwargs)
+    free_policy = _free_conversation_agent_policy()
+    if free_policy is not None:
+        environment.policy = free_policy
+    return environment
 
 
 def build_agent(
@@ -105,10 +141,10 @@ def build_agent(
         )
 
     # Collect tools from environment
-    tools = environment.get_tools()
+    tools = [] if _disable_domain_tools() else environment.get_tools()
     if solo_mode:
         try:
-            user_tools = environment.get_user_tools()
+            user_tools = [] if _disable_domain_tools() else environment.get_user_tools()
             if user_tools:
                 tools = tools + user_tools
         except Exception:
@@ -156,10 +192,13 @@ def build_user(
     """
     UserConstructor = registry.get_user_constructor(user_name)
 
-    try:
-        user_tools = environment.get_user_tools(include=task.user_tools) or None
-    except Exception:
+    if _disable_domain_tools():
         user_tools = None
+    else:
+        try:
+            user_tools = environment.get_user_tools(include=task.user_tools) or None
+        except Exception:
+            user_tools = None
 
     # Validate DummyUser usage
     if issubclass(UserConstructor, DummyUser):
@@ -167,7 +206,7 @@ def build_user(
 
     user_kwargs = {
         "tools": user_tools,
-        "instructions": str(task.user_scenario),
+        "instructions": _task_user_instructions(task),
         "llm": llm,
         "llm_args": llm_args,
     }
@@ -222,18 +261,32 @@ def build_voice_user(
     if domain is None:
         domain = environment.get_domain_name()
 
-    try:
-        user_tools = environment.get_user_tools(include=task.user_tools) or None
-    except Exception:
+    if _disable_domain_tools():
         user_tools = None
+    else:
+        try:
+            user_tools = environment.get_user_tools(include=task.user_tools) or None
+        except Exception:
+            user_tools = None
 
     # Set up voice settings (deep copy to avoid mutating caller's settings)
     if voice_settings is not None:
         task_voice_settings = deepcopy(voice_settings)
     else:
+        tts_provider = os.getenv("TAU2_TTS_PROVIDER", "elevenlabs")
+        provider_config = None
+        if tts_provider == "volcengine":
+            provider_config = VolcengineTTSConfig()
+        elif tts_provider == "openai":
+            provider_config = OpenAITTSConfig()
         task_voice_settings = VoiceSettings(
             transcription_config=None,
-            synthesis_config=SynthesisConfig(),
+            synthesis_config=SynthesisConfig(
+                provider=tts_provider,
+                provider_config=provider_config,
+            )
+            if provider_config is not None
+            else SynthesisConfig(provider=tts_provider),
         )
 
     # Get voice config for this task (from pre-sampled file or sample on the fly)
@@ -265,7 +318,7 @@ def build_voice_user(
     if persona_config is None:
         persona_config = sampled_voice_config.persona_config
 
-    user_instructions = str(task.user_scenario)
+    user_instructions = _task_user_instructions(task)
     if hallucination_feedback:
         user_instructions += f"\n\n{hallucination_feedback}"
 

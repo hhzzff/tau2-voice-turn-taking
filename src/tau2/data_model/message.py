@@ -187,6 +187,10 @@ class TurnTakingAction(BaseModel):
         description="Wall clock time (seconds) for the TTS synthesis call.",
         default=None,
     )
+    interruption_type: Optional[str] = Field(
+        description="Experiment label for a user-initiated interruption.",
+        default=None,
+    )
 
 
 class ParticipantMessageBase(BaseModel):

@@ -1,3 +1,4 @@
+import os
 from typing import Generic, Optional, Tuple, TypeVar
 
 from loguru import logger
@@ -45,6 +46,27 @@ GLOBAL_USER_SIM_GUIDELINES_PATH_VOICE_TOOLS = (
     GLOBAL_USER_SIM_GUIDELINES_DIR / "simulation_guidelines_voice_tools.md"
 )
 
+FREE_CONVERSATION_USER_INSTRUCTIONS_ENV = "TAU2_FREE_CONVERSATION_USER_INSTRUCTIONS"
+
+FREE_CONVERSATION_USER_GUIDELINES_VOICE = """
+You are playing the role of a person having a natural VOICE conversation with an
+assistant.
+
+Core principles:
+- Speak like a real person on a call, using concise conversational language.
+- Discuss the provided topic directly; do not behave like a customer service
+  case, do not ask for account/order lookup, and do not use tools.
+- Ask practical follow-up questions and share ordinary preferences or constraints
+  when useful for the topic.
+- If you interrupt, do it at a plausible point after the assistant has provided
+  enough substance, ask a related side question, and then return to the main
+  topic once the assistant answers.
+- Do not use bracketed sound tags such as [sneeze], [cough], or [pause].
+- When the discussion feels complete, generate ###STOP###.
+
+<PERSONA_GUIDELINES>
+""".strip()
+
 
 def get_global_user_sim_guidelines(use_tools: bool = False) -> str:
     """
@@ -57,10 +79,10 @@ def get_global_user_sim_guidelines(use_tools: bool = False) -> str:
         The global user simulator guidelines.
     """
     if use_tools:
-        with open(GLOBAL_USER_SIM_GUIDELINES_PATH_TOOLS, "r") as fp:
+        with open(GLOBAL_USER_SIM_GUIDELINES_PATH_TOOLS, "r", encoding="utf-8") as fp:
             user_sim_guidelines = fp.read()
     else:
-        with open(GLOBAL_USER_SIM_GUIDELINES_PATH, "r") as fp:
+        with open(GLOBAL_USER_SIM_GUIDELINES_PATH, "r", encoding="utf-8") as fp:
             user_sim_guidelines = fp.read()
     return user_sim_guidelines
 
@@ -75,11 +97,15 @@ def get_global_user_sim_guidelines_voice(use_tools: bool = False) -> str:
     Returns:
         The global user simulator guidelines for voice mode.
     """
+    if os.getenv(FREE_CONVERSATION_USER_INSTRUCTIONS_ENV, "").strip():
+        return FREE_CONVERSATION_USER_GUIDELINES_VOICE
     if use_tools:
-        with open(GLOBAL_USER_SIM_GUIDELINES_PATH_VOICE_TOOLS, "r") as fp:
+        with open(
+            GLOBAL_USER_SIM_GUIDELINES_PATH_VOICE_TOOLS, "r", encoding="utf-8"
+        ) as fp:
             user_sim_guidelines = fp.read()
     else:
-        with open(GLOBAL_USER_SIM_GUIDELINES_PATH_VOICE, "r") as fp:
+        with open(GLOBAL_USER_SIM_GUIDELINES_PATH_VOICE, "r", encoding="utf-8") as fp:
             user_sim_guidelines = fp.read()
     return user_sim_guidelines
 

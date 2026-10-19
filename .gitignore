@@ -224,3 +224,9 @@ data/simulations/.credentials/
 
 # Cursor IDE
 .cursor/
+
+# Local voice experiments and generated bundles may contain credentials.
+/example/doubaocharacter.py
+/example/tts.py
+/test.py
+/artifacts/
