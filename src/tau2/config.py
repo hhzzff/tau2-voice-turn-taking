@@ -232,3 +232,10 @@ OPEN_MODEL_IDENTITIES = {
     "salmonn": "SALMONN-Omni-before-SFT-checkpoint-44000",
     "minicpm": "MiniCPM-o-4.5",
 }
+
+# Explicit native runtimes run in separate Python environments.
+OPEN_MODEL_RUNTIME_MANIFESTS = {
+    "minicpm": "/mnt/bn/audio-visual-llm-data6/terumi/pi-bench/inference/minicpm_o/runtime.json",
+    "salmonn": "/mnt/bn/audio-visual-llm-data6/terumi/pi-bench/inference/salmonn-omni/runtime.json",
+}
+SALMONN_BEFORE_SFT_CHECKPOINT = "/mnt/bn/audio-visual-llm-data6/yuwenyi/playground/salmonn-omni-dev/logs/cu12_stage2_v2_tfv2_short_sm1_sp_longs1/checkpoint-44000"
