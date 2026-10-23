@@ -57,3 +57,40 @@ existing user timing settings when constructing the user simulator. Positive
 subsecond threshold rounding is addressed by the scenario/user integration
 ticket. The open-model config intentionally does not enable a partial local
 provider in the API evaluation CLI before a real adapter exists.
+
+## Native worker launch and transport
+
+`tau2.voice.audio_native.open_model.adapter.OpenModelAdapter(config,
+runtime_config=None, transport=None)` implements the public lifecycle. Native
+assets default to the explicit manifests in `tau2.config`; SALMONN always
+selects the agreed before-SFT checkpoint by default. The registry factory
+`open_model_agent` (`create_open_model_agent`) takes `open_model_config`,
+`runtime_config`, and `transport` keyword arguments and wraps this adapter in
+`DiscreteTimeAudioNativeAgent`. Tools are rejected.
+
+For Merlin, run the native Python executable with
+`scripts/open_model_workers/worker.py --model minicpm --mailbox /shared/run/mailbox
+--idle-timeout 1800` (or `--model salmonn`). Keep each model in its own mailbox.
+The controller passes `MailboxTransport('/shared/run/mailbox')` from
+`tau2.voice.audio_native.open_model.transport`. `ready.json` records that the
+server is listening, not that weights have loaded. Loading occurs on connect.
+Create mailbox `STOP` to exit; idle timeout also releases the worker. Each
+controller session has a UUID directory. Requests/responses use monotonic
+sequence names and atomic rename. A `closed` marker abandons a failed session.
+Do not reuse a run's mailbox for a different worker process.
+
+Without a supplied transport, an isolated native subprocess exchanges JSON
+lines on stdin/stdout. Native model logging is redirected to stderr. Separate
+operational timeouts default to 1800 seconds and fail visibly; they never
+advance simulation time or fabricate audio. All audio wire payloads are
+little-endian mono PCM16 encoded in `audio_pcm16_b64`. Input is always 16kHz,
+with exactly 1280 or 16000 samples. Responses contain `sample_rate`, `text`,
+and `events`. The model interface is `connect(config, system_prompt) ->
+provenance`, `step(pcm16_bytes) -> response`, and `disconnect()`. It is Python
+3.10 compatible and imports no controller packages.
+
+The causal telephony resampler's initial missing interpolation sample is
+extended from the last available sample once at the first input boundary;
+conversion filter state then persists across ticks. This does not read future
+audio. Native-generated sample count and text are retained as events separately
+from played/capped audio. No annotation-derived forced interruption is enabled.

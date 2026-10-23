@@ -294,6 +294,9 @@ try:
         )
 
     # Agent factories
+    from tau2.agent.open_model_agent import create_open_model_agent
+
+    registry.register_agent_factory(create_open_model_agent, "open_model_agent")
     registry.register_agent_factory(create_llm_agent, "llm_agent")
     registry.register_agent_factory(
         create_llm_gt_agent,
