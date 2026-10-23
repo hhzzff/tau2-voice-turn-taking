@@ -95,12 +95,16 @@ class OpenModelScenarioUser(VoiceStreamingUserSimulator):
                         self._heard_seconds
                         - len(self._heard) / incoming.audio_format.bytes_per_second,
                     )
-                    incoming.content = f"[ASR heard {start:.2f}–{self._heard_seconds:.2f}s] {result.transcript}"
+                    transcript = result.transcript.strip()
+                    if transcript:
+                        incoming.content = f"[ASR heard {start:.2f}–{self._heard_seconds:.2f}s] {transcript}"
                     self.asr_events.append(
                         {
                             "heard_start_seconds": start,
                             "heard_end_seconds": self._heard_seconds,
-                            "transcript": result.transcript,
+                            "transcript": transcript,
+                            "outcome": "transcript" if transcript else "no_speech",
+                            "provider_status": result.provider_status,
                             "tick_index": state.tick_count,
                         }
                     )
@@ -159,7 +163,7 @@ class OpenModelScenarioUser(VoiceStreamingUserSimulator):
             self.scenario == "qa"
             and not self._followed_up
             and state.time_since_last_other_talk >= threshold
-            and self.asr_events
+            and any(event["transcript"].strip() for event in self.asr_events)
         ):
             self._followed_up = True
             self._triggered = True

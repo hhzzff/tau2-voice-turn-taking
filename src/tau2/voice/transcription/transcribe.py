@@ -280,7 +280,8 @@ def transcribe_doubao(
     """Recognize delivered audio with Doubao's documented flash file API.
 
     Official protocol: docs.volcengine.com/docs/DoubaoVoice/recording-file-recognition-lite-http
-    Only API status 20000000 represents success, including on HTTP 200.
+    Status 20000000 is recognition success; 20000003 is a normal no-speech result.
+    See docs.volcengine.com/docs/DoubaoVoice/error-code-query for status meanings.
     """
     from uuid import uuid4
 
@@ -315,6 +316,8 @@ def transcribe_doubao(
     )
     response.raise_for_status()
     status = response.headers.get("X-Api-Status-Code")
+    if status == "20000003":
+        return TranscriptionResult(transcript="", provider_status=status)
     if status != "20000000":
         return TranscriptionResult(transcript="", error=f"Doubao ASR status {status}")
     result = response.json().get("result", {})
@@ -322,4 +325,4 @@ def transcribe_doubao(
         return TranscriptionResult(
             transcript="", error="Doubao ASR response has no text"
         )
-    return TranscriptionResult(transcript=result["text"])
+    return TranscriptionResult(transcript=result["text"], provider_status=status)

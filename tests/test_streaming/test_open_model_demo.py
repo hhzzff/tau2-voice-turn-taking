@@ -340,3 +340,143 @@ def test_observed_trigger_follows_utterance_through_silent_chunks(
     event = report["trigger_events"][0]
     assert event["user_active_seconds"] == 2.0
     assert event["observed_overlap_seconds"] == 2.0
+
+
+def test_doubao_no_speech_status_is_empty_success(monkeypatch):
+    from tau2.data_model.audio import AudioData, AudioEncoding, AudioFormat
+    from tau2.data_model.voice import TranscriptionConfig
+    from tau2.voice.transcription.transcribe import transcribe_audio
+
+    class Response:
+        headers = {"X-Api-Status-Code": "20000003"}
+
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            raise AssertionError("No-speech status does not require a transcript body")
+
+    monkeypatch.setenv("VOLCENGINE_ASR_API_KEY", "test-only")
+    monkeypatch.setattr("requests.post", lambda *args, **kwargs: Response())
+    result = transcribe_audio(
+        AudioData(
+            data=b"\0" * 3200,
+            format=AudioFormat(encoding=AudioEncoding.PCM_S16LE, sample_rate=16000),
+        ),
+        TranscriptionConfig(model="doubao-asr"),
+    )
+    assert result.error is None
+    assert result.transcript == ""
+    assert result.provider_status == "20000003"
+
+
+@pytest.mark.parametrize("no_speech_status", ["20000003", "20000000"])
+def test_qa_waits_through_asr_no_speech_then_responds_to_real_transcript(
+    monkeypatch, get_environment, base_task, no_speech_status
+):
+    import base64
+    import json
+    from pathlib import Path
+    from types import SimpleNamespace
+
+    from tau2.data_model.audio import TELEPHONY_AUDIO_FORMAT
+    from tau2.data_model.message import AssistantMessage
+    from tau2.data_model.simulation import OpenModelConfig
+    from tau2.orchestrator.full_duplex_orchestrator import FullDuplexOrchestrator
+    from tau2.scripts.open_model_demo import build_demo_user
+
+    prompts = []
+    asr_calls = []
+
+    def codex(command, **kwargs):
+        prompts.append(kwargs["input"])
+        Path(command[command.index("--output-last-message") + 1]).write_text(
+            json.dumps({"utterance": "Please tell me more."})
+        )
+        return SimpleNamespace(returncode=0, stdout="")
+
+    class Response:
+        def __init__(self, status, text="A real spoken answer."):
+            self.text = text
+            self.headers = {"X-Api-Status-Code": status}
+
+        def raise_for_status(self):
+            pass
+
+        def iter_lines(self, **kwargs):
+            yield json.dumps(
+                {"code": 0, "data": base64.b64encode(b"\x10\x10" * 16000).decode()}
+            )
+            yield json.dumps({"code": 20000000})
+
+        def json(self):
+            return {"result": {"text": self.text}}
+
+    def post(url, **kwargs):
+        if "/recognize/" in url:
+            asr_calls.append(url)
+            return Response(
+                no_speech_status if len(asr_calls) <= 2 else "20000000",
+                text="   " if len(asr_calls) <= 2 else "A real spoken answer.",
+            )
+        return Response("20000000")
+
+    monkeypatch.setattr("subprocess.run", codex)
+    monkeypatch.setattr("requests.post", post)
+    monkeypatch.setenv("VOLCENGINE_TTS_API_KEY", "test-only")
+    monkeypatch.setenv("VOLCENGINE_ASR_API_KEY", "test-only")
+
+    class Model:
+        @staticmethod
+        def message(speech):
+            return AssistantMessage(
+                role="assistant",
+                is_audio=False,
+                contains_speech=speech,
+                audio_format=TELEPHONY_AUDIO_FORMAT,
+                audio_content=base64.b64encode(
+                    (b"\x20" if speech else b"\x7f") * 8000
+                ).decode(),
+            )
+
+        def create_initial_message(self):
+            return self.message(False)
+
+        def get_init_state(self, message_history=None):
+            return 0
+
+        def get_next_chunk(self, state, participant_chunk=None, tool_results=None):
+            return self.message(state in (0, 1, 4, 5)), state + 1
+
+        @staticmethod
+        def is_stop(message):
+            return False
+
+    config = OpenModelConfig(model="minicpm")
+    user = build_demo_user(config, "qa")
+    orchestrator = FullDuplexOrchestrator(
+        domain="mock",
+        agent=Model(),
+        user=user,
+        environment=get_environment(),
+        task=base_task,
+        tick_duration_seconds=1,
+        pacing="frozen",
+    )
+    orchestrator.initialize()
+    for _ in range(4):
+        orchestrator.step()
+    assert len(prompts) == 1
+    assert not user.events
+    assert len(user.asr_events) == 2
+    assert all(event["outcome"] == "no_speech" for event in user.asr_events)
+    assert all(
+        event["provider_status"] == no_speech_status for event in user.asr_events
+    )
+    for _ in range(4):
+        orchestrator.step()
+    assert len(prompts) == 2
+    assert user.events[0]["kind"] == "qa"
+    assert "A real spoken answer." in prompts[-1]
+    assert "[ASR heard 0.00–3.00s]" not in prompts[-1]
+    assert "[ASR heard 0.00–4.00s]" not in prompts[-1]

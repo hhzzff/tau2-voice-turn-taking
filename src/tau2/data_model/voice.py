@@ -62,6 +62,7 @@ class TranscriptionResult(BaseModel):
     transcript: str = Field(description="The transcribed text")
     confidence: Optional[float] = Field(default=None)
     error: Optional[str] = Field(default=None)
+    provider_status: Optional[str] = Field(default=None)
 
 
 # ============================================================================
