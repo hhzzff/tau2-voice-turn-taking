@@ -71,7 +71,13 @@ model text and speech-script metadata are removed before user history ingestion.
 The ASR window is bounded to the last twenty seconds and refreshes at most once per
 one simulated second during speech, plus a final speech-to-silence refresh.
 Annotations record their heard interval; revisions are not word alignments. ASR
-failure does not silently substitute model text.
+failure does not silently substitute model text. Doubao status `20000003` means no
+speech was detected and is a normal empty result, recorded as a `no_speech` ASR
+event with the provider status. Empty/whitespace transcripts never enter spoken
+history or qualify as a heard answer for QA. Subsequent recognized speech resumes
+normal transcript handling; authentication, transport and other API errors still
+fail the run. Status meanings follow the provider's
+[error-code reference](https://docs.volcengine.com/docs/DoubaoVoice/error-code-query?lang=zh).
 
 ## Evidence
 
