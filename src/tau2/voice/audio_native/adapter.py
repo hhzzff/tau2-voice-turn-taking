@@ -10,7 +10,7 @@ create_adapter(): Factory function that validates parameters and constructs
 
 import asyncio
 from abc import ABC, abstractmethod
-from typing import Any, Awaitable, Callable, List, Optional, Tuple
+from typing import Any, Awaitable, Callable, List, Literal, Optional, Tuple
 
 from loguru import logger
 
@@ -67,6 +67,7 @@ class DiscreteTimeAdapter(ABC):
         tick_duration_ms: int,
         audio_format: Optional[AudioFormat] = None,
         send_audio_instant: bool = DEFAULT_SEND_AUDIO_INSTANT,
+        pacing: Literal["realtime", "frozen"] = "realtime",
     ):
         """Initialize the adapter.
 
@@ -77,6 +78,8 @@ class DiscreteTimeAdapter(ABC):
                 if their provider uses a non-telephony external format.
             send_audio_instant: If True, send all audio in one call per tick.
                 If False, send in VoIP-style 20ms chunks with sleeps.
+            pacing: Realtime enforces a minimum wall duration; frozen waits for
+                inference completion without sleeping to match audio time.
 
         Raises:
             ValueError: If tick_duration_ms is <= 0.
@@ -84,6 +87,9 @@ class DiscreteTimeAdapter(ABC):
         if tick_duration_ms <= 0:
             raise ValueError(f"tick_duration_ms must be > 0, got {tick_duration_ms}")
 
+        if pacing not in ("realtime", "frozen"):
+            raise ValueError(f"Unsupported pacing policy: {pacing}")
+        self.pacing = pacing
         self.tick_duration_ms = tick_duration_ms
         self.audio_format = audio_format or TELEPHONY_AUDIO_FORMAT
         self.bytes_per_tick = int(
@@ -245,7 +251,8 @@ class DiscreteTimeAdapter(ABC):
         # 11. Enforce minimum tick duration (safety net)
         elapsed = asyncio.get_running_loop().time() - tick_start
         remaining = (self.tick_duration_ms / 1000) - elapsed
-        if remaining > 0:
+        result.computation_duration_seconds = elapsed
+        if self.pacing == "realtime" and remaining > 0:
             await asyncio.sleep(remaining)
 
         logger.info(f"Tick {tick_number} completed:\n{result.summary()}")

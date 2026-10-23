@@ -79,6 +79,10 @@ class TickResult(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
+    computation_duration_seconds: float = Field(
+        default=0.0, description="Tick computation time before optional realtime pacing"
+    )
+
     # --- Tick identification ---
     tick_number: int = Field(description="1-indexed tick number")
 
