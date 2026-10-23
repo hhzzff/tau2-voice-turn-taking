@@ -203,3 +203,17 @@ test: add integration tests for retail domain
 - **Pre-commit hook**: Runs `make check-all` (ruff lint + format). Fix any issues before committing.
 - **Notebooks**: Excluded from ruff (`*.ipynb` in pyproject.toml exclude).
 - **`banking_knowledge` domain**: Uses `--retrieval-config` to specify how the agent accesses the knowledge base. If omitted, defaults to `alltools` (BM25 + dense + shell; see `src/tau2/knowledge/README.md`). For offline-only, use e.g. `bm25`. Other offline configs: `no_knowledge`, `full_kb`, `golden_retrieval`, `bm25_grep`, `grep_only`. `openai_embeddings*` and default `alltools` require `OPENAI_API_KEY`. `qwen_embeddings*` and `alltools-qwen` require `OPENROUTER_API_KEY` (included in `.env.example`). `*_reranker` configs additionally require `OPENAI_API_KEY` for the LLM reranker. `terminal_use*`, `alltools`, and `alltools-qwen` require `sandbox-runtime`: install via `npm install -g @anthropic-ai/sandbox-runtime@0.0.23` **AND** the system tools it shells out to (`apt install ripgrep bubblewrap socat` on Linux, `brew install ripgrep` on macOS) — `SandboxManager` raises `SandboxRuntimeError` at construction time if any are missing. Embedding cache lives in `data/.embeddings_cache` (gitignored). See `src/tau2/knowledge/README.md` for full details.
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs are tracked in GitHub Issues. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Use the five default triage labels. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Use a single-context layout with a root glossary and ADRs. See `docs/agents/domain.md`.
