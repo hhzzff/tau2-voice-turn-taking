@@ -1,6 +1,6 @@
-# =============================================================================
+# ======================================================================
 # SIMULATION DEFAULTS (overridable via CLI)
-# =============================================================================
+# ======================================================================
 DEFAULT_MAX_STEPS = 200
 DEFAULT_MAX_ERRORS = 10
 DEFAULT_SEED = 300
@@ -9,9 +9,9 @@ DEFAULT_NUM_TRIALS = 1
 DEFAULT_SAVE_TO = None
 DEFAULT_LOG_LEVEL = "ERROR"
 
-# =============================================================================
+# ======================================================================
 # LLM DEFAULTS (overridable via CLI)
-# =============================================================================
+# ======================================================================
 DEFAULT_AGENT_IMPLEMENTATION = "llm_agent"
 DEFAULT_USER_IMPLEMENTATION = "user_simulator"
 DEFAULT_LLM_AGENT = "gpt-4.1-2025-04-14"
@@ -34,9 +34,9 @@ DEFAULT_LLM_EVAL_USER_SIMULATOR = "claude-opus-4-5"
 # LLM debug logging
 DEFAULT_LLM_LOG_MODE = "latest"  # Options: "all", "latest"
 
-# =============================================================================
+# ======================================================================
 # LLM INFRASTRUCTURE (fixed operational constants)
-# =============================================================================
+# ======================================================================
 DEFAULT_MAX_RETRIES = 3
 DEFAULT_RETRY_ATTEMPTS = 3
 DEFAULT_RETRY_MIN_WAIT = 1.0  # seconds
@@ -58,21 +58,21 @@ REDIS_CACHE_TTL = 60 * 60 * 24 * 30
 # Langfuse
 USE_LANGFUSE = False
 
-# =============================================================================
+# ======================================================================
 # API SERVICE (fixed)
-# =============================================================================
+# ======================================================================
 API_PORT = 8000
 
-# =============================================================================
+# ======================================================================
 # AUDIO CONSTANTS (fixed, protocol-defined)
-# =============================================================================
+# ======================================================================
 DEFAULT_PCM_SAMPLE_RATE = 16000  # User simulator synthesis rate
 DEFAULT_TELEPHONY_RATE = 8000  # API/agent rate (8kHz μ-law, 1 byte/sample)
 TELEPHONY_ULAW_SILENCE = b"\x7f"  # μ-law silence byte
 
-# =============================================================================
+# ======================================================================
 # VOICE DEFAULTS (overridable via CLI, legacy half-duplex mode)
-# =============================================================================
+# ======================================================================
 DEFAULT_VOICE_ENABLED = False
 DEFAULT_VOICE_SYNTHESIS_PROVIDER = "elevenlabs"
 DEFAULT_VOICE_TRANSCRIPTION_MODEL = "nova-3"
@@ -86,16 +86,16 @@ DEFAULT_TEXT_STREAMING_CONFIG = {
     "chunk_size": DEFAULT_TEXT_STREAMING_CHUNK_SIZE,
 }
 
-# =============================================================================
+# ======================================================================
 # VOICE USER SIMULATOR (fixed versioning + overridable model)
-# =============================================================================
+# ======================================================================
 VOICE_USER_SIMULATOR_VERSION = "v1.0"  # fixed, bump on changes
 VOICE_USER_SIMULATOR_DECISION_MODEL = "gpt-4.1"  # overridable
 DEFAULT_SPEECH_COMPLEXITY = "regular"  # overridable: "control", "regular"
 
-# =============================================================================
+# ======================================================================
 # FULL-DUPLEX VOICE DEFAULTS (overridable via CLI)
-# =============================================================================
+# ======================================================================
 DEFAULT_AUDIO_NATIVE_AGENT_IMPLEMENTATION = "discrete_time_audio_native_agent"
 DEFAULT_AUDIO_NATIVE_USER_IMPLEMENTATION = "voice_streaming_user_simulator"
 DEFAULT_AUDIO_NATIVE_PROVIDER = (
@@ -122,9 +122,9 @@ DEFAULT_USE_LLM_BACKCHANNEL = True
 DEFAULT_AUDIO_NATIVE_MAX_RETRIES = 3
 DEFAULT_AUDIO_NATIVE_RETRY_DELAY_SECONDS = 5.0
 
-# =============================================================================
+# ======================================================================
 # ADAPTER TIMING (fixed operational constants)
-# =============================================================================
+# ======================================================================
 DEFAULT_AUDIO_NATIVE_VOIP_PACKET_INTERVAL_MS = 20  # fixed, standard RTP pacing
 DEFAULT_AUDIO_NATIVE_CONNECT_TIMEOUT = 30.0  # fixed
 DEFAULT_AUDIO_NATIVE_DISCONNECT_TIMEOUT = 5.0  # fixed
@@ -132,9 +132,9 @@ DEFAULT_AUDIO_NATIVE_THREAD_JOIN_TIMEOUT = 2.0  # fixed
 DEFAULT_AUDIO_NATIVE_TICK_TIMEOUT_BUFFER = 30.0  # fixed
 DEFAULT_AUDIO_NATIVE_MAX_INACTIVE_SECONDS = 40.0  # fixed, stall detection
 
-# =============================================================================
+# ======================================================================
 # OPENAI PROVIDER (overridable model/voice, fixed API constants)
-# =============================================================================
+# ======================================================================
 DEFAULT_OPENAI_REALTIME_MODEL = "gpt-realtime-1.5"  # overridable
 _LEGACY_OPENAI_REALTIME_MODEL = "gpt-realtime-2025-08-28"
 DEFAULT_OPENAI_REALTIME_BASE_URL = "wss://api.openai.com/v1/realtime"  # fixed
@@ -147,9 +147,9 @@ DEFAULT_OPENAI_OUTPUT_SAMPLE_RATE = 24000  # fixed, API-defined
 DEFAULT_OPENAI_TRANSCRIPTION_MODEL = "gpt-4o-transcribe"  # overridable
 DEFAULT_WHISPER_MODEL = "whisper-1"  # fixed
 
-# =============================================================================
+# ======================================================================
 # GEMINI PROVIDER (overridable model/voice, fixed API constants)
-# =============================================================================
+# ======================================================================
 # Auth mode selected from environment:
 #   GEMINI_API_KEY -> AI Studio
 #   GOOGLE_SERVICE_ACCOUNT_KEY or GOOGLE_APPLICATION_CREDENTIALS -> Vertex AI
@@ -161,25 +161,25 @@ DEFAULT_GEMINI_LOCATION = "us-central1"  # fixed
 DEFAULT_GEMINI_INPUT_SAMPLE_RATE = 16000  # fixed, API-defined
 DEFAULT_GEMINI_OUTPUT_SAMPLE_RATE = 24000  # fixed, API-defined
 
-# =============================================================================
+# ======================================================================
 # XAI PROVIDER (overridable voice, fixed API constants)
-# =============================================================================
+# ======================================================================
 DEFAULT_XAI_REALTIME_BASE_URL = "wss://api.x.ai/v1/realtime"  # fixed
 DEFAULT_XAI_VOICE = "Ara"  # overridable: Ara, Rex, Sal, Eve, Leo
 DEFAULT_XAI_MODEL = "xai-realtime"  # fixed, determined by endpoint
 
-# =============================================================================
+# ======================================================================
 # NOVA PROVIDER (overridable model/voice, fixed API constants)
-# =============================================================================
+# ======================================================================
 DEFAULT_NOVA_MODEL = "amazon.nova-2-sonic-v1:0"  # overridable
 DEFAULT_NOVA_VOICE = "tiffany"  # overridable: matthew, tiffany, amy
 DEFAULT_NOVA_REGION = "us-east-1"  # fixed
 DEFAULT_NOVA_INPUT_SAMPLE_RATE = 16000  # fixed, API-defined
 DEFAULT_NOVA_OUTPUT_SAMPLE_RATE = 24000  # fixed, API-defined
 
-# =============================================================================
+# ======================================================================
 # QWEN PROVIDER (overridable model/voice, fixed API constants)
-# =============================================================================
+# ======================================================================
 DEFAULT_QWEN_REALTIME_URL = (
     "wss://dashscope-intl.aliyuncs.com/api-ws/v1/realtime"  # fixed
 )
@@ -191,9 +191,9 @@ DEFAULT_QWEN_VOICE = "Tina"  # overridable; Qwen3.5-Omni-Realtime default voice
 DEFAULT_QWEN_INPUT_SAMPLE_RATE = 16000  # fixed, API-defined
 DEFAULT_QWEN_OUTPUT_SAMPLE_RATE = 24000  # fixed, API-defined
 
-# =============================================================================
+# ======================================================================
 # PROVIDER REGISTRY (derived from above)
-# =============================================================================
+# ======================================================================
 DEFAULT_AUDIO_NATIVE_MODELS = {
     "openai": DEFAULT_OPENAI_REALTIME_MODEL,
     "gemini": DEFAULT_GEMINI_MODEL,
@@ -221,9 +221,9 @@ AUDIO_NATIVE_PROVIDER_TYPES = {
     "livekit": "cascaded",
 }
 
-# =============================================================================
+# ======================================================================
 # DISPLAY
-# =============================================================================
+# ======================================================================
 TERM_DARK_MODE = True
 
 # Native open-model identities and simulation granularity.
@@ -241,3 +241,10 @@ OPEN_MODEL_DEMO_ASR_WINDOW_SECONDS = 20.0
 OPEN_MODEL_DEMO_USER_LLM = "codex/gpt-5.6-luna"
 DOUBAO_ASR_URL = "https://openspeech.bytedance.com/api/v3/auc/bigmodel/recognize/flash"
 DOUBAO_ASR_RESOURCE_ID = "volc.bigasr.auc_turbo"
+
+# Explicit native runtimes run in separate Python environments.
+OPEN_MODEL_RUNTIME_MANIFESTS = {
+    "minicpm": "/mnt/bn/audio-visual-llm-data6/terumi/pi-bench/inference/minicpm_o/runtime.json",
+    "salmonn": "/mnt/bn/audio-visual-llm-data6/terumi/pi-bench/inference/salmonn-omni/runtime.json",
+}
+SALMONN_BEFORE_SFT_CHECKPOINT = "/mnt/bn/audio-visual-llm-data6/yuwenyi/playground/salmonn-omni-dev/logs/cu12_stage2_v2_tfv2_short_sm1_sp_longs1/checkpoint-44000"

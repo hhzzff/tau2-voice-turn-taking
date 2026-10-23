@@ -15,7 +15,7 @@ from pathlib import Path
 
 import numpy as np
 
-from tau2.config import OPEN_MODEL_DEMO_SECONDS, OPEN_MODEL_DEMO_USER_LLM
+from tau2.config import DEFAULT_SEED, OPEN_MODEL_DEMO_SECONDS, OPEN_MODEL_DEMO_USER_LLM
 from tau2.data_model.audio import AudioData
 from tau2.data_model.simulation import AudioNativeConfig, OpenModelConfig
 from tau2.user.open_model_scenarios import SCENARIOS, OpenModelScenarioUser
@@ -296,7 +296,7 @@ def build_demo_user(config, scenario):
             ),
             channel_effects_config=ChannelEffectsConfig(enable_frame_drops=False),
         ),
-        speech_environment=SpeechEnvironment(voice_seed=300),
+        speech_environment=SpeechEnvironment(voice_seed=DEFAULT_SEED),
     )
     user = OpenModelScenarioUser(
         tools=[],
@@ -396,7 +396,7 @@ def main(argv=None):
                 "user_llm": OPEN_MODEL_DEMO_USER_LLM,
                 "tts": "volcengine",
                 "asr": "doubao-asr",
-                "seed": 300,
+                "seed": DEFAULT_SEED,
                 "mailbox": str(args.mailbox),
                 "threshold_rounding": "ceil",
                 "requested_seconds": args.seconds,
