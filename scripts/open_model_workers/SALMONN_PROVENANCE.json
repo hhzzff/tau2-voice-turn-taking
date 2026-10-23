@@ -1,0 +1,29 @@
+{
+  "source_license": "No tracked LICENSE, COPYING, or NOTICE found in either source checkout. No license grant is inferred. Internal source adaptation requested by repository owner; review source rights before redistribution.",
+  "sources": [
+    {
+      "path": "/mnt/bn/audio-visual-llm-data6/terumi/pi-bench/inference/salmonn-omni/causal_speech_bridge.py",
+      "sha256": "626e018483ef2576870bf75f7d68d26219d19ab24d8f822806dd7d20ff9f8924"
+    },
+    {
+      "path": "/mnt/bn/audio-visual-llm-data6/yuwenyi/playground/salmonn-omni-dev/fdb_tts_runtime.py",
+      "sha256": "d686022ffbdc42524dab78f5a3639d63ecee3af32748fc151dc7eec9350ec754"
+    },
+    {
+      "path": "/mnt/bn/audio-visual-llm-data6/terumi/pi-bench/inference/salmonn-omni/backend.py",
+      "sha256": "7f6f1839f0b7eeda8eceaa65bdce0b847bd7218e9ebecbf789bbc935848f5cca"
+    }
+  ],
+  "external_source_sha256": {
+    "utils.py": "d2b39beb522042eb7ead7805154a3af4a617b77b9727faa2cc89154cb3390692",
+    "models/modeling_llama_salmonn_omni.py": "f701e95f548a2c775e3d7535dbd4ca1fcc287d269519b6982a53af020fee6a7d",
+    "models/streaming_transformer_encoder_v2/audio_encoder.py": "68935647e3418af5bf64d24edaac22ca880a3028ce568f1e1818e30403d79957",
+    "models/streaming_transformer_encoder_v2/subsampling.py": "321c2f004610eb45e593b0c5a961f48991cb7e482621bbc250093cb7a0d611d1",
+    "models/streaming_transformer_encoder_v2/transformer_encoder.py": "b1f963de65df52b798a4dad3a5e96703003312900eec9b7a3e4ae029dc6fe362"
+  },
+  "adaptations": [
+    "Causal frontend only; removed prerecorded continuation controller and CLI audit harness.",
+    "Playback requires an explicit prompt runtime, plain clause_v2=False; original queue/HiFT and lead semantics retained.",
+    "Live decoder consumes new audio embeddings only, retains prefix KV and native one-token cadence."
+  ]
+}
