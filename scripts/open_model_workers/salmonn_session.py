@@ -145,7 +145,10 @@ class NativeSession:
             speaker = frontend._extract_spk_embedding(prompt16)
             codec, _ = frontend._extract_speech_token(prompt16)
             runtime = CosyPromptRuntime(
-                feature, codec, speaker, torchaudio.transforms.Resample(24000, 16000)
+                prompt_speech_feat=feature,
+                prompt_speech_token=codec,
+                spk_embedding=speaker,
+                resample_24k_to_16k=torchaudio.transforms.Resample(24000, 16000),
             )
         self.playback = FDBSpeechPlayback(
             model,

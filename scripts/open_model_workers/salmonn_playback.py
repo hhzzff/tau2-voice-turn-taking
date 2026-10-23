@@ -4,10 +4,10 @@ from __future__ import annotations
 
 import math
 from collections import deque
-from dataclasses import dataclass, field
 from typing import Any
 
 import torch
+from pydantic import BaseModel, ConfigDict, Field
 
 INPUT_SAMPLE_RATE = 16000
 OUTPUT_SAMPLE_RATE = 24000
@@ -26,17 +26,19 @@ TTS_SENTENCE_SEPARATORS = (
 )
 
 
-@dataclass
-class CosyPromptRuntime:
+class CosyPromptRuntime(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     prompt_speech_feat: Any
     prompt_speech_token: Any
     spk_embedding: Any
     resample_24k_to_16k: Any
 
 
-@dataclass
-class _Sentence:
-    embeddings: list[torch.Tensor] = field(default_factory=list)
+class _Sentence(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    embeddings: list[torch.Tensor] = Field(default_factory=list)
     sealed: bool = False
 
 

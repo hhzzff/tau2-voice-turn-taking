@@ -6,6 +6,7 @@ import tempfile
 import time
 from pathlib import Path
 
+from tau2.config import OPEN_MODEL_DEMO_USER_LLM
 from tau2.data_model.message import AssistantMessage
 
 
@@ -40,7 +41,7 @@ def generate_codex(messages, *, tools=None, timeout=180):
                 "codex",
                 "exec",
                 "--model",
-                "gpt-5.6-luna",
+                OPEN_MODEL_DEMO_USER_LLM.removeprefix("codex/"),
                 "--ephemeral",
                 "--ignore-user-config",
                 "--sandbox",
@@ -106,5 +107,8 @@ def generate_codex(messages, *, tools=None, timeout=180):
         role="assistant",
         content=data["utterance"],
         generation_time_seconds=time.perf_counter() - started,
-        raw_data={"provider": "codex-cli", "model": "gpt-5.6-luna"},
+        raw_data={
+            "provider": "codex-cli",
+            "model": OPEN_MODEL_DEMO_USER_LLM.removeprefix("codex/"),
+        },
     )

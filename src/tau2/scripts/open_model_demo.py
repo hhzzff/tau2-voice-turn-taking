@@ -89,6 +89,10 @@ def export_demo(
             "user_input_sha256": previous["agent"],
             "agent_input_sha256": previous["user"],
             "user_audio_bytes": len(uraw),
+            "user_chunk_id": tick.user_chunk.chunk_id if tick.user_chunk else None,
+            "user_final_chunk": tick.user_chunk.is_final_chunk
+            if tick.user_chunk
+            else False,
             "agent_audio_bytes": len(araw),
             "user_active_seconds": float(np.count_nonzero(ua) * 0.02),
             "agent_active_seconds": float(np.count_nonzero(aa) * 0.02),
@@ -111,34 +115,36 @@ def export_demo(
     for requested in getattr(user, "events", []):
         event = dict(requested)
         start = event["tick_index"]
-        active = []
+        extent = []
+        # Follow the generated utterance's playback extent, including silent
+        # leading chunks and pauses. A later utterance must not satisfy this event.
         for row in rows[start:]:
-            if row["user_active_seconds"] <= 0:
+            expected_id = len(extent)
+            if row["user_chunk_id"] != expected_id:
                 break
-            active.append(row)
-        overlap = sum(row["overlap_seconds"] for row in active)
+            extent.append(row)
+            if row["user_final_chunk"]:
+                break
+        overlap = sum(row["overlap_seconds"] for row in extent)
         if scenario in {"correction", "user_backchannel"}:
             observed = overlap > 0
         elif scenario == "model_backchannel":
             observed = (
-                len(active) >= 2
-                and sum(row["user_active_seconds"] for row in active) >= 1.0
+                sum(row["user_active_seconds"] > 0 for row in extent) >= 2
+                and sum(row["user_active_seconds"] for row in extent) >= 1.0
             )
         else:
-            observed = bool(active) and any(
+            observed = any(row["user_active_seconds"] > 0 for row in extent) and any(
                 row["agent_active_seconds"] > 0 for row in rows[:start]
             )
         event.update(
             trigger_requested=True,
             observed_trigger=observed,
             observed_overlap_seconds=overlap,
-            user_active_seconds=sum(row["user_active_seconds"] for row in active),
+            user_active_seconds=sum(row["user_active_seconds"] for row in extent),
         )
         events.append(event)
     provenance = dict(provenance)
-    runtime = getattr(getattr(user, "demo_adapter", None), "provenance", None)
-    if runtime:
-        provenance["worker"] = runtime
     report = {
         "status": status,
         "error": error,
@@ -205,7 +211,11 @@ def export_demo(
 
 
 def run_demo(orchestrator, config, scenario, output, *, steps, provenance):
-    """Drive the established initialize/step seam and retain partial failure evidence."""
+    """Drive the established step seam and retain partial failure evidence.
+
+    Provenance may be a mapping or a callable read after runtime initialization.
+    This keeps worker identity at the orchestration boundary, outside user state.
+    """
     if scenario not in SCENARIOS or steps < 0:
         raise ValueError("Unknown scenario or negative step count")
     output = Path(output)
@@ -230,7 +240,7 @@ def run_demo(orchestrator, config, scenario, output, *, steps, provenance):
             config,
             scenario,
             output,
-            provenance=provenance,
+            provenance=provenance() if callable(provenance) else provenance,
             user=orchestrator.user,
             status=status,
             error=error,
@@ -347,31 +357,24 @@ def main(argv=None):
     for key in ["VOLCENGINE_TTS_API_KEY", "VOLCENGINE_ASR_API_KEY"]:
         if not os.getenv(key):
             parser.error(f"{key} is required on the authenticated controller")
-    from tau2.agent.discrete_time_audio_native_agent import DiscreteTimeAudioNativeAgent
     from tau2.data_model.tasks import Task, UserScenario
     from tau2.domains.mock.environment import get_environment
     from tau2.orchestrator.full_duplex_orchestrator import FullDuplexOrchestrator
-    from tau2.voice.audio_native.open_model.adapter import OpenModelAdapter
+    from tau2.registry import registry
     from tau2.voice.audio_native.open_model.transport import MailboxTransport
 
     user = build_demo_user(config, args.scenario)
     runtime = (
         json.loads(args.runtime_config.read_text()) if args.runtime_config else None
     )
-    adapter = OpenModelAdapter(
-        config, runtime_config=runtime, transport=MailboxTransport(args.mailbox)
-    )
-    user.demo_adapter = adapter
-    agent = DiscreteTimeAudioNativeAgent(
+    agent = registry.get_agent_factory("open_model_agent")(
         tools=[],
         domain_policy="Have a helpful natural spoken conversation. No tools are available.",
-        tick_duration_ms=config.tick_duration_ms,
-        adapter=adapter,
-        provider=config.model,
-        model=config.model_identity,
-        vad_config={},
-        max_inactive_seconds=0,
+        open_model_config=config,
+        runtime_config=runtime,
+        transport=MailboxTransport(args.mailbox),
     )
+    adapter = agent.adapter
     orchestrator = FullDuplexOrchestrator(
         domain="mock",
         agent=agent,
@@ -391,7 +394,8 @@ def main(argv=None):
             args.scenario,
             args.output,
             steps=max(0, math.ceil(args.seconds / config.tick_duration_seconds) - 1),
-            provenance={
+            provenance=lambda: {
+                "worker": dict(adapter.provenance),
                 "runtime_config": adapter.runtime_config,
                 "user_llm": OPEN_MODEL_DEMO_USER_LLM,
                 "tts": "volcengine",
@@ -404,7 +408,7 @@ def main(argv=None):
             },
         )
     finally:
-        adapter.disconnect()
+        agent.stop()
         user.stop(state=getattr(orchestrator, "user_state", None))
 
 
