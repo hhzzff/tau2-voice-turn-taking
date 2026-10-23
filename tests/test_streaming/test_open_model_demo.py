@@ -136,7 +136,10 @@ def test_demo_exports_previous_handoff_stereo_and_honest_overlap(
         "user_backchannel",
         tmp_path,
         steps=2,
-        provenance={"runtime": "controlled-test"},
+        provenance=lambda: {
+            "runtime": "controlled-test",
+            "completed_steps": orchestrator.step_count,
+        },
     )
     events = [
         json.loads(line) for line in (tmp_path / "ticks.jsonl").read_text().splitlines()
@@ -155,6 +158,7 @@ def test_demo_exports_previous_handoff_stereo_and_honest_overlap(
     assert result["observed_overlap_seconds"] == 2
     assert result["semantic_outcome"] == "not_assessed"
     assert result["scenario_triggered"] is False
+    assert result["provenance"]["completed_steps"] == 2
 
 
 @pytest.mark.parametrize("model", ["minicpm", "salmonn"])
@@ -279,3 +283,60 @@ def test_real_user_scenario_uses_only_delivered_asr_and_triggers_backchannel(
         for t in orchestrator.get_ticks()
         if t.user_chunk.turn_taking_action
     )
+
+
+@pytest.mark.parametrize("scenario", ["correction", "model_backchannel"])
+def test_observed_trigger_follows_utterance_through_silent_chunks(
+    tmp_path, get_environment, base_task, scenario
+):
+    import base64
+
+    from tau2.data_model.audio import TELEPHONY_AUDIO_FORMAT
+    from tau2.data_model.message import AssistantMessage, UserMessage
+    from tau2.data_model.simulation import OpenModelConfig
+    from tau2.orchestrator.full_duplex_orchestrator import FullDuplexOrchestrator
+    from tau2.scripts.open_model_demo import run_demo
+
+    class Participant:
+        events = [{"tick_index": 0, "kind": scenario}]
+
+        def __init__(self, role):
+            self.role = role
+
+        def get_init_state(self, message_history=None):
+            return 0
+
+        def get_next_chunk(self, state, participant_chunk=None, tool_results=None):
+            message = AssistantMessage if self.role == "assistant" else UserMessage
+            active = self.role == "assistant" or state not in (0, 2)
+            return message(
+                role=self.role,
+                is_audio=True,
+                audio_format=TELEPHONY_AUDIO_FORMAT,
+                audio_content=base64.b64encode(
+                    (b"\x20" if active else b"\x7f") * 8000
+                ).decode(),
+                chunk_id=state % 4,
+                is_final_chunk=(state % 4 == 3),
+                contains_speech=active,
+            ), state + 1
+
+        @staticmethod
+        def is_stop(message):
+            return False
+
+    config = OpenModelConfig(model="minicpm")
+    orchestrator = FullDuplexOrchestrator(
+        domain="mock",
+        agent=Participant("assistant"),
+        user=Participant("user"),
+        environment=get_environment(),
+        task=base_task,
+        tick_duration_seconds=1,
+        pacing="frozen",
+    )
+    report = run_demo(orchestrator, config, scenario, tmp_path, steps=5, provenance={})
+    assert report["scenario_triggered"]
+    event = report["trigger_events"][0]
+    assert event["user_active_seconds"] == 2.0
+    assert event["observed_overlap_seconds"] == 2.0

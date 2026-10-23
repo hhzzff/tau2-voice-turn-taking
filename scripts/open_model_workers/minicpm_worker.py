@@ -11,6 +11,17 @@ class MiniCPMWorker:
 
     def connect(self, config, system_prompt):
         """Load the configured native processor and prepare one conversation."""
+        checkpoint = Path(config.get("checkpoint", "")).resolve()
+        supported = Path(
+            "/mnt/bn/audio-visual-llm-data6/base_models/MiniCPM-o-4_5"
+        ).resolve()
+        if (
+            checkpoint != supported
+            or config.get("assets", {}).get("pt_path") is not None
+        ):
+            raise ValueError(
+                "MiniCPM-o-4.5 MVP requires its approved base checkpoint without pt_path overrides"
+            )
         import numpy as np
 
         self.np = np
@@ -34,7 +45,7 @@ class MiniCPMWorker:
             tts_temperature=settings.get("tts_temperature", 0.8),
         )
         self.unified = processors.UnifiedProcessor(
-            model_path=config["checkpoint"],
+            model_path=str(checkpoint),
             pt_path=config["assets"].get("pt_path"),
             duplex_config=duplex_config,
         )
@@ -46,7 +57,7 @@ class MiniCPMWorker:
         )
         return {
             "model": "MiniCPM-o-4.5",
-            "checkpoint": config["checkpoint"],
+            "checkpoint": str(checkpoint),
             "sample_rate": 24000,
             "python": sys.executable,
             "processors": processors.__file__,

@@ -26,7 +26,9 @@ The controller disconnects the adapter after the run, including failure.
 
 The runtime configuration is the worker manifest containing `python`, checkpoint,
 model source and settings. Supply the frozen manifest included in the validated
-Merlin bundle. The resolved manifest and worker provenance are retained in
+Merlin bundle. MiniCPM accepts only the approved base checkpoint at
+`/mnt/bn/audio-visual-llm-data6/base_models/MiniCPM-o-4_5` (or a symlink to it),
+and rejects `pt_path` overlays before loading weights. The resolved manifest and worker provenance are retained in
 `summary.json`. See `open-model-adapter-contract.md` for the worker boundary.
 
 Required local controller configuration:
@@ -85,7 +87,9 @@ Activity is a declared 20 ms RMS detector, threshold 128 PCM16 units. It describ
 sound activity, not semantic speech. `trigger_requested` records action scheduling. `scenario_triggered` requires observed
 audio: overlap during correction/user acknowledgement, continuing user speech for
 a model acknowledgement opportunity, or a heard model answer before QA follow-up.
-Per-event activity and overlap remain separate from semantic success. Semantic outcome
+Per-event activity and overlap remain separate from semantic success. Observation
+follows the generated utterance through its final playback chunk, including leading
+silence and internal pauses; a later utterance cannot satisfy an earlier trigger. Semantic outcome
 remains `not_assessed` until listening review. Missing triggers and model behavior
 are valid reported outcomes, never filled with fabricated responses. Controller
 startup time is separate from the preserved initial trajectory timing field.
