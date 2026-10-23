@@ -225,3 +225,10 @@ AUDIO_NATIVE_PROVIDER_TYPES = {
 # DISPLAY
 # =============================================================================
 TERM_DARK_MODE = True
+
+# Native open-model identities and simulation granularity.
+OPEN_MODEL_TICK_DURATION_MS = {"salmonn": 80, "minicpm": 1000}
+OPEN_MODEL_IDENTITIES = {
+    "salmonn": "SALMONN-Omni-before-SFT-checkpoint-44000",
+    "minicpm": "MiniCPM-o-4.5",
+}
