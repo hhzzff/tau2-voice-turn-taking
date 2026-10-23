@@ -283,8 +283,10 @@ try:
     registry.register_user(UserSimulator, "user_simulator")
     registry.register_user(DummyUser, "dummy_user")
     try:
+        from tau2.user.open_model_scenarios import OpenModelScenarioUser
         from tau2.user.user_simulator_streaming import VoiceStreamingUserSimulator
 
+        registry.register_user(OpenModelScenarioUser, "open_model_scenario_user")
         registry.register_user(
             VoiceStreamingUserSimulator, "voice_streaming_user_simulator"
         )

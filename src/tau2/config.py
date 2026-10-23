@@ -232,3 +232,12 @@ OPEN_MODEL_IDENTITIES = {
     "salmonn": "SALMONN-Omni-before-SFT-checkpoint-44000",
     "minicpm": "MiniCPM-o-4.5",
 }
+
+# Open-model demo controller defaults. Credentials are read only from the environment.
+OPEN_MODEL_DEMO_SECONDS = 30.0
+OPEN_MODEL_DEMO_TRIGGER_SECONDS = 1.0
+OPEN_MODEL_DEMO_ASR_REFRESH_SECONDS = 1.0
+OPEN_MODEL_DEMO_ASR_WINDOW_SECONDS = 20.0
+OPEN_MODEL_DEMO_USER_LLM = "codex/gpt-5.6-luna"
+DOUBAO_ASR_URL = "https://openspeech.bytedance.com/api/v3/auc/bigmodel/recognize/flash"
+DOUBAO_ASR_RESOURCE_ID = "volc.bigasr.auc_turbo"

@@ -376,6 +376,10 @@ def generate(
     Returns: A tuple containing the message and the cost.
     """
     validate_message_history(messages)
+    if model == "codex/gpt-5.6-luna":
+        from tau2.utils.codex_llm import generate_codex
+
+        return generate_codex(messages, tools=tools, timeout=kwargs.get("timeout", 180))
     if kwargs.get("num_retries") is None:
         kwargs["num_retries"] = DEFAULT_MAX_RETRIES
 

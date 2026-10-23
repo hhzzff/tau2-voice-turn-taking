@@ -1641,7 +1641,9 @@ Follow this topic plan during the conversation:
         )
 
         # Check that last message is a valid user input message
-        if not isinstance(linearized_messages[-1], (ValidUserInputMessage)):
+        if linearized_messages and not isinstance(
+            linearized_messages[-1], (ValidUserInputMessage)
+        ):
             if isinstance(linearized_messages[-1], SystemMessage):
                 # SystemMessage at end is expected (e.g., silence annotations)
                 logger.debug(
@@ -1652,7 +1654,9 @@ Follow this topic plan during the conversation:
                     f"Last message is not a valid user input message: {type(linearized_messages[-1]).__name__}"
                 )
 
-        if isinstance(linearized_messages[-1], (AssistantMessage)):
+        if linearized_messages and isinstance(
+            linearized_messages[-1], (AssistantMessage)
+        ):
             if linearized_messages[-1].content is None:
                 logger.warning(
                     f"Last message is an assistant message with no content: {linearized_messages[-1]}"

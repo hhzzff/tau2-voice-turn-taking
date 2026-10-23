@@ -37,6 +37,9 @@ def transcribe_audio(
         if conversion_error:
             return TranscriptionResult(transcript="", error=conversion_error)
 
+        if config.model == "doubao-asr":
+            return transcribe_doubao(audio_data, config)
+
         if config.model in ["nova-2", "nova-3"]:
             return transcribe_deepgram(pcm_audio_data, config)
 
@@ -269,3 +272,54 @@ async def transcribe_gpt4o_realtime(
         return TranscriptionResult(
             transcript="", error=f"OpenAI Realtime transcription failed: {str(e)}"
         )
+
+
+def transcribe_doubao(
+    audio_data: AudioData, config: TranscriptionConfig
+) -> TranscriptionResult:
+    """Recognize delivered audio with Doubao's documented flash file API.
+
+    Official protocol: docs.volcengine.com/docs/DoubaoVoice/recording-file-recognition-lite-http
+    Only API status 20000000 represents success, including on HTTP 200.
+    """
+    from uuid import uuid4
+
+    from tau2.config import DOUBAO_ASR_RESOURCE_ID, DOUBAO_ASR_URL
+
+    key = os.environ.get("VOLCENGINE_ASR_API_KEY")
+    if not key:
+        return TranscriptionResult(
+            transcript="", error="VOLCENGINE_ASR_API_KEY is required"
+        )
+    pcm = resample_audio(convert_to_mono(convert_to_pcm16(audio_data)), 16000)
+    buffer = io.BytesIO()
+    with wave.open(buffer, "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(16000)
+        wav.writeframes(pcm.data)
+    response = requests.post(
+        DOUBAO_ASR_URL,
+        headers={
+            "X-Api-Key": key,
+            "X-Api-Resource-Id": DOUBAO_ASR_RESOURCE_ID,
+            "X-Api-Request-Id": str(uuid4()),
+            "X-Api-Sequence": "-1",
+        },
+        json={
+            "user": {"uid": "tau-voice-demo"},
+            "audio": {"data": base64.b64encode(buffer.getvalue()).decode()},
+            "request": {"model_name": "bigmodel"},
+        },
+        timeout=60,
+    )
+    response.raise_for_status()
+    status = response.headers.get("X-Api-Status-Code")
+    if status != "20000000":
+        return TranscriptionResult(transcript="", error=f"Doubao ASR status {status}")
+    result = response.json().get("result", {})
+    if not isinstance(result.get("text"), str):
+        return TranscriptionResult(
+            transcript="", error="Doubao ASR response has no text"
+        )
+    return TranscriptionResult(transcript=result["text"])

@@ -36,7 +36,12 @@ except ImportError:
 # ============================================================================
 
 TranscriptionModel = Literal[
-    "nova-2", "nova-3", "whisper-1", "gpt-4o-transcribe", "gpt-4o-mini-transcribe"
+    "nova-2",
+    "nova-3",
+    "whisper-1",
+    "gpt-4o-transcribe",
+    "gpt-4o-mini-transcribe",
+    "doubao-asr",
 ]
 
 
