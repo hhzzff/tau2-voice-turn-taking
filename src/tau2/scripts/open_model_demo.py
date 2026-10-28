@@ -389,7 +389,16 @@ def main(argv=None):
     )
     agent = registry.get_agent_factory("open_model_agent")(
         tools=[],
-        domain_policy="Have a helpful natural spoken conversation. No tools are available.",
+        domain_policy=(
+            "You are a travel-agency planning concierge. Help the caller plan a Beijing trip. "
+            "No customer account, identity verification, booking or tools are needed. "
+            "Do not ask for names, IDs, account numbers or spelling. "
+            "Ask one relevant preference question at a time, give brief useful suggestions "
+            "in two or three sentences, and adapt to the constraints the caller tells you. "
+            "Listen to corrections and allow the caller time to speak."
+            if args.scenario == "long_conversation"
+            else "Have a helpful natural spoken conversation. No tools are available."
+        ),
         open_model_config=config,
         runtime_config=runtime,
         transport=MailboxTransport(args.mailbox),
