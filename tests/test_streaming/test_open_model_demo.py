@@ -163,7 +163,8 @@ def test_demo_exports_previous_handoff_stereo_and_honest_overlap(
 
 @pytest.mark.parametrize("model", ["minicpm", "salmonn"])
 @pytest.mark.parametrize(
-    "scenario", ["qa", "correction", "user_backchannel", "model_backchannel"]
+    "scenario",
+    ["qa", "correction", "user_backchannel", "model_backchannel", "long_conversation"],
 )
 def test_real_user_scenario_uses_only_delivered_asr_and_triggers_backchannel(
     tmp_path, monkeypatch, get_environment, base_task, model, scenario
@@ -186,7 +187,14 @@ def test_real_user_scenario_uses_only_delivered_asr_and_triggers_backchannel(
     def codex(command, **kwargs):
         prompts.append(kwargs["input"])
         Path(command[command.index("--output-last-message") + 1]).write_text(
-            json.dumps({"utterance": "Please explain how to plan a trip."})
+            json.dumps(
+                {
+                    "utterance": "YES"
+                    if "Respond with ONLY" in kwargs["input"]
+                    and "NO" in kwargs["input"]
+                    else "Please explain how to plan a trip."
+                }
+            )
         )
         return SimpleNamespace(returncode=0, stdout="")
 
@@ -267,13 +275,37 @@ def test_real_user_scenario_uses_only_delivered_asr_and_triggers_backchannel(
         config,
         scenario,
         tmp_path,
-        steps=int(6 / config.tick_duration_seconds),
+        steps=int(
+            (30 if scenario == "long_conversation" else 6)
+            / config.tick_duration_seconds
+        ),
         provenance={"runtime": "controlled-test"},
     )
     assert report["scenario_triggered"]
-    assert report["trigger_events"][0]["kind"] == (
-        "model_backchannel_opportunity" if scenario == "model_backchannel" else scenario
-    )
+    if scenario == "long_conversation":
+        assert "original VoiceStreamingUserSimulator" in report["user_policy"]
+        assert (
+            len(
+                [e for e in report["trigger_events"] if e["kind"] == "generate_message"]
+            )
+            >= 2
+        )
+        assert user.decision_model == "codex/gpt-5.6-luna"
+        assert any("Respond with ONLY" in prompt for prompt in prompts)
+        assert any(
+            "Known user facts and listener instructions" in prompt
+            and "600 yuan" in prompt
+            for prompt in prompts
+        )
+        substantive = user._substantive_turns
+        user._generate_backchannel_message(orchestrator.user_state)
+        assert user._substantive_turns == substantive
+    else:
+        assert report["trigger_events"][0]["kind"] == (
+            "model_backchannel_opportunity"
+            if scenario == "model_backchannel"
+            else scenario
+        )
     assert report["observed_overlap_seconds"] > 0
     assert report["asr_events"]
     assert all("UNHEARD FUTURE WORDS" not in prompt for prompt in prompts)
@@ -482,130 +514,15 @@ def test_qa_waits_through_asr_no_speech_then_responds_to_real_transcript(
     assert "[ASR heard 0.00–4.00s]" not in prompts[-1]
 
 
-@pytest.mark.parametrize("model", ["minicpm", "salmonn"])
-def test_long_conversation_uses_original_reactions_and_repeated_audio_turns(
-    tmp_path, monkeypatch, get_environment, base_task, model
-):
-    import base64
-    import json
-    from pathlib import Path
-    from types import SimpleNamespace
+def test_long_asr_commits_stable_words_without_replaying_revisions():
+    from tau2.voice.utils.incremental_transcript import IncrementalTranscript
 
-    import numpy as np
-
-    from tau2.data_model.audio import TELEPHONY_AUDIO_FORMAT
-    from tau2.data_model.message import AssistantMessage
-    from tau2.data_model.simulation import OpenModelConfig
-    from tau2.orchestrator.full_duplex_orchestrator import FullDuplexOrchestrator
-    from tau2.scripts.open_model_demo import build_demo_user, run_demo
-
-    scenario = "long_conversation"
-    prompts = []
-
-    def codex(command, **kwargs):
-        prompts.append(kwargs["input"])
-        Path(command[command.index("--output-last-message") + 1]).write_text(
-            json.dumps(
-                {
-                    "utterance": "YES"
-                    if "ONLY" in kwargs["input"] and "NO" in kwargs["input"]
-                    else "Please explain how to plan a trip."
-                }
-            )
-        )
-        return SimpleNamespace(returncode=0, stdout="")
-
-    pcm = (np.sin(np.arange(32000) * 0.1) * 5000).astype("<i2").tobytes()
-
-    class Response:
-        headers = {"X-Api-Status-Code": "20000000"}
-
-        def raise_for_status(self):
-            pass
-
-        def iter_lines(self, **kwargs):
-            return [
-                json.dumps({"code": 0, "data": base64.b64encode(pcm).decode()}),
-                json.dumps({"code": 20000000}),
-            ]
-
-        def json(self):
-            return {"result": {"text": "heard words only"}}
-
-    monkeypatch.setattr("subprocess.run", codex)
-    monkeypatch.setattr("requests.post", lambda *a, **kw: Response())
-    monkeypatch.setenv("VOLCENGINE_TTS_API_KEY", "test-only")
-    monkeypatch.setenv("VOLCENGINE_ASR_API_KEY", "test-only")
-
-    class Model:
-        def create_initial_message(self):
-            return AssistantMessage(
-                role="assistant",
-                is_audio=False,
-                contains_speech=False,
-                audio_format=TELEPHONY_AUDIO_FORMAT,
-                audio_content=base64.b64encode(
-                    b"\x7f" * (config.tick_duration_ms * 8)
-                ).decode(),
-            )
-
-        def get_init_state(self, message_history=None):
-            return 0
-
-        def get_next_chunk(self, state, participant_chunk=None, tool_results=None):
-            return AssistantMessage(
-                role="assistant",
-                content="UNHEARD FUTURE WORDS",
-                is_audio=False,
-                audio_format=TELEPHONY_AUDIO_FORMAT,
-                audio_content=base64.b64encode(
-                    (
-                        b"\x7f"
-                        if scenario == "qa"
-                        and state * config.tick_duration_seconds >= 3
-                        else b"\x20"
-                    )
-                    * (config.tick_duration_ms * 8)
-                ).decode(),
-                contains_speech=not (
-                    scenario == "qa" and state * config.tick_duration_seconds >= 3
-                ),
-            ), state + 1
-
-        @staticmethod
-        def is_stop(message):
-            return False
-
-    config = OpenModelConfig(model=model)
-    user = build_demo_user(config, scenario)
-    orchestrator = FullDuplexOrchestrator(
-        domain="mock",
-        agent=Model(),
-        user=user,
-        environment=get_environment(),
-        task=base_task,
-        tick_duration_seconds=config.tick_duration_seconds,
-        pacing="frozen",
+    stream = IncrementalTranscript()
+    assert stream.update("Hello, my name is") == ""
+    assert stream.update("hello my name is Alice") == "hello my name is"
+    assert stream.update("MY name is Alice and I travel") == "Alice"
+    assert (
+        stream.update("name is Alice and I travel tomorrow", final=True)
+        == "and I travel tomorrow"
     )
-    report = run_demo(
-        orchestrator,
-        config,
-        scenario,
-        tmp_path,
-        steps=int(30 / config.tick_duration_seconds),
-        provenance={"runtime": "controlled-test"},
-    )
-    assert report["scenario_triggered"]
-    assert "original VoiceStreamingUserSimulator" in report["user_policy"]
-    generated = [e for e in report["trigger_events"] if e["kind"] == "generate_message"]
-    assert len(generated) >= 2
-    assert user.decision_model == "codex/gpt-5.6-luna"
-    assert report["observed_overlap_seconds"] > 0
-    assert report["asr_events"]
-    assert all("UNHEARD FUTURE WORDS" not in prompt for prompt in prompts)
-    assert any(
-        t.user_chunk.turn_taking_action.action
-        == ("backchannel" if scenario == "user_backchannel" else "generate_message")
-        for t in orchestrator.get_ticks()
-        if t.user_chunk.turn_taking_action
-    )
+    assert stream.update("name is ALICE and I travel tomorrow.", final=True) == ""

@@ -490,6 +490,7 @@ def user_interruption_policy(
     state: UserStreamingState,
     integration_ticks: int = 1,
     decision_model: Optional[str] = None,
+    decision_context: Optional[str] = None,
 ) -> ListenerReactionDecision:
     """
     Decide whether the user should interrupt the agent while they're speaking.
@@ -642,6 +643,10 @@ just to satisfy the experiment condition.
             interruption_prompt += f"\n\n{type_instruction}\n"
 
     # Create messages for LLM call
+    if decision_context:
+        interruption_prompt += (
+            "\nKnown user facts and listener instructions:\n" + decision_context
+        )
     decision_messages = [UserMessage(role="user", content=interruption_prompt)]
 
     try:
@@ -688,6 +693,7 @@ def user_backchannel_policy(
     state: UserStreamingState,
     integration_ticks: int = 1,
     decision_model: Optional[str] = None,
+    decision_context: Optional[str] = None,
 ) -> ListenerReactionDecision:
     """
     Decide whether the user should backchannel while the agent is speaking.
@@ -727,6 +733,10 @@ def user_backchannel_policy(
     )
 
     # Create messages for LLM call
+    if decision_context:
+        decision_prompt += (
+            "\nKnown user facts and listener instructions:\n" + decision_context
+        )
     decision_messages = [UserMessage(role="user", content=decision_prompt)]
 
     try:
@@ -1177,6 +1187,10 @@ Follow this topic plan during the conversation:
         # Check contains_speech flag - defaults to True for backward compatibility if not set
         return chunk.contains_speech if chunk.contains_speech is not None else True
 
+    def _listener_context(self, state):
+        """Provide optional known facts to listener decisions; default is unchanged."""
+        return None
+
     def _next_turn_taking_action(
         self, state: UserAudioStreamingState
     ) -> TurnTakingAction:
@@ -1198,6 +1212,7 @@ Follow this topic plan during the conversation:
                     s,
                     integration_ticks=integration_ticks,
                     decision_model=self.decision_model,
+                    decision_context=self._listener_context(s),
                 )
 
         # Backchannel callback is tied to the use_llm_backchannel config
@@ -1210,6 +1225,7 @@ Follow this topic plan during the conversation:
                     s,
                     integration_ticks=integration_ticks,
                     decision_model=self.decision_model,
+                    decision_context=self._listener_context(s),
                 )
 
         action, info = basic_turn_taking_policy(

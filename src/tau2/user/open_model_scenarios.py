@@ -6,6 +6,7 @@ from copy import deepcopy
 import numpy as np
 
 from tau2.config import (
+    OPEN_MODEL_DEMO_ACTIVITY_FRAME_MS,
     OPEN_MODEL_DEMO_ASR_REFRESH_SECONDS,
     OPEN_MODEL_DEMO_ASR_WINDOW_SECONDS,
     OPEN_MODEL_DEMO_TRIGGER_SECONDS,
@@ -15,7 +16,9 @@ from tau2.data_model.message import SystemMessage, TurnTakingAction
 from tau2.data_model.voice import TranscriptionConfig
 from tau2.user.user_simulator_streaming import VoiceStreamingUserSimulator
 from tau2.voice.transcription.transcribe import transcribe_audio
+from tau2.voice.utils.audio_activity import active_pcm16_frames
 from tau2.voice.utils.audio_preprocessing import convert_to_pcm16, resample_audio
+from tau2.voice.utils.incremental_transcript import IncrementalTranscript
 
 SCENARIOS = {
     "long_conversation": """Have a sustained, natural conversation to plan a two-day Beijing trip with your mother. Your budget is 600 yuan per person per day excluding the hotel. Your mother gets tired on stairs, you arrive on Friday evening, and you enjoy food and history. Reveal these facts gradually as relevant, ask follow-up questions, compare alternatives, and negotiate a useful plan over at least eight substantive user turns. If the assistant contradicts your known constraints or makes a mistake, you may interrupt to correct that specific mistake after hearing it. Acknowledge substantive completed ideas at natural semantic boundaries without taking the floor unnecessarily. During one suitable turn, describe your family preferences and previous travel experience at length (roughly 60-90 words), giving the model opportunities to acknowledge you. Choose your actual words and next topic dynamically from what you have heard. Do not invent assistant responses or assume it followed a correction. Do not end the conversation early just because one question was answered.""",
@@ -51,7 +54,8 @@ class OpenModelScenarioUser(VoiceStreamingUserSimulator):
         self._followed_up = False
         self._audible_model_seconds = 0.0
         self._last_model_active = False
-        self._previous_asr_words = []
+        self._incremental_asr = IncrementalTranscript()
+        self._substantive_turns = 0
 
     def get_init_state(self, message_history=None):
         """Reset scenario and ASR state for an independent conversation."""
@@ -63,7 +67,8 @@ class OpenModelScenarioUser(VoiceStreamingUserSimulator):
         self._followed_up = False
         self._audible_model_seconds = 0.0
         self._last_model_active = False
-        self._previous_asr_words = []
+        self._incremental_asr = IncrementalTranscript()
+        self._substantive_turns = 0
         return super().get_init_state(message_history)
 
     def get_next_chunk(self, state, participant_chunk, tool_results=None):
@@ -86,11 +91,12 @@ class OpenModelScenarioUser(VoiceStreamingUserSimulator):
                         8000,
                     )
                     samples = np.frombuffer(pcm.data, dtype="<i2").astype(float)
-                    frames = samples[: len(samples) // 160 * 160].reshape(-1, 160)
-                    active = np.sqrt(np.mean(frames * frames, axis=1)) > 128
+                    active = active_pcm16_frames(samples)
                     self._last_model_active = bool(active.any())
                     incoming.contains_speech = self._last_model_active
-                    self._audible_model_seconds += float(active.sum()) * 0.02
+                    self._audible_model_seconds += (
+                        float(active.sum()) * OPEN_MODEL_DEMO_ACTIVITY_FRAME_MS / 1000
+                    )
                 self._heard.extend(audio)
                 seconds = len(audio) / incoming.audio_format.bytes_per_second
                 self._heard_seconds += seconds
@@ -122,21 +128,9 @@ class OpenModelScenarioUser(VoiceStreamingUserSimulator):
                     if transcript:
                         delivered_text = transcript
                         if self.scenario == "long_conversation":
-                            words = transcript.split()
-                            old = self._previous_asr_words
-                            common = 0
-                            while (
-                                common < min(len(old), len(words))
-                                and old[common] == words[common]
-                            ):
-                                common += 1
-                            if common == 0:
-                                for size in range(min(len(old), len(words)), 0, -1):
-                                    if old[-size:] == words[:size]:
-                                        common = size
-                                        break
-                            delivered_text = " ".join(words[common:])
-                            self._previous_asr_words = words
+                            delivered_text = self._incremental_asr.update(
+                                transcript, final=not speech
+                            )
                         if delivered_text:
                             incoming.content = delivered_text
                     self.asr_events.append(
@@ -160,15 +154,32 @@ class OpenModelScenarioUser(VoiceStreamingUserSimulator):
                 SystemMessage(
                     role="system",
                     content=(
-                        f"This is substantive user turn {state.user_utterance_count + 1}. "
-                        "Continue exploring the trip plan naturally. Before eight substantive "
+                        f"Generated substantive user turns: {self._substantive_turns}. "
+                        "Continue exploring the trip plan naturally. Until eight generated substantive "
                         "turns, do not emit a stop marker; ask a relevant follow-up, provide "
                         "new preferences, or correct an actually heard mistake. Use only "
                         "the assistant audio already transcribed, not imagined responses."
                     ),
                 )
             )
-        return super()._generate_full_duplex_voice_message(message, state)
+            state.system_messages.append(
+                SystemMessage(role="system", content=self._listener_context(state))
+            )
+        result = super()._generate_full_duplex_voice_message(message, state)
+        if self.scenario == "long_conversation" and result[0].contains_speech:
+            self._substantive_turns += 1
+        return result
+
+    def _listener_context(self, state):
+        if self.scenario != "long_conversation":
+            return super()._listener_context(state)
+        snapshot = next((e for e in reversed(self.asr_events) if e["transcript"]), None)
+        return (
+            SCENARIOS[self.scenario]
+            + "\nReact only to actually heard mistakes or completed semantic units. "
+            + "Do not interrupt simply because enough words have been spoken. "
+            + f"\nLatest authoritative heard ASR snapshot: {snapshot}"
+        )
 
     def _next_turn_taking_action(self, state):
         if self.scenario == "long_conversation":
@@ -195,6 +206,9 @@ class OpenModelScenarioUser(VoiceStreamingUserSimulator):
                         "kind": action.action,
                         "intent": action.info,
                         "heard_model_active_seconds": self._audible_model_seconds,
+                        "heard_snapshot": self.asr_events[-1]
+                        if self.asr_events
+                        else None,
                     }
                 )
                 if action.action == "generate_message":

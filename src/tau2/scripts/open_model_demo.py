@@ -15,10 +15,17 @@ from pathlib import Path
 
 import numpy as np
 
-from tau2.config import DEFAULT_SEED, OPEN_MODEL_DEMO_SECONDS, OPEN_MODEL_DEMO_USER_LLM
+from tau2.config import (
+    DEFAULT_SEED,
+    OPEN_MODEL_DEMO_ACTIVITY_FRAME_MS,
+    OPEN_MODEL_DEMO_ACTIVITY_RMS,
+    OPEN_MODEL_DEMO_SECONDS,
+    OPEN_MODEL_DEMO_USER_LLM,
+)
 from tau2.data_model.audio import AudioData
 from tau2.data_model.simulation import AudioNativeConfig, OpenModelConfig
 from tau2.user.open_model_scenarios import SCENARIOS, OpenModelScenarioUser
+from tau2.voice.utils.audio_activity import active_pcm16_frames
 from tau2.voice.utils.audio_preprocessing import convert_to_pcm16, resample_audio
 
 
@@ -33,12 +40,6 @@ def _track(message, samples):
     if audio.format.channels != 1 or len(values) > samples:
         raise ValueError("Demo participant output exceeds one mono simulation tick")
     return raw, np.pad(values, (0, samples - len(values)))
-
-
-def _active_frames(values):
-    # A declared, simple 20ms energy detector; not a semantic speech classifier.
-    frames = values.astype(float).reshape(-1, 160)
-    return np.sqrt(np.mean(frames * frames, axis=1)) > 128
 
 
 def export_demo(
@@ -63,8 +64,10 @@ def export_demo(
     for index, tick in enumerate(ticks):
         uraw, u = _track(tick.user_chunk, samples)
         araw, a = _track(tick.agent_chunk, samples)
-        ua, aa = _active_frames(u), _active_frames(a)
-        overlap = float(np.count_nonzero(ua & aa) * 0.02)
+        ua, aa = active_pcm16_frames(u), active_pcm16_frames(a)
+        overlap = float(
+            np.count_nonzero(ua & aa) * OPEN_MODEL_DEMO_ACTIVITY_FRAME_MS / 1000
+        )
         overlap_seconds += overlap
         raw_result = (tick.agent_chunk.raw_data or {}) if tick.agent_chunk else {}
         row = {
@@ -94,8 +97,12 @@ def export_demo(
             if tick.user_chunk
             else False,
             "agent_audio_bytes": len(araw),
-            "user_active_seconds": float(np.count_nonzero(ua) * 0.02),
-            "agent_active_seconds": float(np.count_nonzero(aa) * 0.02),
+            "user_active_seconds": float(
+                np.count_nonzero(ua) * OPEN_MODEL_DEMO_ACTIVITY_FRAME_MS / 1000
+            ),
+            "agent_active_seconds": float(
+                np.count_nonzero(aa) * OPEN_MODEL_DEMO_ACTIVITY_FRAME_MS / 1000
+            ),
             "overlap_seconds": overlap,
             "user_intended_text": tick.user_chunk.content if tick.user_chunk else None,
             "model_text_metadata": tick.agent_chunk.content
@@ -162,7 +169,10 @@ def export_demo(
         "observed_overlap_seconds": overlap_seconds,
         "semantic_outcome": "not_assessed",
         "semantic_note": "Listen to the separate channels to assess correction handling or backchannels. Audio overlap alone does not establish either behavior.",
-        "energy_detector": {"frame_ms": 20, "pcm16_rms_threshold": 128},
+        "energy_detector": {
+            "frame_ms": OPEN_MODEL_DEMO_ACTIVITY_FRAME_MS,
+            "pcm16_rms_threshold": OPEN_MODEL_DEMO_ACTIVITY_RMS,
+        },
         "asr_events": getattr(user, "asr_events", []),
         "user_timing_ticks": {
             name: getattr(user, name, None)
