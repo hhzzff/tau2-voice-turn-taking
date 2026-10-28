@@ -125,6 +125,7 @@ class OpenModelAdapter(DiscreteTimeAdapter):
         )
         if audio:
             result.agent_audio_chunks.append((audio, item))
+        event_start = len(result.events)
         result.events.append(
             {
                 "type": "native_generation",
@@ -134,6 +135,7 @@ class OpenModelAdapter(DiscreteTimeAdapter):
             }
         )
         result.events.extend(event.get("events", []))
+        result.serializable_events.extend(result.events[event_start:])
 
     async def _flush_pending_tool_results(self):
         if self._pending_tool_results:

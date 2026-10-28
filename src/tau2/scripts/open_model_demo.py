@@ -19,6 +19,7 @@ from tau2.config import (
     DEFAULT_SEED,
     OPEN_MODEL_DEMO_ACTIVITY_FRAME_MS,
     OPEN_MODEL_DEMO_ACTIVITY_RMS,
+    OPEN_MODEL_DEMO_LISTENER_CHECK_SECONDS,
     OPEN_MODEL_DEMO_SECONDS,
     OPEN_MODEL_DEMO_USER_LLM,
 )
@@ -76,7 +77,9 @@ def export_demo(
             "sim_end_seconds": (index + 1) * config.tick_duration_seconds,
             "computation_seconds": tick.wall_clock_duration_seconds,
             "initialization_interval": index == 0,
-            "native_events": raw_result.get("events", []),
+            "native_events": raw_result.get(
+                "serializable_events", raw_result.get("events", [])
+            ),
             "adapter_computation_seconds": raw_result.get(
                 "computation_duration_seconds"
             ),
@@ -345,7 +348,13 @@ def build_demo_user(config, scenario):
         yield_threshold_when_interrupting=max(
             2, timing.yield_threshold_when_interrupting_ticks
         ),
-        interruption_check_interval=timing.interruption_check_interval_ticks,
+        interruption_check_interval=(
+            math.ceil(
+                OPEN_MODEL_DEMO_LISTENER_CHECK_SECONDS / config.tick_duration_seconds
+            )
+            if scenario == "long_conversation"
+            else timing.interruption_check_interval_ticks
+        ),
         integration_ticks=timing.integration_ticks,
     )
     if scenario == "long_conversation":

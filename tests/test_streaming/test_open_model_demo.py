@@ -526,3 +526,35 @@ def test_long_asr_commits_stable_words_without_replaying_revisions():
         == "and I travel tomorrow"
     )
     assert stream.update("name is ALICE and I travel tomorrow.", final=True) == ""
+
+
+@pytest.mark.parametrize("call_name", ["interruption_decision", "backchannel_decision"])
+def test_listener_calls_constrain_luna_to_decisions(monkeypatch, call_name):
+    import json
+    from pathlib import Path
+    from types import SimpleNamespace
+
+    from tau2.data_model.message import UserMessage
+    from tau2.utils.llm_utils import generate
+
+    def run(command, **kwargs):
+        schema = json.loads(
+            Path(command[command.index("--output-schema") + 1]).read_text()
+        )
+        assert schema["properties"]["utterance"]["enum"] == ["YES", "NO"]
+        Path(command[command.index("--output-last-message") + 1]).write_text(
+            '{"utterance":"YES"}'
+        )
+        return SimpleNamespace(returncode=0, stdout="")
+
+    monkeypatch.setattr("subprocess.run", run)
+    result = generate(
+        "codex/gpt-5.6-luna",
+        [
+            UserMessage(
+                role="user", content="Decide whether to acknowledge this complete idea."
+            )
+        ],
+        call_name=call_name,
+    )
+    assert result.content == "YES"

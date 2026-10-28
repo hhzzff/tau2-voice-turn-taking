@@ -38,6 +38,7 @@ def test_buffered_output_still_consumes_each_input_and_reconnect_resets():
     assert len(first.get_played_agent_audio()) == 8000
     assert len(second.agent_audio_data) == 8000
     assert second.events[-1]["input_count"] == 2
+    assert second.model_dump()["serializable_events"][-1] == {"input_count": 2}
     adapter.disconnect()
     adapter.connect("fresh", [], None)
     assert adapter.run_tick(b"\xff" * 8000).events[-1]["input_count"] == 1

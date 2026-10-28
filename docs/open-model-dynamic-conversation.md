@@ -13,7 +13,7 @@ should negotiate details over at least eight substantive turns and describe
 preferences at length in a suitable turn. This is a generation instruction,
 not a guarantee that any model will sustain eight successful exchanges.
 
-Listener decisions use the same configured user LLM. Corrections and
+Listener decisions use the same configured user LLM with strict YES/NO output constraints. Natural user utterances remain free-form. The long demo checks listener reactions at a four-second cadence through the original policy. Corrections and
 backchannels require actual audible model audio, measured in 20ms frames, with
 at least one second of accumulated active audio since the user's last substantive
 turn. The original policy then decides whether to act based on heard content.
@@ -45,3 +45,5 @@ predicts a listening transition while output is pending and verifies that
 unplayed output is cancelled. This establishes the implementation path, not the
 real checkpoint's ability or willingness to interrupt. Real-weight controlled
 replay is needed to assess the effect on behavior.
+
+Native JSON-safe diagnostic events now survive trajectory serialization. Earlier trajectories omitted the raw `TickResult.events` field by design; missing events in those files are not evidence that no native transition occurred. The controlled replay stores native worker responses directly.

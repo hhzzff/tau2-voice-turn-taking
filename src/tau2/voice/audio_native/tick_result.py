@@ -105,6 +105,11 @@ class TickResult(BaseModel):
         exclude=True,  # Exclude from serialization (may contain bytes)
     )
 
+    serializable_events: List[dict] = Field(
+        default_factory=list,
+        description="JSON-safe provider diagnostics retained in trajectories",
+    )
+
     # --- VAD events (provider-agnostic) ---
     # Normalized VAD event types detected this tick:
     #   - "speech_started": User started speaking (OpenAI/xAI/Nova)

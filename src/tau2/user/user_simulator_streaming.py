@@ -858,6 +858,7 @@ class VoiceStreamingUserSimulator(
             voice_settings: Voice settings for the user.
             persona_config: Runtime persona configuration for user behavior (e.g., verbosity level, interrupt tendency)
             audio_taps_dir: If set, record audio at each pipeline stage to WAV files in this directory.
+            decision_model: Optional model for semantic listener decisions; defaults to the existing decision model.
         """
         # Initialize mixin and base class
         super().__init__(

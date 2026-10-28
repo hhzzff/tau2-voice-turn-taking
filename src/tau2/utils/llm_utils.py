@@ -380,7 +380,12 @@ def generate(
     if model == OPEN_MODEL_DEMO_USER_LLM:
         from tau2.utils.codex_llm import generate_codex
 
-        return generate_codex(messages, tools=tools, timeout=kwargs.get("timeout", 180))
+        return generate_codex(
+            messages,
+            tools=tools,
+            timeout=kwargs.get("timeout", 180),
+            call_name=call_name,
+        )
     if kwargs.get("num_retries") is None:
         kwargs["num_retries"] = DEFAULT_MAX_RETRIES
 
