@@ -172,6 +172,10 @@ class NativeSession:
         self.cached_length = 0
         self.past = None
         self.tick = 0
+        self.echo_ratio = float(settings.get("echo_ratio", 1.0))
+        if not 0 <= self.echo_ratio <= 1:
+            raise ValueError("SALMONN echo_ratio must be between zero and one")
+        self.played_audio = np.zeros(1280, dtype=np.float32)
         self.speaking = False
         self.end_text = False
         self.output_ids = []
@@ -188,6 +192,8 @@ class NativeSession:
             "tick_ms": 80,
             "frontend_startup_ticks": 1,
             "playback_lead_seconds": self.playback.lead_seconds,
+            "echo_ratio": self.echo_ratio,
+            "self_audio_source": "previous actually played 80ms block",
             "greedy": True,
             "seed": seed,
         }
@@ -253,6 +259,9 @@ class NativeSession:
             raise ValueError("SALMONN step requires 1280 PCM16 samples (80 ms)")
         torch, np = self.torch, self.np
         audio = np.frombuffer(pcm16, dtype="<i2").astype(np.float32) / 32768.0
+        # The incoming user block and previous playback share the same clock.
+        # Never feed synthesized-but-unplayed future audio back to the model.
+        audio = audio + self.played_audio * self.echo_ratio
         with torch.inference_mode():
             features, fbank_event = self.fbank.append_waveform(
                 torch.from_numpy(audio).unsqueeze(0)
@@ -266,6 +275,10 @@ class NativeSession:
                     "event": "audio_ingest",
                     "tick": self.tick,
                     "input_samples_total": self.fbank.total_waveform_samples,
+                    "self_audio_nonzero_samples": int(
+                        np.count_nonzero(self.played_audio)
+                    ),
+                    "echo_ratio": self.echo_ratio,
                     "speech_tokens_total": self.queue.total_appended,
                     "fbank": fbank_event,
                     "speech": speech_event,
@@ -360,6 +373,9 @@ class NativeSession:
                 .numpy()
                 .astype("<i2")
                 .tobytes()
+            )
+            self.played_audio = (
+                np.frombuffer(encoded, dtype="<i2").astype(np.float32) / 32768.0
             )
             events.append({"event": "playback", **self.playback.metadata})
             self.tick += 1

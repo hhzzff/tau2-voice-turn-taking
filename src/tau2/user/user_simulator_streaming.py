@@ -489,6 +489,7 @@ class UserAudioStreamingState(
 def user_interruption_policy(
     state: UserStreamingState,
     integration_ticks: int = 1,
+    decision_model: Optional[str] = None,
 ) -> ListenerReactionDecision:
     """
     Decide whether the user should interrupt the agent while they're speaking.
@@ -645,7 +646,7 @@ just to satisfy the experiment condition.
 
     try:
         response = generate(
-            model=VOICE_USER_SIMULATOR_DECISION_MODEL,
+            model=decision_model or VOICE_USER_SIMULATOR_DECISION_MODEL,
             messages=decision_messages,
             call_name="interruption_decision",
         )
@@ -686,6 +687,7 @@ just to satisfy the experiment condition.
 def user_backchannel_policy(
     state: UserStreamingState,
     integration_ticks: int = 1,
+    decision_model: Optional[str] = None,
 ) -> ListenerReactionDecision:
     """
     Decide whether the user should backchannel while the agent is speaking.
@@ -729,7 +731,7 @@ def user_backchannel_policy(
 
     try:
         response = generate(
-            model=VOICE_USER_SIMULATOR_DECISION_MODEL,
+            model=decision_model or VOICE_USER_SIMULATOR_DECISION_MODEL,
             messages=decision_messages,
             call_name="backchannel_decision",
         )
@@ -816,6 +818,7 @@ class VoiceStreamingUserSimulator(
         tick_duration_seconds: float = 0.05,
         persona_config: Optional[PersonaConfig] = None,
         audio_taps_dir: Optional["Path"] = None,
+        decision_model: Optional[str] = None,
     ):
         """
         Initialize the streaming user simulator.
@@ -868,6 +871,7 @@ class VoiceStreamingUserSimulator(
         self.backchannel_max_threshold = backchannel_max_threshold
         self.backchannel_poisson_rate = backchannel_poisson_rate
         self.use_llm_backchannel = use_llm_backchannel
+        self.decision_model = decision_model
         self.interruption_check_interval = interruption_check_interval
 
         # Default yield_threshold_when_interrupting to yield_threshold_when_interrupted if not set
@@ -1190,7 +1194,11 @@ Follow this topic plan during the conversation:
             def should_interrupt_callback(
                 s: UserStreamingState,
             ) -> ListenerReactionDecision:
-                return user_interruption_policy(s, integration_ticks=integration_ticks)
+                return user_interruption_policy(
+                    s,
+                    integration_ticks=integration_ticks,
+                    decision_model=self.decision_model,
+                )
 
         # Backchannel callback is tied to the use_llm_backchannel config
         if self.use_llm_backchannel:
@@ -1198,7 +1206,11 @@ Follow this topic plan during the conversation:
             def should_backchannel_callback(
                 s: UserStreamingState,
             ) -> ListenerReactionDecision:
-                return user_backchannel_policy(s, integration_ticks=integration_ticks)
+                return user_backchannel_policy(
+                    s,
+                    integration_ticks=integration_ticks,
+                    decision_model=self.decision_model,
+                )
 
         action, info = basic_turn_taking_policy(
             state,

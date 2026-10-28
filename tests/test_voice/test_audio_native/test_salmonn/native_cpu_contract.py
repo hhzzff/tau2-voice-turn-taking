@@ -150,7 +150,29 @@ with (
             pass
         else:
             raise AssertionError("accepted a short tick")
+        received = []
+        append = worker.session.fbank.append_waveform
+
+        def capture(waveform):
+            received.append(waveform.clone())
+            return append(waveform)
+
+        worker.session.fbank.append_waveform = capture
         outputs = [worker.step(bytes(2560)) for _ in range(16)]
+        for index in range(1, len(outputs)):
+            previous = base64.b64decode(outputs[index - 1]["audio_pcm16_b64"])
+            expected = (
+                (
+                    torch.frombuffer(bytearray(previous), dtype=torch.int16).float()
+                    / 32768.0
+                )
+                if previous
+                else torch.zeros(1280)
+            )
+            assert torch.allclose(received[index].squeeze(), expected), (
+                "SALMONN must hear the previous actually played block, not silence "
+                "or queued future output"
+            )
         assert outputs[0]["audio_pcm16_b64"] == ""
         assert outputs[0]["events"][-1]["event"] == "frontend_startup"
         assert [item["events"][0]["speech_tokens_total"] for item in outputs] == list(

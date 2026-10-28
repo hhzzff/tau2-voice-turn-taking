@@ -126,7 +126,10 @@ def export_demo(
             if row["user_final_chunk"]:
                 break
         overlap = sum(row["overlap_seconds"] for row in extent)
-        if scenario in {"correction", "user_backchannel"}:
+        if (
+            scenario in {"correction", "user_backchannel"}
+            or event.get("kind") == "backchannel"
+        ):
             observed = overlap > 0
         elif scenario == "model_backchannel":
             observed = (
@@ -172,7 +175,11 @@ def export_demo(
                 "integration_ticks",
             ]
         },
-        "user_policy": "deterministic scenario actions on VoiceStreamingUserSimulator",
+        "user_policy": (
+            "original VoiceStreamingUserSimulator turn-taking with LLM listener reactions"
+            if scenario == "long_conversation"
+            else "deterministic scenario actions on VoiceStreamingUserSimulator"
+        ),
         "ticks": len(rows),
         "sim_duration_seconds": len(rows) * config.tick_duration_seconds,
         "startup_seconds": startup_seconds,
@@ -318,7 +325,8 @@ def build_demo_user(config, scenario):
         chunk_size=timing.user_chunk_size,
         voice_settings=voice,
         tick_duration_seconds=config.tick_duration_seconds,
-        use_llm_backchannel=False,
+        use_llm_backchannel=scenario == "long_conversation",
+        decision_model=OPEN_MODEL_DEMO_USER_LLM,
         wait_to_respond_threshold_other=timing.wait_to_respond_threshold_other_ticks,
         wait_to_respond_threshold_self=timing.wait_to_respond_threshold_self_ticks,
         yield_threshold_when_interrupted=max(
@@ -330,6 +338,8 @@ def build_demo_user(config, scenario):
         interruption_check_interval=timing.interruption_check_interval_ticks,
         integration_ticks=timing.integration_ticks,
     )
+    if scenario == "long_conversation":
+        user.enable_user_initiated_interruption = True
     return user
 
 
