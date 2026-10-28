@@ -18,7 +18,10 @@ class IncrementalTranscript(BaseModel):
         Revisions before the committed boundary stay in the separately recorded
         full ASR snapshot. They are not replayed as fresh assistant speech.
         """
-        words = text.split()
+        # Chinese ASR commonly omits spaces; treating a whole window as one
+        # word prevents any stable prefix from being committed while speaking.
+        spans = list(re.finditer(r"[\u3400-\u9fff]|[^\s\u3400-\u9fff]+", text))
+        words = [span.group() for span in spans]
 
         def normalize(values):
             return [re.sub(r"\W+", "", w).casefold() for w in values]
@@ -40,7 +43,11 @@ class IncrementalTranscript(BaseModel):
         stable = max((b.b + b.size for b in blocks if b.size), default=0)
         end = len(words) if final else stable
         end = max(boundary, end)
-        addition = " ".join(words[boundary:end])
+        addition = (
+            text[spans[boundary].start() : spans[end - 1].end()]
+            if end > boundary
+            else ""
+        )
         self.previous = words
         self.committed = end
         return addition

@@ -558,3 +558,13 @@ def test_listener_calls_constrain_luna_to_decisions(monkeypatch, call_name):
         call_name=call_name,
     )
     assert result.content == "YES"
+
+
+def test_long_asr_commits_chinese_without_waiting_for_speech_end():
+    from tau2.voice.utils.incremental_transcript import IncrementalTranscript
+
+    stream = IncrementalTranscript()
+    assert stream.update("我们先游览故宫。") == ""
+    assert stream.update("我们先游览故宫。然后去景山。") == "我们先游览故宫。"
+    assert stream.update("游览故宫。然后去景山。最后吃午饭。") == "然后去景山。"
+    assert stream.update("然后去景山。最后吃午饭。", final=True) == "最后吃午饭。"
