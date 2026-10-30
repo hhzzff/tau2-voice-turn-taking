@@ -164,7 +164,14 @@ def test_demo_exports_previous_handoff_stereo_and_honest_overlap(
 @pytest.mark.parametrize("model", ["minicpm", "salmonn"])
 @pytest.mark.parametrize(
     "scenario",
-    ["qa", "correction", "user_backchannel", "model_backchannel", "long_conversation"],
+    [
+        "qa",
+        "correction",
+        "user_backchannel",
+        "model_backchannel",
+        "long_conversation",
+        "ordered_conversation",
+    ],
 )
 def test_real_user_scenario_uses_only_delivered_asr_and_triggers_backchannel(
     tmp_path, monkeypatch, get_environment, base_task, model, scenario
@@ -236,23 +243,21 @@ def test_real_user_scenario_uses_only_delivered_asr_and_triggers_backchannel(
             return 0
 
         def get_next_chunk(self, state, participant_chunk=None, tool_results=None):
+            silent = (
+                scenario == "qa" and state * config.tick_duration_seconds >= 3
+            ) or (
+                scenario == "ordered_conversation"
+                and any(e.get("phase") == "user_backchannel" for e in user.events)
+            )
             return AssistantMessage(
                 role="assistant",
                 content="UNHEARD FUTURE WORDS",
                 is_audio=False,
                 audio_format=TELEPHONY_AUDIO_FORMAT,
                 audio_content=base64.b64encode(
-                    (
-                        b"\x7f"
-                        if scenario == "qa"
-                        and state * config.tick_duration_seconds >= 3
-                        else b"\x20"
-                    )
-                    * (config.tick_duration_ms * 8)
+                    (b"\x7f" if silent else b"\x20") * (config.tick_duration_ms * 8)
                 ).decode(),
-                contains_speech=not (
-                    scenario == "qa" and state * config.tick_duration_seconds >= 3
-                ),
+                contains_speech=not silent,
             ), state + 1
 
         @staticmethod
@@ -276,13 +281,25 @@ def test_real_user_scenario_uses_only_delivered_asr_and_triggers_backchannel(
         scenario,
         tmp_path,
         steps=int(
-            (30 if scenario == "long_conversation" else 6)
+            (30 if scenario in {"long_conversation", "ordered_conversation"} else 6)
             / config.tick_duration_seconds
         ),
         provenance={"runtime": "controlled-test"},
     )
     assert report["scenario_triggered"]
-    if scenario == "long_conversation":
+    if scenario == "ordered_conversation":
+        phases = [event.get("phase") for event in report["trigger_events"]]
+        assert phases[:4] == [
+            "greeting",
+            "interruption",
+            "user_backchannel",
+            "model_backchannel_opportunity",
+        ]
+        assert report["trigger_events"][0]["tick_index"] == 0
+        assert orchestrator.get_ticks()[0].user_chunk.contains_speech
+        assert report["trigger_events"][1]["heard_model_active_seconds"] >= 1
+        assert any("English only" in prompt for prompt in prompts)
+    elif scenario == "long_conversation":
         assert "original VoiceStreamingUserSimulator" in report["user_policy"]
         assert (
             len(

@@ -188,8 +188,25 @@ def export_demo(
                 "integration_ticks",
             ]
         },
+        "protocol": {
+            "language": "English",
+            "stage_order": [
+                "greeting",
+                "interruption",
+                "user_backchannel",
+                "model_backchannel_opportunity",
+                "dynamic_followup",
+            ],
+            "requested_stages": list(
+                dict.fromkeys(e.get("phase") for e in events if e.get("phase"))
+            ),
+        }
+        if scenario == "ordered_conversation"
+        else None,
         "user_policy": (
-            "original VoiceStreamingUserSimulator turn-taking with LLM listener reactions"
+            "ordered shared stages on VoiceStreamingUserSimulator; original policy for follow-ups"
+            if scenario == "ordered_conversation"
+            else "original VoiceStreamingUserSimulator turn-taking with LLM listener reactions"
             if scenario == "long_conversation"
             else "deterministic scenario actions on VoiceStreamingUserSimulator"
         ),
@@ -338,7 +355,7 @@ def build_demo_user(config, scenario):
         chunk_size=timing.user_chunk_size,
         voice_settings=voice,
         tick_duration_seconds=config.tick_duration_seconds,
-        use_llm_backchannel=scenario == "long_conversation",
+        use_llm_backchannel=scenario in {"long_conversation", "ordered_conversation"},
         decision_model=OPEN_MODEL_DEMO_USER_LLM,
         wait_to_respond_threshold_other=timing.wait_to_respond_threshold_other_ticks,
         wait_to_respond_threshold_self=timing.wait_to_respond_threshold_self_ticks,
@@ -357,7 +374,7 @@ def build_demo_user(config, scenario):
         ),
         integration_ticks=timing.integration_ticks,
     )
-    if scenario == "long_conversation":
+    if scenario in {"long_conversation", "ordered_conversation"}:
         user.enable_user_initiated_interruption = True
     return user
 
@@ -404,8 +421,10 @@ def main(argv=None):
             "Do not ask for names, IDs, account numbers or spelling. "
             "Ask one relevant preference question at a time, give brief useful suggestions "
             "in two or three sentences, and adapt to the constraints the caller tells you. "
-            "Listen to corrections and allow the caller time to speak."
-            if args.scenario == "long_conversation"
+            "Listen to corrections and allow the caller time to speak. "
+            "Speak English only throughout. Wait for the caller greeting before "
+            "giving an itinerary. Keep every response brief and allow interruptions."
+            if args.scenario in {"long_conversation", "ordered_conversation"}
             else "Have a helpful natural spoken conversation. No tools are available."
         ),
         open_model_config=config,
