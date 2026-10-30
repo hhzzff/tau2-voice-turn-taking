@@ -87,7 +87,7 @@ def run_and_summarize() -> int:
     passed = total - failures - skipped - errors
 
     lines = []
-    lines.append(f"Provider Suite — {datetime.now():%Y-%m-%d %H:%M %Z}")
+    lines.append(f"Provider Suite — {datetime.now():%Y-%m-%d %H:%M %Z}".rstrip())
     lines.append("")
 
     current = ""
@@ -118,8 +118,8 @@ def run_and_summarize() -> int:
     # Atomic write: write to temp file then rename, so the previous results
     # file remains readable until the new one is complete.
     tmp = RESULTS_FILE.with_suffix(".tmp")
-    tmp.write_text(output + "\n")
-    tmp.rename(RESULTS_FILE)
+    tmp.write_text(output + "\n", encoding="utf-8")
+    tmp.replace(RESULTS_FILE)
 
     return 1 if failures or errors else 0
 

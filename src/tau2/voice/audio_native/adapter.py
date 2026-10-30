@@ -385,17 +385,29 @@ def create_adapter(
     # --- Construct adapter ---
     adapter: DiscreteTimeAdapter
     if provider == "openai":
-        from tau2.voice.audio_native.openai.discrete_time_adapter import (
-            DiscreteTimeOpenAIAdapter,
-        )
+        if model == "gpt-live-1":
+            from tau2.voice.audio_native.openai.live_discrete_time_adapter import (
+                DiscreteTimeOpenAILiveAdapter,
+            )
 
-        adapter = DiscreteTimeOpenAIAdapter(
-            tick_duration_ms=tick_duration_ms,
-            send_audio_instant=send_audio_instant,
-            model=model,
-            reasoning_effort=reasoning_effort,
-            audio_format=audio_format,
-        )
+            adapter = DiscreteTimeOpenAILiveAdapter(
+                tick_duration_ms=tick_duration_ms,
+                send_audio_instant=send_audio_instant,
+                model=model,
+                audio_format=audio_format,
+            )
+        else:
+            from tau2.voice.audio_native.openai.discrete_time_adapter import (
+                DiscreteTimeOpenAIAdapter,
+            )
+
+            adapter = DiscreteTimeOpenAIAdapter(
+                tick_duration_ms=tick_duration_ms,
+                send_audio_instant=send_audio_instant,
+                model=model,
+                reasoning_effort=reasoning_effort,
+                audio_format=audio_format,
+            )
     elif provider == "gemini":
         from tau2.voice.audio_native.gemini.discrete_time_adapter import (
             DiscreteTimeGeminiAdapter,
