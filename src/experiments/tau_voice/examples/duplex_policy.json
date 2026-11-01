@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "selected_events": [
+    "interruption.follow_up",
+    "rejection.talking_to_others",
+    "proactive.clarification"
+  ],
+  "seed": 42,
+  "language": "Chinese",
+  "user_model": "gpt-6.1-terra",
+  "topic": "",
+  "user_context": "",
+  "decision_interval_seconds": 1.0
+}

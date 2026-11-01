@@ -13,6 +13,7 @@ from tau2.data_model.message import (
 )
 from tau2.data_model.simulation import SimulationRun
 from tau2.orchestrator.modes import CommunicationMode
+from tau2.voice.utils.audio_activity import is_audible_chunk
 from tau2.voice.utils.audio_io import load_wav_file, save_wav_file
 from tau2.voice.utils.audio_preprocessing import convert_to_stereo, merge_audio_datas
 
@@ -31,7 +32,7 @@ class SpeechSegment:
     start_tick: int
     end_tick: int  # inclusive
     text: str
-    role: str  # "user" or "assistant"
+    role: str  # "user", "assistant", or "third_party"
 
 
 def _collect_speech_segments(
@@ -39,77 +40,73 @@ def _collect_speech_segments(
     role: str,
 ) -> list[SpeechSegment]:
     """
-    Collect continuous speech segments for a given role.
+    Collect speech labels without using audio energy to filter transcript text.
 
-    Groups consecutive ticks where contains_speech=True into segments,
-    concatenating their text content.
+    Proportional transcripts can place words on quiet ticks. Group by utterance
+    identity and retain all emitted text, while trimming label times to audible
+    audio. Only text actually emitted in ticks is used, never the full script
+    (which could include an interrupted, unplayed remainder). Without utterance
+    IDs, merge short pauses and retain the text between the audible bounds.
 
     Args:
         ticks: List of simulation ticks.
-        role: Either "user" or "assistant".
+        role: "user", "assistant", or "third_party" (background input speech).
 
     Returns:
         List of SpeechSegment objects with combined text.
     """
     segments: list[SpeechSegment] = []
-    current_segment: Optional[SpeechSegment] = None
+    run: list[tuple[int, str, bool]] = []
+    run_ids: tuple[str, ...] = ()
+    max_silent_gap_ticks = 4
 
-    for tick in ticks:
-        # Get the chunk for this role
-        if role == "user":
-            chunk = tick.user_chunk
-        else:  # assistant
-            chunk = tick.agent_chunk
-
-        # Check if this tick has speech
-        has_speech = chunk is not None and getattr(chunk, "contains_speech", False)
-
-        if has_speech:
-            # Get text content - prefer proportional_transcript from raw_data for agent
-            text = ""
-            if chunk.content:
-                text = chunk.content
-            elif role == "assistant" and chunk.raw_data:
-                # Agent may have proportional_transcript in raw_data
-                if isinstance(chunk.raw_data, dict):
-                    text = chunk.raw_data.get("proportional_transcript", "")
-
-            if current_segment is None:
-                # Start new segment
-                current_segment = SpeechSegment(
-                    start_tick=tick.tick_id,
-                    end_tick=tick.tick_id,
-                    text=text,
+    def flush_run():
+        audible = [i for i, (_, _, active) in enumerate(run) if active]
+        if not audible:
+            return
+        bounds = []
+        first = last = audible[0]
+        for index in audible[1:]:
+            if not run_ids and run[index][0] - run[last][0] > max_silent_gap_ticks + 1:
+                bounds.append((first, last))
+                first = index
+            last = index
+        bounds.append((first, last))
+        for first, last in bounds:
+            text_rows = run if run_ids else run[first : last + 1]
+            segments.append(
+                SpeechSegment(
+                    start_tick=run[first][0],
+                    end_tick=run[last][0],
+                    text="".join(text for _, text, _ in text_rows),
                     role=role,
                 )
-            else:
-                # Check if this is consecutive (within 1 tick gap tolerance)
-                if tick.tick_id <= current_segment.end_tick + 1:
-                    # Extend current segment
-                    current_segment.end_tick = tick.tick_id
-                    if text:
-                        if current_segment.text:
-                            current_segment.text += text
-                        else:
-                            current_segment.text = text
-                else:
-                    # Gap too large, finalize current and start new
-                    segments.append(current_segment)
-                    current_segment = SpeechSegment(
-                        start_tick=tick.tick_id,
-                        end_tick=tick.tick_id,
-                        text=text,
-                        role=role,
-                    )
-        else:
-            # No speech - finalize current segment if any
-            if current_segment is not None:
-                segments.append(current_segment)
-                current_segment = None
+            )
 
-    # Don't forget the last segment
-    if current_segment is not None:
-        segments.append(current_segment)
+    for tick in ticks:
+        chunk = tick.agent_chunk if role == "assistant" else tick.user_chunk
+        source = getattr(chunk, "source", None)
+        matches_role = chunk is not None
+        if role == "third_party":
+            matches_role = matches_role and source == "background"
+        elif role == "user":
+            matches_role = matches_role and source not in {"background", "noise"}
+        if chunk is not None and chunk.content == "###STOP###":
+            matches_role = False
+        ids = tuple(chunk.utterance_ids or []) if chunk is not None else ()
+        if run and (
+            not matches_role or ids != run_ids or tick.tick_id != run[-1][0] + 1
+        ):
+            flush_run()
+            run = []
+        if not matches_role:
+            continue
+        run_ids = ids
+        text = chunk.content or ""
+        if not text and role == "assistant" and isinstance(chunk.raw_data, dict):
+            text = chunk.raw_data.get("proportional_transcript", "") or ""
+        run.append((tick.tick_id, text, is_audible_chunk(chunk)))
+    flush_run()
 
     return segments
 
@@ -179,10 +176,10 @@ def generate_audacity_labels(
     output_dir: Path,
 ) -> dict[str, Path]:
     """
-    Generate Audacity label track files for user and assistant speech.
+    Generate separate Audacity labels for primary user, assistant and background.
 
     Creates .txt files in Audacity's label format that can be imported
-    alongside the audio files to annotate speech segments with their text.
+    alongside the audio files to annotate speech segments with their full text.
 
     Audacity label format (tab-separated):
         start_seconds<TAB>end_seconds<TAB>label_text
@@ -194,14 +191,16 @@ def generate_audacity_labels(
 
     Returns:
         Dictionary mapping role to label file path:
-        {"user": Path, "assistant": Path}
+        {"user": Path, "assistant": Path, "third_party": Path} when present.
+        Input audio still includes background speech; labels distinguish sources.
+        Text timing is proportional, not word-level forced alignment.
     """
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     label_files: dict[str, Path] = {}
 
-    for role in ["user", "assistant"]:
+    for role in ["user", "assistant", "third_party"]:
         # Speech labels
         segments = _collect_speech_segments(ticks, role)
 
@@ -214,8 +213,6 @@ def generate_audacity_labels(
                 end_sec = (seg.end_tick + 1) * tick_duration_ms / 1000.0
 
                 label_text = seg.text.replace("\n", " ").replace("\t", " ").strip()
-                if len(label_text) > 200:
-                    label_text = label_text[:197] + "..."
 
                 labels.append(f"{start_sec:.3f}\t{end_sec:.3f}\t{label_text}")
 
@@ -225,6 +222,10 @@ def generate_audacity_labels(
 
             label_files[role] = label_path
             logger.debug(f"Generated {len(segments)} labels for {role}: {label_path}")
+
+        # Background speakers have no framework tool calls.
+        if role == "third_party":
+            continue
 
         # Tool call labels
         tc_segments = _collect_tool_call_segments(ticks, role)

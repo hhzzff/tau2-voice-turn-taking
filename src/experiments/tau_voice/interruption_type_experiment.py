@@ -254,21 +254,18 @@ def _contextual_topic_plan(
     }
 
 
-def _free_conversation_agent_policy(topic_plan_text: str) -> str:
+def _free_conversation_agent_policy(main_topic: str) -> str:
     return f"""
 You are the assistant in a natural voice conversation.
 
-This is a turn-taking and interruption test, not a customer-service benchmark.
-Do not use tools, do not ask for account/order identifiers, and do not try to
-look anything up. Discuss the topic directly from common reasoning and the
-conversation context.
+Discuss the topic directly from common reasoning and the conversation context.
+Do not use tools or ask for account, order, flight, policy, or other private
+record lookups.
 
-Use the topic plan as the conversation anchor:
-{topic_plan_text}
+Conversation topic:
+{main_topic}
 
-When the user interrupts with a related side question, stop your current answer
-promptly, address that question, then naturally return to the main topic. Keep
-responses conversational and substantive, with concrete suggestions and tradeoffs.
+Keep your responses conversational, substantive, and focused on the topic.
 """.strip()
 
 
@@ -723,7 +720,7 @@ def _run_one(args: argparse.Namespace, interruption_type: str, sample_idx: int) 
         env["TAU2_DISABLE_DOMAIN_TOOLS"] = "1"
     if args.topic_source == "discussion" and topic_plan_text:
         env["TAU2_FREE_CONVERSATION_AGENT_POLICY"] = _free_conversation_agent_policy(
-            topic_plan_text
+            topic_plan["main_topic"]
         )
         env["TAU2_FREE_CONVERSATION_USER_INSTRUCTIONS"] = (
             _free_conversation_user_instructions(topic_plan_text)

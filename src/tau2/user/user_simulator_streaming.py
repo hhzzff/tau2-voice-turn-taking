@@ -1530,6 +1530,10 @@ Follow this topic plan during the conversation:
                 full_message.source_effects = noise_chunk.source_effects
                 full_message.turn_taking_action = action
                 return full_message, new_state
+            elif not full_message.has_text_content():
+                logger.warning(
+                    "Skipping empty generated user message and emitting silence"
+                )
             elif self.is_stop(full_message):
                 logger.debug("Generating message: Stop message detected")
                 full_message.turn_taking_action = action
@@ -1787,6 +1791,10 @@ Follow this topic plan during the conversation:
 
         # Check for stop
         if self.is_stop(user_message):
+            return user_message, state
+
+        if not user_message.has_text_content():
+            logger.warning("User LLM returned no text; skipping voice synthesis")
             return user_message, state
 
         # Synthesize voice (without background noise - added per chunk) with timing

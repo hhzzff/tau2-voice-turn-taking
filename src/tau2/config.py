@@ -91,6 +91,10 @@ DEFAULT_TEXT_STREAMING_CONFIG = {
 # ======================================================================
 VOICE_USER_SIMULATOR_VERSION = "v1.0"  # fixed, bump on changes
 VOICE_USER_SIMULATOR_DECISION_MODEL = "gpt-4.1"  # overridable
+DEFAULT_DUPLEX_USER_MODEL = "gpt-6.1-terra"
+# Protect recall answers from later test stimuli; these are simulation seconds.
+DEFAULT_DUPLEX_MEMORY_RESPONSE_TIMEOUT_SECONDS = 120.0
+DEFAULT_DUPLEX_RESPONSE_QUIET_SECONDS = 1.0
 DEFAULT_SPEECH_COMPLEXITY = "regular"  # overridable: "control", "regular"
 
 # ======================================================================
@@ -138,6 +142,10 @@ DEFAULT_AUDIO_NATIVE_MAX_INACTIVE_SECONDS = 40.0  # fixed, stall detection
 DEFAULT_OPENAI_REALTIME_MODEL = "gpt-realtime-1.5"  # overridable
 _LEGACY_OPENAI_REALTIME_MODEL = "gpt-realtime-2025-08-28"
 DEFAULT_OPENAI_REALTIME_BASE_URL = "wss://api.openai.com/v1/realtime"  # fixed
+DEFAULT_OPENAI_LIVE_BASE_URL = "wss://api.openai.com/v1/live/sessions"
+DEFAULT_OPENAI_LIVE_MODEL = "gpt-live-1"
+DEFAULT_OPENAI_LIVE_VOICE = "marin"
+DEFAULT_OPENAI_LIVE_CLOSE_TIMEOUT = 15.0
 DEFAULT_OPENAI_VOICE = "alloy"  # overridable
 DEFAULT_OPENAI_NOISE_REDUCTION = "near_field"  # fixed: "near_field", "far_field", None
 DEFAULT_OPENAI_VAD_THRESHOLD_LOW = 0.2  # fixed
