@@ -585,3 +585,22 @@ def test_long_asr_commits_chinese_without_waiting_for_speech_end():
     assert stream.update("我们先游览故宫。然后去景山。") == "我们先游览故宫。"
     assert stream.update("游览故宫。然后去景山。最后吃午饭。") == "然后去景山。"
     assert stream.update("然后去景山。最后吃午饭。", final=True) == "最后吃午饭。"
+
+
+def test_source_hashes_support_symlinked_snapshot(tmp_path, monkeypatch):
+    import hashlib
+    from pathlib import Path
+
+    from tau2.scripts import open_model_demo
+
+    actual = Path(open_model_demo.__file__).resolve()
+    linked = tmp_path / "snapshot"
+    linked.symlink_to(actual.parents[3], target_is_directory=True)
+    monkeypatch.setattr(
+        open_model_demo, "__file__", str(linked / "src/tau2/scripts/open_model_demo.py")
+    )
+    hashes = open_model_demo.source_hashes()
+    assert (
+        hashes["src/tau2/scripts/open_model_demo.py"]
+        == hashlib.sha256(actual.read_bytes()).hexdigest()
+    )

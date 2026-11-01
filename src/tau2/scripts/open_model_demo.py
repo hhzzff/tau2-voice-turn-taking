@@ -290,7 +290,7 @@ def source_hashes():
     """Hash the controller and worker source used by this checkout."""
     root = Path(__file__).resolve().parents[3]
     files = [
-        Path(__file__),
+        root / "src/tau2/scripts/open_model_demo.py",
         root / "src/tau2/user/open_model_scenarios.py",
         root / "src/tau2/utils/codex_llm.py",
         root / "src/tau2/utils/llm_utils.py",

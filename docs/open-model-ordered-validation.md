@@ -81,3 +81,36 @@ on failure or completion;
 the GPU entrypoint also has a 90-minute wall timeout. Recordings and final
 publication remain pending until a native worker can start. This report does
 not establish real English compliance or completion of the shared stages.
+
+
+## 2026-11-01 recovery
+
+The replacement `cloudnative-lq` A100 job `386e698abb49afad` reached running
+and finished; the old `gpuspot1-lq` queued job was stopped. SALMONN executed all
+2249 steps plus the initialization interval (180 seconds), but provenance
+collection raised before export: a symlinked source path was combined with a
+resolved checkout root. This prevented the sequential MiniCPM controller from
+starting. The GPU job is terminal (`done` / `finished`).
+
+The source hash function now constructs the controller path from the same
+resolved root as the remaining entries. A symlinked-snapshot regression failed
+before the fix; it and the existing audio export regression passed afterwards
+(2 tests). The original snapshot and mailbox evidence are unchanged.
+
+SALMONN playback was recovered under
+`data/simulations/open-model-ordered/20261101-run1/recovered-salmonn/`.
+All 2249 native user inputs passed a byte-for-byte forward-conversion check
+after inverse recovery. The recovered stereo includes the initialization
+interval; the final silent user interval is verified in the controller log.
+Missing original in-memory tick objects, ASR snapshots and computation durations
+are explicitly recorded. These are recovered diagnostic recordings, not a
+successful original export.
+
+The native trace contains one assistant start and one listening transition.
+Only greeting and correction user utterances were generated; subsequent
+backchannel stages were not reached. A completed 180-second inference is not
+completion of the requested long conversation.
+
+MiniCPM is being run independently in job `294cd3c18536bb1f`, using the original
+frozen scenario and model code with a canonical controller import path. Its
+artifacts are under `data/simulations/open-model-ordered/20261101-minicpm-resume1/`.
