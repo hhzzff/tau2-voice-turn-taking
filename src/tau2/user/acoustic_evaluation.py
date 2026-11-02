@@ -147,7 +147,7 @@ def _model_judgment(model, name, policy, payload, schema):
             UserMessage(
                 role="user",
                 content=policy
-                + "\n"
+                + "\nReturn one JSON object matching response_schema.\n"
                 + json.dumps(
                     {**payload, "response_schema": schema.model_json_schema()},
                     ensure_ascii=False,

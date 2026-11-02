@@ -37,6 +37,9 @@ def transcribe_audio(
         if conversion_error:
             return TranscriptionResult(transcript="", error=conversion_error)
 
+        if config.model == "scribe_v1":
+            return transcribe_scribe(pcm_audio_data, config)
+
         if config.model == "doubao-asr":
             return transcribe_doubao(audio_data, config)
 
@@ -326,3 +329,34 @@ def transcribe_doubao(
             transcript="", error="Doubao ASR response has no text"
         )
     return TranscriptionResult(transcript=result["text"], provider_status=status)
+
+
+def transcribe_scribe(
+    audio_data: AudioData, config: TranscriptionConfig
+) -> TranscriptionResult:
+    """Recognize delivered WAV audio with the documented ModelHub Scribe route."""
+    from tau2.utils.byted_modelhub import elevenlabs_request
+
+    output = io.BytesIO()
+    with wave.open(output, "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(audio_data.format.sample_rate)
+        wav.writeframes(audio_data.data)
+    data = {"model_id": "scribe_v1"}
+    if config.language:
+        data["language_code"] = config.language.split("-")[0].lower()
+    try:
+        response = elevenlabs_request(
+            "/speech-to-text",
+            files={"file": ("delivered.wav", output.getvalue(), "audio/wav")},
+            data=data,
+        ).json()
+        text = response.get("text")
+        if not isinstance(text, str):
+            raise ValueError("Missing Scribe transcript")
+        return TranscriptionResult(transcript=text, provider_status="200")
+    except Exception as exc:
+        return TranscriptionResult(
+            transcript="", error=f"Scribe transcription failed: {type(exc).__name__}"
+        )

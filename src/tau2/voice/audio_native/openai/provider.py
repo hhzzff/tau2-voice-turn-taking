@@ -15,6 +15,7 @@ from loguru import logger
 from pydantic import BaseModel
 
 from tau2.config import (
+    BYTED_REALTIME_BASE_URL,
     DEFAULT_OPENAI_NOISE_REDUCTION,
     DEFAULT_OPENAI_REALTIME_BASE_URL,
     DEFAULT_OPENAI_REALTIME_MODEL,
@@ -131,11 +132,14 @@ class OpenAIRealtimeProvider:
         Raises:
             ValueError: If no API key is provided or found in environment.
         """
-        self.api_key = api_key or os.environ.get("OPENAI_API_KEY")
+        self.gateway = bool(model and model.startswith("byted/"))
+        self.api_key = api_key or os.environ.get(
+            "TERUMI_BT_AK" if self.gateway else "OPENAI_API_KEY"
+        )
         if not self.api_key:
             raise ValueError("OpenAI API key not provided. Set OPENAI_API_KEY env var.")
 
-        self.model = model or self.DEFAULT_MODEL
+        self.model = (model or self.DEFAULT_MODEL).removeprefix("byted/")
         self.reasoning_effort = reasoning_effort
         self.ws: Optional[websockets.WebSocketClientProtocol] = None
         self._current_vad_config: Optional[OpenAIVADConfig] = None
@@ -177,8 +181,13 @@ class OpenAIRealtimeProvider:
         if self.is_connected:
             return
 
-        url = f"{self.BASE_URL}?model={self.model}"
-        headers = {"Authorization": f"Bearer {self.api_key}"}
+        base_url = BYTED_REALTIME_BASE_URL if self.gateway else self.BASE_URL
+        url = f"{base_url}?model={self.model}"
+        headers = (
+            {"Api-Key": self.api_key}
+            if self.gateway
+            else {"Authorization": f"Bearer {self.api_key}"}
+        )
 
         self.ws = await websockets.connect(url, additional_headers=headers)
 

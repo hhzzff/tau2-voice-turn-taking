@@ -75,7 +75,7 @@ def prepare(args):
 
 
 def build_dynamic_user(
-    scenario, output, config, primary_voice, background_voice, tts_model
+    scenario, output, config, primary_voice, background_voice, tts_model, gateway=False
 ):
     """Disable unrelated random effects for attribution to the selected events."""
     from tau2.data_model.audio_effects import (
@@ -84,9 +84,11 @@ def build_dynamic_user(
         SpeechEffectsConfig,
     )
     from tau2.data_model.voice import (
+        ElevenLabsTTSConfig,
         OpenAITTSConfig,
         SpeechEnvironment,
         SynthesisConfig,
+        TranscriptionConfig,
         VoiceSettings,
     )
     from tau2.user.duplex_scenario_user import DuplexUserSimulator
@@ -94,8 +96,15 @@ def build_dynamic_user(
     settings = VoiceSettings(
         transcription_config=None,
         synthesis_config=SynthesisConfig(
-            provider="openai",
-            provider_config=OpenAITTSConfig(model=tts_model, voice=primary_voice),
+            provider="elevenlabs" if gateway else "openai",
+            provider_config=ElevenLabsTTSConfig(
+                model_id=tts_model,
+                voice_id=primary_voice,
+                gateway=True,
+                seed=scenario.seed,
+            )
+            if gateway
+            else OpenAITTSConfig(model=tts_model, voice=primary_voice),
             channel_effects_config=ChannelEffectsConfig(enable_frame_drops=False),
             source_effects_config=SourceEffectsConfig(
                 enable_background_noise=False, enable_burst_noise=False
@@ -119,6 +128,11 @@ def build_dynamic_user(
         primary_voice=primary_voice,
         background_voice=background_voice,
         tts_model=tts_model,
+        perception_config=TranscriptionConfig(
+            model="scribe_v1", language="zh" if scenario.language == "Chinese" else "en"
+        )
+        if gateway
+        else None,
         instructions=scenario.user_context,
         tools=[],
         llm=scenario.user_model,
@@ -146,9 +160,17 @@ def _run(args):
     """Run the runtime user policy and preserve partial evidence on failure."""
     from dotenv import load_dotenv
 
-    from tau2.config import DEFAULT_AUDIO_NATIVE_MODELS
+    from tau2.config import (
+        BYTED_DEFAULT_REALTIME_MODEL,
+        BYTED_DEFAULT_TEXT_MODEL,
+        BYTED_DEFAULT_TTS_MODEL,
+        BYTED_DEFAULT_VOICE,
+        DEFAULT_AUDIO_NATIVE_MODELS,
+        DEFAULT_DUPLEX_USER_MODEL,
+    )
     from tau2.data_model.simulation import AudioNativeConfig
     from tau2.data_model.tasks import Task, UserScenario
+    from tau2.data_model.voice import OpenAITTSConfig
     from tau2.orchestrator.full_duplex_orchestrator import FullDuplexOrchestrator
     from tau2.runner.build import build_agent, build_environment
     from tau2.user.duplex_evaluation import (
@@ -159,7 +181,23 @@ def _run(args):
     )
     from tau2.voice.synthesis.conversation_builder import generate_simulation_audio
 
-    load_dotenv()
+    load_dotenv(args.env_file)
+    if args.byted_gateway:
+        if args.provider != "openai":
+            raise ValueError(
+                "--byted-gateway currently supports the OpenAI native provider"
+            )
+        args.model = args.model or BYTED_DEFAULT_REALTIME_MODEL
+        if not args.model.startswith("byted/"):
+            raise ValueError("Use the explicit byted/ native model prefix")
+        args.user_model = args.user_model or BYTED_DEFAULT_TEXT_MODEL
+        if args.judge_model == DEFAULT_DUPLEX_USER_MODEL:
+            args.judge_model = BYTED_DEFAULT_TEXT_MODEL
+        if args.primary_voice == "nova":
+            args.primary_voice = BYTED_DEFAULT_VOICE
+        args.tts_model = args.tts_model or BYTED_DEFAULT_TTS_MODEL
+    else:
+        args.tts_model = args.tts_model or OpenAITTSConfig().model
     scenario = (
         _load_scenario(args.scenario)
         if args.scenario
@@ -186,6 +224,17 @@ def _run(args):
         if scenario.acoustic_clarification is None:
             raise ValueError("--dns-noise-path requires an acoustic task")
         scenario.acoustic_clarification.noise_path = args.dns_noise_path
+    if (
+        args.byted_gateway
+        and args.background_voice == "onyx"
+        and set(scenario.selected_events)
+        & {"rejection.third_party", "rejection.contextual"}
+    ):
+        raise ValueError(
+            "Provide a distinct available ElevenLabs --background-voice ID for background speaker events"
+        )
+    if args.seed is not None:
+        scenario.seed = args.seed
     if args.user_model:
         scenario.user_model = args.user_model
     if args.language:
@@ -211,6 +260,7 @@ def _run(args):
                 "primary_voice": args.primary_voice,
                 "background_voice": args.background_voice,
                 "tts_model": args.tts_model,
+                "byted_gateway": args.byted_gateway,
             },
             indent=2,
         ),
@@ -243,6 +293,7 @@ def _run(args):
                 args.primary_voice,
                 args.background_voice,
                 args.tts_model,
+                gateway=args.byted_gateway,
             )
             agent = build_agent(
                 "discrete_time_audio_native_agent",
@@ -369,8 +420,16 @@ def assess(args):
     if args.judge_model:
         from dotenv import load_dotenv
 
-        load_dotenv()
-        assessment = judge_report(scenario, assessment, args.judge_model)
+        from tau2.utils.llm_utils import llm_log_dir, llm_log_mode
+
+        load_dotenv(args.env_file)
+        directory_token = llm_log_dir.set(args.output / "llm_calls")
+        mode_token = llm_log_mode.set("all")
+        try:
+            assessment = judge_report(scenario, assessment, args.judge_model)
+        finally:
+            llm_log_mode.reset(mode_token)
+            llm_log_dir.reset(directory_token)
     (args.output / "assessment.json").write_text(
         json.dumps(assessment, ensure_ascii=False, indent=2), encoding="utf-8"
     )
@@ -381,7 +440,6 @@ def assess(args):
 def build_parser():
     """Expose event selection, preparation, execution and offline assessment."""
     from tau2.config import DEFAULT_DUPLEX_USER_MODEL
-    from tau2.data_model.voice import OpenAITTSConfig
 
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -467,7 +525,16 @@ def build_parser():
     )
     execution.add_argument("--primary-voice", default="nova")
     execution.add_argument("--background-voice", default="onyx")
-    execution.add_argument("--tts-model", default=OpenAITTSConfig().model)
+    execution.add_argument(
+        "--tts-model", help="OpenAI default or ElevenLabs model_id for --byted-gateway"
+    )
+    execution.add_argument(
+        "--byted-gateway",
+        action="store_true",
+        help="Use TERUMI_BT_AK for text, TTS, Scribe ASR and native voice",
+    )
+    execution.add_argument("--env-file", type=Path, default=Path(".env"))
+    execution.add_argument("--seed", type=int, help="Override scenario random seed")
     execution.add_argument("--max-seconds", type=int)
     execution.add_argument(
         "--judge-model",
@@ -485,6 +552,7 @@ def build_parser():
     scoring = commands.add_parser("assess", help="Assess an existing run")
     scoring.add_argument("--output", type=Path, required=True)
     scoring.add_argument("--judge-model")
+    scoring.add_argument("--env-file", type=Path, default=Path(".env"))
     scoring.set_defaults(func=assess)
     return parser
 

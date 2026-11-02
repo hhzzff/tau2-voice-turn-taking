@@ -22,8 +22,8 @@ class PlayedAudioPerception:
     transcription latency; it is not a low-latency streaming ASR implementation.
     """
 
-    def __init__(self, language: str):
-        self.config = TranscriptionConfig(
+    def __init__(self, language: str, config: TranscriptionConfig | None = None):
+        self.config = config or TranscriptionConfig(
             model=DEFAULT_WHISPER_MODEL,
             language="zh" if language == "Chinese" else "en",
         )
