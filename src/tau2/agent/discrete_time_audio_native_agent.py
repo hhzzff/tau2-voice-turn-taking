@@ -39,6 +39,7 @@ See docs/architecture/discrete_time_audio_native_agent.md for design details.
 """
 
 import base64
+import hashlib
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING, List, Literal, Optional, Tuple, Union
@@ -64,7 +65,12 @@ from tau2.config import (
     DEFAULT_OPENAI_VAD_THRESHOLD,
     DEFAULT_SEND_AUDIO_INSTANT,
 )
-from tau2.data_model.audio import TELEPHONY_AUDIO_FORMAT, AudioEncoding, AudioFormat
+from tau2.data_model.audio import (
+    TELEPHONY_AUDIO_FORMAT,
+    AudioData,
+    AudioEncoding,
+    AudioFormat,
+)
 from tau2.data_model.message import (
     AssistantMessage,
     EnvironmentMessage,
@@ -320,6 +326,9 @@ class DiscreteTimeAudioNativeAgent(FullDuplexAgent[DiscreteTimeAgentState]):
         # Adapter - created lazily if not provided
         self._adapter = adapter
         self._owns_adapter = adapter is None
+        self._incoming_telephony_converter = None
+        self._incoming_source_rate = None
+        self.input_audio_conversions = []
 
         # Build system prompt
         self.system_prompt = self._build_system_prompt()
@@ -405,6 +414,9 @@ class DiscreteTimeAudioNativeAgent(FullDuplexAgent[DiscreteTimeAgentState]):
         if message_history is None:
             message_history = []
 
+        self._incoming_telephony_converter = None
+        self._incoming_source_rate = None
+        self.input_audio_conversions = []
         # Connect adapter if not connected
         if not self.adapter.is_connected:
             self.adapter.connect(
@@ -458,7 +470,7 @@ class DiscreteTimeAudioNativeAgent(FullDuplexAgent[DiscreteTimeAgentState]):
         state.tick_count += 1
 
         # Extract user audio from participant chunk
-        user_audio = self._extract_user_audio(participant_chunk)
+        user_audio = self._extract_user_audio(participant_chunk, state.tick_count)
         state.total_user_audio_bytes += len(user_audio)
 
         if self._agent_input_tap:
@@ -558,7 +570,9 @@ class DiscreteTimeAudioNativeAgent(FullDuplexAgent[DiscreteTimeAgentState]):
             silence_byte = b"\x00\x00"
         return silence_byte * (self.bytes_per_tick // len(silence_byte))
 
-    def _extract_user_audio(self, chunk: ValidAgentInputMessage) -> bytes:
+    def _extract_user_audio(
+        self, chunk: ValidAgentInputMessage, tick_number=0
+    ) -> bytes:
         """Extract audio bytes from user message.
 
         Args:
@@ -580,20 +594,60 @@ class DiscreteTimeAudioNativeAgent(FullDuplexAgent[DiscreteTimeAgentState]):
         if audio_bytes is None:
             return self._get_silence()
 
-        # Verify format matches configured audio format
-        # The user simulator should already output the correct format
-        if (
-            chunk.audio_format
-            and chunk.audio_format.encoding == self.audio_format.encoding
-        ):
+        if chunk.audio_format is None:
+            raise ValueError("Incoming audio must declare its format")
+        if chunk.audio_format == self.audio_format:
             return audio_bytes
+        if chunk.audio_format.channels != 1 or self.audio_format.channels != 1:
+            raise ValueError("Native audio format conversion requires mono audio")
 
-        # If format doesn't match, we'd need conversion here
-        # For now, assume it's already in the right format
-        logger.warning(
-            f"Expected {self.audio_format.encoding} format, got {chunk.audio_format}"
+        from tau2.voice.audio_native.audio_converter import StreamingTelephonyConverter
+        from tau2.voice.utils.audio_preprocessing import (
+            convert_to_alaw,
+            convert_to_pcm16,
+            convert_to_ulaw,
+            resample_audio,
         )
-        return audio_bytes
+
+        decoded = convert_to_pcm16(
+            AudioData(data=audio_bytes, format=chunk.audio_format)
+        )
+        if (
+            self.audio_format.encoding == AudioEncoding.ULAW
+            and self.audio_format.sample_rate == 8000
+        ):
+            if self._incoming_source_rate != decoded.format.sample_rate:
+                self._incoming_source_rate = decoded.format.sample_rate
+                self._incoming_telephony_converter = StreamingTelephonyConverter(
+                    output_sample_rate=decoded.format.sample_rate
+                )
+            converted = self._incoming_telephony_converter.convert_output(decoded.data)
+        else:
+            decoded = resample_audio(decoded, self.audio_format.sample_rate)
+            if self.audio_format.encoding == AudioEncoding.PCM_S16LE:
+                converted = decoded.data
+            elif self.audio_format.encoding == AudioEncoding.ULAW:
+                converted = convert_to_ulaw(decoded).data
+            elif self.audio_format.encoding == AudioEncoding.ALAW:
+                converted = convert_to_alaw(decoded).data
+            else:
+                raise ValueError("Unsupported native input audio encoding")
+        self.input_audio_conversions.append(
+            {
+                "tick": tick_number,
+                "source_format": chunk.audio_format.model_dump(mode="json"),
+                "provider_format": self.audio_format.model_dump(mode="json"),
+                "source_bytes": len(audio_bytes),
+                "provider_bytes": len(converted),
+                "source_sha256": hashlib.sha256(audio_bytes).hexdigest(),
+                "provider_sha256": hashlib.sha256(converted).hexdigest(),
+                "source_duration_seconds": len(audio_bytes)
+                / chunk.audio_format.bytes_per_second,
+                "provider_duration_seconds": len(converted)
+                / self.audio_format.bytes_per_second,
+            }
+        )
+        return converted
 
     def _handle_tool_result(
         self,

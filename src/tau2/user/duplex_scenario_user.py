@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import time
 import wave
 from pathlib import Path
 
@@ -9,12 +10,14 @@ import numpy as np
 
 from tau2.data_model.audio import (
     PCM_SAMPLE_RATE,
+    AudioData,
     AudioEncoding,
     AudioFormat,
     audio_bytes_to_string,
 )
 from tau2.data_model.message import TurnTakingAction, UserMessage
 from tau2.data_model.voice import OpenAITTSConfig
+from tau2.user.acoustic_clarification import degrade_utterance, pcm_wav
 from tau2.user.duplex_events import (
     EVENT_CATALOG,
     DuplexDecision,
@@ -25,7 +28,7 @@ from tau2.user.user_simulator_streaming import VoiceStreamingUserSimulator
 from tau2.utils.llm_utils import generate
 from tau2.voice.synthesis.synthesize import synthesize_voice
 from tau2.voice.utils.audio_activity import is_audible_chunk
-from tau2.voice.utils.audio_preprocessing import resample_audio
+from tau2.voice.utils.audio_preprocessing import convert_to_pcm16, resample_audio
 
 RUNTIME_POLICY = """You are the USER in a live voice conversation, not the assistant.
 Speak the configured language and pursue your ordinary conversation goal.
@@ -77,8 +80,17 @@ pause_seconds, observation_seconds, noise and reason. Schema is supplied below.
   agreed phrase AT THE END of text and keep speaking in continuation afterward.
   No direct system prompts or out-of-character scoring instructions to the agent.
 - finish: only when no events remain pending and all observations have finished.
+  Answer an outstanding assistant question before finishing. With no pending
+  event types, first have an ordinary substantive exchange with the assistant.
   Once coverage and observation are complete, finish at the next quiet moment;
   do not introduce new requests just to extend this sample.
+
+For every ordinary primary spoken text, also annotate one semantically important
+keyword as {text, start_char, end_char}: exact zero-based Python character offsets
+into text (end exclusive). Choose the intended occurrence when a word repeats.
+This is neutral semantic annotation, never extra spoken words. A response to an
+assistant question should answer naturally from your original intent and what
+was actually asked, without assuming what the assistant understood.
 
 Spoken text must be natural user language with no stage directions, test labels,
 sound tags or stop tokens. Do not manufacture a fixed checklist conversation.
@@ -107,6 +119,7 @@ class DuplexController:
         self.observing_until = None
         self.finished = False
         self.feedback = ""
+        self.heard_assistant_audio = False
 
     def allowed(
         self,
@@ -115,13 +128,30 @@ class DuplexController:
     ) -> bool:
         """Reject impossible/unselected actions; never substitute a scripted one."""
         reason = ""
-        if self.active and decision.action != "wait":
+        if (
+            self.active
+            and decision.action != "wait"
+            and not (
+                self.scenario.acoustic_clarification is not None
+                and decision.action == "speak"
+                and self.active["event_id"] != "turn_taking.handoff"
+            )
+        ):
             reason = "The current event is still being observed; wait before any new user action."
         elif (
             decision.action in {"prepare_event", "trigger_event"}
             and decision.event_id not in self.pending
         ):
             reason = "That event is not pending; choose a selected, unexecuted event."
+        elif (
+            decision.action == "finish"
+            and self.scenario.acoustic_clarification is not None
+            and not (
+                any(row["role"] == "user" for row in self.history)
+                and self.heard_assistant_audio
+            )
+        ):
+            reason = "Have an ordinary exchange with the assistant before finishing."
         elif decision.action == "finish" and (self.pending or self.active):
             reason = "Pending events or an unfinished observation remain."
         elif decision.action in {"speak", "prepare_event"} and assistant_speaking:
@@ -210,6 +240,8 @@ class DuplexController:
 
     def observe(self, now, speaking, text, item_bearing_audio=False):
         """Accumulate actual incoming chunks and per-event evidence."""
+        if speaking or item_bearing_audio:
+            self.heard_assistant_audio = True
         if text:
             if self.history and self.history[-1]["role"] == "assistant":
                 self.history[-1]["text"] += text
@@ -321,6 +353,11 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
         self.consecutive_errors = 0
         self.assistant_speaking = False
         self.last_assistant_audio_seconds = -1.0
+        self.acoustic_records = []
+        self.acoustic_user_utterances = []
+        self.acoustic_delivery_audio = {}
+        self.acoustic_assistant_observations = []
+        self.acoustic_current = None
         self.perception = self._new_perception()
         super().__init__(**kwargs)
         self.controller = DuplexController(scenario, self.tick_duration_seconds)
@@ -332,6 +369,11 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
         self.controller = DuplexController(self.scenario, self.tick_duration_seconds)
         self.pending_decision = None
         self.synthesis_records = []
+        self.acoustic_records = []
+        self.acoustic_user_utterances = []
+        self.acoustic_delivery_audio = {}
+        self.acoustic_assistant_observations = []
+        self.acoustic_current = None
         self.next_check = 0
         self.consecutive_errors = 0
         self.last_assistant_audio_seconds = -1.0
@@ -414,6 +456,37 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
             else None
         )
         self.assistant_speaking = is_audible_chunk(incoming)
+        if self.scenario.acoustic_clarification is not None and incoming is not None:
+            observation = {
+                "start_seconds": max(0, now - self.tick_duration_seconds),
+                "end_seconds": now,
+                "audible": self.assistant_speaking,
+                "text": incoming.content or "",
+                "text_is_unverified": True,
+                "utterance_ids": list(incoming.utterance_ids or []),
+            }
+            if incoming.audio_content:
+                directory = self.output_dir / "acoustic_audio"
+                directory.mkdir(parents=True, exist_ok=True)
+                relative = f"acoustic_audio/assistant-{len(self.acoustic_assistant_observations):06d}.wav"
+                data = incoming.get_audio_bytes()
+                observation["sha256"] = hashlib.sha256(data).hexdigest()
+                observation["original_format"] = incoming.audio_format.model_dump(
+                    mode="json"
+                )
+                decoded = convert_to_pcm16(
+                    AudioData(data=data, format=incoming.audio_format)
+                )
+                observation["audio_file"] = relative
+                observation["saved_pcm_sha256"] = hashlib.sha256(
+                    decoded.data
+                ).hexdigest()
+                with wave.open(str(self.output_dir / relative), "wb") as wav:
+                    wav.setnchannels(decoded.format.channels)
+                    wav.setsampwidth(2)
+                    wav.setframerate(decoded.format.sample_rate)
+                    wav.writeframes(decoded.data)
+            self.acoustic_assistant_observations.append(observation)
         # A quiet frame within a delivered utterance is not playback completion.
         # Require a full second without item-bearing audio before ending a run.
         if self.assistant_speaking or (incoming is not None and incoming.utterance_ids):
@@ -442,10 +515,24 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
                     entry["truncated"] = True
                     break
         if state.output_streaming_queue:
+            if self.scenario.acoustic_clarification is not None:
+                # Reuse the shared interruption thresholds and stop_talking queue
+                # cancellation instead of adding an acoustic-specific policy.
+                action = super()._next_turn_taking_action(state)
+                if action.action == "stop_talking":
+                    return action
             return TurnTakingAction(action="keep_talking")
         c.advance_observation(now, False)
-        if c.active or now < self.next_check:
+        protected = c.active and (
+            self.scenario.acoustic_clarification is None
+            or c.active["event_id"] == "turn_taking.handoff"
+        )
+        if protected or now < self.next_check:
             return TurnTakingAction(action="wait")
+        if self.assistant_speaking:
+            # Ordinary repairs are chosen after listening, using the same model.
+            if self.scenario.acoustic_clarification is not None:
+                return TurnTakingAction(action="wait")
         if not c.pending and now - self.last_assistant_audio_seconds < 1.0:
             return TurnTakingAction(action="wait")
         self.next_check = now + self.scenario.decision_interval_seconds
@@ -481,6 +568,7 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
                 voice=voice,
             ),
         )
+        self._acoustic_last_tts_return = time.perf_counter()
         # The script is an intention, not an ASR transcript: TTS can omit words.
         # Preserve its response before any resampling, chunking or audio effects.
         directory = self.output_dir / "synthesized_audio"
@@ -572,6 +660,65 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
             ]
         )
         now = state.elapsed_samples / PCM_SAMPLE_RATE
+        if self.scenario.acoustic_clarification is not None:
+            record = {
+                "id": f"user-{len(self.acoustic_user_utterances) + 1:04d}",
+                "script_text": decision.text + decision.continuation,
+                "script_is_verified_transcript": False,
+                "sample_rate": PCM_SAMPLE_RATE,
+                "sample_count": len(samples),
+                "start_seconds": now,
+                "natural_end_seconds": now + len(samples) / PCM_SAMPLE_RATE,
+                "actual_stop_seconds": None,
+                "cancelled_samples": [],
+                "delivery": [],
+                "delivered_samples": 0,
+                "delivered_target_samples": 0,
+                "delivered_modified_samples": 0,
+                "status": "prepared",
+            }
+            if not self.acoustic_records and not background and not noise:
+                preparation_started = time.perf_counter()
+                record.update({"mode": "dropchunk", "severity": "hard"})
+                self.acoustic_records.append(record)
+                clean = samples
+                samples = degrade_utterance(
+                    samples,
+                    record["script_text"],
+                    decision.keyword,
+                    PCM_SAMPLE_RATE,
+                    self.scenario.seed,
+                    record,
+                )
+                directory = self.output_dir / "acoustic_audio"
+                directory.mkdir(parents=True, exist_ok=True)
+                for name, values in (("clean", clean), ("degraded", samples)):
+                    relative = f"acoustic_audio/{record['id']}-{name}.wav"
+                    (self.output_dir / relative).write_bytes(
+                        pcm_wav(values, PCM_SAMPLE_RATE)
+                    )
+                    record[f"{name}_audio_file"] = relative
+                changed = np.flatnonzero(clean != samples)
+                if changed.size:
+                    breaks = np.flatnonzero(np.diff(changed) > 1)
+                    record["modified_intervals_samples"] = [
+                        [int(a), int(b) + 1]
+                        for a, b in zip(
+                            np.r_[changed[0], changed[breaks + 1]],
+                            np.r_[changed[breaks], changed[-1]],
+                        )
+                    ]
+                else:
+                    record["modified_intervals_samples"] = []
+                    if record["status"] != "failed":
+                        record["status"] = "failed"
+                        record["failure_reason"] = "no_effective_modification"
+                record["timing"]["tts_postprocess_seconds"] = (
+                    time.perf_counter() - preparation_started
+                )
+            self.acoustic_user_utterances.append(record)
+            self.acoustic_delivery_audio[record["id"]] = []
+            self.acoustic_current = record
         self.active_speaker = self.controller.begin(
             decision,
             now,
@@ -579,6 +726,8 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
             len(first) / PCM_SAMPLE_RATE,
             self.assistant_speaking,
         )
+        if self.acoustic_current is not None:
+            self.acoustic_current["source"] = self.active_speaker
         if self.perception is not None:
             self.perception.start_user_turn()
         text = "" if noise else decision.text + decision.continuation
@@ -594,7 +743,80 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
         ), state
 
     def _perform_turn_taking_action(self, state, action):
+        now = state.elapsed_samples / PCM_SAMPLE_RATE
         chunk, state = super()._perform_turn_taking_action(state, action)
+        record = self.acoustic_current
+        if record is not None:
+            if action.action == "stop_talking":
+                record["actual_stop_seconds"] = now
+                record["cancelled_samples"] = [
+                    record["delivered_samples"],
+                    record["sample_count"],
+                ]
+                if record["status"] != "failed":
+                    record["status"] = "incomplete"
+                for entry in reversed(self.controller.history):
+                    if entry["role"] == "user":
+                        entry["truncated"] = True
+                        break
+                if self.controller.active is not None:
+                    self.controller.active["user_stopped_for_agent"] = True
+                    self.controller.active["natural_end_seconds"] = (
+                        self.controller.active["end_seconds"]
+                    )
+                    self.controller.active["end_seconds"] = now
+                self.acoustic_current = None
+            elif action.action in {"generate_message", "keep_talking"}:
+                start = record["delivered_samples"]
+                end = min(start + self.chunk_size, record["sample_count"])
+                record["delivery"].append(
+                    {
+                        "start_seconds": now,
+                        "end_seconds": now + (end - start) / PCM_SAMPLE_RATE,
+                        "sample_start": start,
+                        "sample_end": end,
+                        "padding_samples": self.chunk_size - (end - start),
+                        "utterance_ids": list(chunk.utterance_ids or []),
+                        "sha256": hashlib.sha256(chunk.get_audio_bytes()).hexdigest(),
+                    }
+                )
+                record["delivered_samples"] = end
+                if action.action == "generate_message" and "timing" in record:
+                    record["timing"]["tts_postprocess_seconds"] = (
+                        time.perf_counter() - self._acoustic_last_tts_return
+                    )
+                self.acoustic_delivery_audio[record["id"]].append(
+                    chunk.get_audio_bytes()
+                )
+                record["delivered_format"] = chunk.audio_format.model_dump(mode="json")
+                if (
+                    chunk.audio_format.encoding != AudioEncoding.PCM_S16LE
+                    or chunk.audio_format.sample_rate != PCM_SAMPLE_RATE
+                ):
+                    record["status"] = "failed"
+                    record["failure_reason"] = "unsupported_delivery_format"
+                record["delivered_modified_samples"] = sum(
+                    max(0, min(end, b) - a)
+                    for a, b in record.get("modified_intervals_samples", [])
+                )
+                target = record.get("target_samples")
+                if target:
+                    record["delivered_target_samples"] = max(
+                        0, min(end, target[1]) - target[0]
+                    )
+                if end == record["sample_count"]:
+                    record["actual_stop_seconds"] = (
+                        now + (end - start) / PCM_SAMPLE_RATE
+                    )
+                    if record["status"] != "failed":
+                        record["status"] = "delivered"
+                    self.acoustic_current = None
+        if self.scenario.acoustic_clarification is not None:
+            # The agent-facing channel carries actual audio only. Clean scripts
+            # and neutral annotations remain private synthesis/evaluation data.
+            if not self.is_stop(chunk):
+                chunk.content = ""
+                chunk.audio_script_gold = None
         if chunk.contains_speech:
             chunk.source = self.active_speaker
             chunk.contains_speech = self.active_speaker != "noise" and is_audible_chunk(
@@ -607,10 +829,40 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
         self.output_dir.mkdir(parents=True, exist_ok=True)
         if self.perception is not None:
             self.perception.save(self.output_dir)
+        report = self.controller.report()
+        if self.scenario.acoustic_clarification is not None:
+            for utterance in self.acoustic_user_utterances:
+                audio = b"".join(self.acoustic_delivery_audio[utterance["id"]])
+                utterance["delivered_sha256"] = hashlib.sha256(audio).hexdigest()
+                if (
+                    audio
+                    and utterance.get("delivered_format", {}).get("encoding")
+                    == AudioEncoding.PCM_S16LE.value
+                ):
+                    relative = f"acoustic_audio/{utterance['id']}-delivered.wav"
+                    (self.output_dir / relative).write_bytes(
+                        pcm_wav(
+                            np.frombuffer(audio, dtype="<i2"),
+                            utterance["delivered_format"]["sample_rate"],
+                        )
+                    )
+                    utterance["delivered_audio_file"] = relative
+            records = self.acoustic_records
+            if not records or records[0]["status"] != "delivered":
+                report["status"] = "incomplete"
+            report["acoustic_clarification"] = {
+                "status": records[0]["status"] if records else "not_reached",
+                "mode": self.scenario.acoustic_clarification.mode,
+                "severity": "hard",
+                "utterances": records,
+                "user_utterances": self.acoustic_user_utterances,
+                "assistant_observations": self.acoustic_assistant_observations,
+            }
         (self.output_dir / "events.json").write_text(
-            json.dumps(self.controller.report(), ensure_ascii=False, indent=2),
+            json.dumps(report, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
+        return report
 
     def stop(self, participant_chunk=None, state=None, tool_results=None):
         """Save evidence while the existing pipeline saves its own audio data."""

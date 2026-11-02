@@ -13,6 +13,10 @@ from tau2.config import (
     DEFAULT_DUPLEX_RESPONSE_QUIET_SECONDS,
     DEFAULT_DUPLEX_USER_MODEL,
 )
+from tau2.user.acoustic_clarification import (
+    AcousticClarificationConfig,
+    KeywordAnnotation,
+)
 
 Family = Literal["interruption", "rejection", "turn_taking", "proactive"]
 Trigger = Literal["assistant_speaking", "assistant_silent", "any"]
@@ -205,7 +209,8 @@ class DuplexScenario(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     version: Literal[1] = 1
-    selected_events: list[str] = Field(min_length=1)
+    selected_events: list[str] = Field(default_factory=list)
+    acoustic_clarification: AcousticClarificationConfig | None = None
     seed: int = 42
     language: Literal["Chinese", "English"] = "Chinese"
     user_model: str = DEFAULT_DUPLEX_USER_MODEL
@@ -223,7 +228,8 @@ class DuplexScenario(BaseModel):
     @model_validator(mode="after")
     def canonical_events(self):
         """Normalize the selected subset without defining an execution order."""
-        self.selected_events = select_events(self.selected_events)
+        if self.selected_events or self.acoustic_clarification is None:
+            self.selected_events = select_events(self.selected_events)
         return self
 
 
@@ -253,6 +259,7 @@ class DuplexDecision(BaseModel):
     event_id: str | None = None
     text: str = ""
     continuation: str = ""
+    keyword: KeywordAnnotation | None = None
     pause_seconds: float = Field(default=0, ge=0, le=10)
     observation_seconds: float = Field(default=6, ge=2, le=20)
     noise: Literal["door_knock", "phone_ring", "rustle"] = "door_knock"

@@ -260,3 +260,9 @@ OPEN_MODEL_RUNTIME_MANIFESTS = {
     "salmonn": "/mnt/bn/audio-visual-llm-data6/terumi/pi-bench/inference/salmonn-omni/runtime.json",
 }
 SALMONN_BEFORE_SFT_CHECKPOINT = "/mnt/bn/audio-visual-llm-data6/yuwenyi/playground/salmonn-omni-dev/logs/cu12_stage2_v2_tfv2_short_sm1_sp_longs1/checkpoint-44000"
+
+# Whole-utterance acoustic clarification alignment.
+DEFAULT_ACOUSTIC_ALIGNMENT_TIMEOUT_SECONDS = 30.0
+DEFAULT_ACOUSTIC_ALIGNMENT_ATTEMPTS = 3
+DEFAULT_ACOUSTIC_ALIGNMENT_URL = "https://api.elevenlabs.io/v1/forced-alignment"
+DEFAULT_ACOUSTIC_ALIGNMENT_GATEWAY_URL = "https://aidp.bytedance.net/api/modelhub/online/multimodal/crawl/11labs/v1/forced-alignment"
