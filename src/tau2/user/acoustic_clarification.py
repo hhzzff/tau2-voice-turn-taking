@@ -10,6 +10,8 @@ import math
 import os
 import time
 import wave
+from pathlib import Path
+from typing import Literal
 
 import httpx
 import numpy as np
@@ -20,6 +22,7 @@ from tau2.config import (
     DEFAULT_ACOUSTIC_ALIGNMENT_GATEWAY_URL,
     DEFAULT_ACOUSTIC_ALIGNMENT_TIMEOUT_SECONDS,
     DEFAULT_ACOUSTIC_ALIGNMENT_URL,
+    DEFAULT_ACOUSTIC_DNS_NOISE_PATH,
 )
 
 
@@ -27,7 +30,8 @@ class AcousticClarificationConfig(BaseModel):
     """Opt-in whole-utterance degradation; severity is always hard."""
 
     model_config = ConfigDict(extra="forbid")
-    mode: str = Field(default="dropchunk", pattern="^dropchunk$")
+    mode: Literal["dropchunk", "dns_noise"] = "dropchunk"
+    noise_path: str = DEFAULT_ACOUSTIC_DNS_NOISE_PATH
 
 
 class KeywordAnnotation(BaseModel):
@@ -178,7 +182,137 @@ def hard_dropchunk(samples, target, seed):
     }
 
 
-def degrade_utterance(samples, text, keyword, sample_rate, seed, record):
+class PreparedNoise(BaseModel):
+    """One immutable, predecoded asset and private preparation diagnostics."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    samples: np.ndarray | None = Field(default=None, exclude=True)
+    source: str | None = None
+    sha256: str | None = None
+    sample_rate: int
+    preparation_seconds: float = 0.0
+    failure_reason: str | None = None
+
+
+def prepare_noise(config, sample_rate, seed):
+    """Load one deterministically selected WAV before any utterance is timed.
+
+    A directory is scanned once. Decoding, mono conversion, resampling and asset
+    hashing happen here, never inside the local degradation operation.
+    """
+    if config is None or config.mode != "dns_noise":
+        return None
+    started = time.perf_counter()
+    prepared = PreparedNoise(sample_rate=sample_rate)
+    try:
+        from scipy.io import wavfile
+        from scipy.signal import resample_poly
+
+        path = Path(config.noise_path)
+        if path.is_dir():
+            candidates = sorted(
+                p for p in path.iterdir() if p.is_file() and p.suffix.lower() == ".wav"
+            )
+            if not candidates:
+                candidates = sorted(path.rglob("*.wav"))
+            if not candidates:
+                raise AlignmentError("noise_directory_has_no_wavs")
+            path = candidates[
+                int(np.random.default_rng(seed).integers(len(candidates)))
+            ]
+        prepared.source = str(path)
+        raw = path.read_bytes()
+        rate, values = wavfile.read(io.BytesIO(raw))
+        prepared.sha256 = hashlib.sha256(raw).hexdigest()
+        if values.dtype.kind == "i":
+            values = values.astype(np.float32) / (2 ** (8 * values.dtype.itemsize - 1))
+        elif values.dtype == np.uint8:
+            values = (values.astype(np.float32) - 128) / 128
+        elif values.dtype.kind == "f":
+            values = values.astype(np.float32)
+        else:
+            raise AlignmentError("noise_unsupported_encoding")
+        if values.ndim == 2:
+            values = values.mean(axis=1)
+        if values.ndim != 1 or not values.size or not np.isfinite(values).all():
+            raise AlignmentError("noise_invalid_samples")
+        if rate != sample_rate:
+            factor = math.gcd(int(rate), sample_rate)
+            values = resample_poly(
+                values, sample_rate // factor, int(rate) // factor
+            ).astype(np.float32)
+        values = np.ascontiguousarray(values, dtype=np.float32)
+        if not values.size or np.max(np.abs(values)) < 0.01:
+            raise AlignmentError("noise_below_rms_threshold")
+        values.flags.writeable = False
+        prepared.samples = values
+    except AlignmentError as exc:
+        prepared.failure_reason = str(exc)
+    except (OSError, ValueError, EOFError):
+        prepared.failure_reason = "noise_asset_unavailable_or_invalid"
+    prepared.preparation_seconds = time.perf_counter() - started
+    return prepared
+
+
+def hard_dns_noise(samples, target, seed, noise):
+    """Mix source hard (-20 dB) noise locally, then clip and quantize PCM16.
+
+    The source recipe's epsilon, threshold and 12-offset selection are retained.
+    Ineligible fragments explicitly fail instead of using a quiet fallback.
+    """
+    if noise is None or noise.failure_reason or noise.samples is None:
+        raise AlignmentError(noise.failure_reason if noise else "noise_not_prepared")
+    start, end = target
+    length = end - start
+    values = noise.samples
+    rng = np.random.default_rng(seed)
+    repetitions = max(1, math.ceil(length / len(values)))
+    extended_count = len(values) * repetitions
+    max_offset = extended_count - length
+    segment = None
+    for _ in range(12):
+        offset = int(rng.integers(0, max_offset + 1)) if max_offset else 0
+        if repetitions == 1:
+            candidate = values[offset : offset + length]
+        else:
+            candidate = values[(offset + np.arange(length)) % len(values)]
+        rms = float(np.sqrt(np.mean(candidate**2)))
+        if rms >= 0.01:
+            segment = candidate
+            break
+    if segment is None:
+        raise AlignmentError("noise_no_valid_fragment")
+    clean = samples[start:end].astype(np.float32) / 32768
+    clean_rms = float(np.sqrt(np.mean(clean**2)))
+    scale = (clean_rms + 1e-8) * 10 / (rms + 1e-8)
+    scaled = segment * scale
+    mixed = clean + scaled
+    result = samples.copy()
+    result[start:end] = np.clip(
+        np.rint(np.clip(mixed, -1.0, 1.0) * 32768), -32768, 32767
+    ).astype("<i2")
+    return result, {
+        "noise_source": noise.source,
+        "noise_sha256": noise.sha256,
+        "noise_offset_samples": offset,
+        "noise_segment_samples": length,
+        "noise_repetitions": repetitions,
+        "noise_sample_rate": noise.sample_rate,
+        "noise_scale": scale,
+        "noise_segment_rms": rms,
+        "clean_target_rms": clean_rms,
+        "preclip_noise_rms": float(np.sqrt(np.mean(scaled**2))),
+        "target_snr_db": -20,
+        "selected_by_threshold": True,
+        "clipped_samples": int(np.count_nonzero((mixed > 1.0) | (mixed < -1.0))),
+        "clipping_range": [-1.0, 1.0],
+        "applied_range_samples": [start, end],
+    }
+
+
+def degrade_utterance(
+    samples, text, keyword, sample_rate, seed, record, *, mode="dropchunk", noise=None
+):
     """Construct one private evidence record and a whole degraded waveform."""
     started = time.perf_counter()
     record.update(
@@ -215,14 +349,24 @@ def degrade_utterance(samples, text, keyword, sample_rate, seed, record):
         target = aligned_samples(response, text, keyword, sample_rate, len(samples))
         record["target_samples"] = list(target)
         operation_start = time.perf_counter()
-        samples, details = hard_dropchunk(samples, target, seed)
-        record["timing"]["degradation_seconds"] = time.perf_counter() - operation_start
+        try:
+            if mode == "dns_noise":
+                samples, details = hard_dns_noise(samples, target, seed, noise)
+            else:
+                samples, details = hard_dropchunk(samples, target, seed)
+        finally:
+            record["timing"]["degradation_seconds"] = (
+                time.perf_counter() - operation_start
+            )
         record.update(details)
         record["status"] = "prepared"
     except (AlignmentError, TypeError, AttributeError) as exc:
         record["failure_reason"] = (
             str(exc) if isinstance(exc, AlignmentError) else "alignment_invalid_schema"
         )
+    if noise is not None:
+        record["timing"]["noise_preparation_seconds"] = noise.preparation_seconds
+        record["noise_preparation"] = noise.model_dump()
     record["timing"].setdefault("alignment_seconds", 0.0)
     record["timing"].setdefault("degradation_seconds", 0.0)
     record["timing"]["tts_postprocess_seconds"] = time.perf_counter() - started
