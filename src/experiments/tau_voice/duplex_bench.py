@@ -153,6 +153,7 @@ def _run(args):
     from tau2.user.duplex_evaluation import (
         assess_report,
         attach_asr_evidence,
+        finalize_acoustic_evidence,
         judge_report,
     )
     from tau2.voice.synthesis.conversation_builder import generate_simulation_audio
@@ -213,6 +214,7 @@ def _run(args):
     orchestrator = None
     simulation = None
     assessment = None
+    run_error = None
     try:
         if not scenario.topic:
             topic = generate_topic(scenario)
@@ -259,11 +261,22 @@ def _run(args):
             )
             generate_simulation_audio(simulation, args.output / "audio")
     except Exception as exc:
+        run_error = type(exc).__name__
         (args.output / "error.json").write_text(
             json.dumps({"error_type": type(exc).__name__}), encoding="utf-8"
         )
         raise
     finally:
+        if orchestrator is not None and simulation is None:
+            orchestrator._cleanup()
+        if orchestrator is not None and orchestrator.ticks:
+            (args.output / "ticks.json").write_text(
+                json.dumps(
+                    [tick.model_dump(mode="json") for tick in orchestrator.ticks],
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
         if agent is not None and scenario.acoustic_clarification is not None:
             (args.output / "agent_input_conversion.json").write_text(
                 json.dumps(agent.input_audio_conversions, ensure_ascii=False, indent=2),
@@ -276,23 +289,38 @@ def _run(args):
                 (args.output / "events.json").write_text(
                     json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
                 )
+            if scenario.acoustic_clarification is not None:
+                reason = (
+                    simulation.termination_reason.value
+                    if simulation is not None and run_error is None
+                    else "run_error"
+                )
+                report["conversation"] = {
+                    "status": "complete"
+                    if reason in {"user_stop", "agent_stop"}
+                    else "incomplete",
+                    "termination_reason": reason,
+                }
+                report = finalize_acoustic_evidence(
+                    scenario,
+                    report,
+                    args.output,
+                    config.tick_duration_seconds,
+                    orchestrator.ticks if orchestrator is not None else [],
+                    transcription_config=user.perception.config
+                    if user.perception is not None
+                    else None,
+                    transcribe=bool(args.judge_model),
+                )
+                (args.output / "events.json").write_text(
+                    json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
+                )
             assessment = assess_report(scenario, report, config.tick_duration_seconds)
             if args.judge_model:
                 assessment = judge_report(scenario, assessment, args.judge_model)
             (args.output / "assessment.json").write_text(
                 json.dumps(assessment, ensure_ascii=False, indent=2), encoding="utf-8"
             )
-        if orchestrator is not None and orchestrator.ticks:
-            # A run can fail before a SimulationRun is returned.
-            (args.output / "ticks.json").write_text(
-                json.dumps(
-                    [tick.model_dump(mode="json") for tick in orchestrator.ticks],
-                    ensure_ascii=False,
-                ),
-                encoding="utf-8",
-            )
-        if orchestrator is not None and simulation is None:
-            orchestrator._cleanup()
     print(f"Saved trajectory, audio, events and assessment: {args.output}")
     return (
         0
@@ -301,9 +329,12 @@ def _run(args):
         and (
             scenario.acoustic_clarification is None
             or (
-                user.acoustic_records
-                and user.acoustic_records[0].get("delivered_modified_samples", 0) > 0
-                and user.acoustic_records[0]["status"] != "failed"
+                assessment["acoustic_clarification"]["assessment"]["input_validity"]
+                == "valid"
+                and assessment["acoustic_clarification"]["assessment"][
+                    "conversation_status"
+                ]
+                == "complete"
             )
         )
         else 1

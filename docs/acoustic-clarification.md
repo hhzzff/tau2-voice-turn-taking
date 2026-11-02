@@ -68,3 +68,33 @@ The final evaluation must additionally establish whether delivered acoustic
 damage mattered, whether the agent made an appropriate clarification request,
 and whether a later clear repair was used correctly. Successful audio corruption
 alone does not establish clarification success.
+
+After conversation termination, the runner writes consumption evidence and then
+performs acoustic assessment. User output from tick `n` is consumed in agent tick
+`n+1`; an emitted final frame with no receiving tick is excluded. When available,
+ASR uses the decoded provider input tap, with its first sample mapped to receiving
+tick 1. Intended user scripts remain private intent, never verified transcripts.
+
+The evaluator discovers semantic clarification requests from actual assistant
+ASR. It judges request quality using only saved audio context before the earliest
+possible request onset, then judges repair using the complete later interaction.
+A midutterance context is separately cropped and transcribed; the rest of that
+utterance and later repair cannot influence request adequacy. User nonresponse
+leaves repair incomplete without invalidating a reasonable request. A supported
+contextual inference without a question is recorded separately from completed
+clarification; unsupported guessing can fail.
+
+Question timing uses conservative segment bounds, independently of semantic
+quality. During-user and after-user results use the same content standard. A
+segment crossing the original natural endpoint stays uncertain; cancellation of
+an unplayed tail does not move that endpoint or invalidate an already delivered
+damaged target. Timing precision is one simulation tick, not ASR arrival time.
+
+`assessment.json` retains the private construction/delivery references under
+`acoustic_clarification`, with an `assessment` containing input validity,
+conversation/evidence status, question, repair, timing, and explicit denominators
+and missing/judge-failure counts. A timeout or incomplete evidence cannot pass.
+`--no-semantic-judge` records mechanical assessment without final ASR calls.
+`python -m experiments.tau_voice.duplex_bench assess --output RUN_DIR` reuses saved
+ASR and cropped prefixes; it never synthesizes, aligns, transcribes or opens an
+agent session. Add `--judge-model MODEL` to rerun only semantic judgment.
