@@ -119,6 +119,23 @@ and missing/judge-failure counts. A timeout or incomplete evidence cannot pass.
 ASR and cropped prefixes; it never synthesizes, aligns, transcribes or opens an
 agent session. Add `--judge-model MODEL` to rerun only semantic judgment.
 
+Final discovery examines each actual assistant ASR segment with its own saved
+pre-segment audio prefix. An ordinary question for a new slot does not mask a
+later request to repair already supplied information. The private target keyword
+is labeled intent, never a heard transcript; missing ASR alone cannot establish
+that the user never supplied that slot. Later user repairs are excluded from
+earlier discovery and request judgments.
+
+For an answer without clarification, the evaluator requires modified samples to
+have been consumed before the earliest possible answer onset, then checks both
+relevance to the affected task and support from actual prior context. It includes
+adjacent native response pieces, so an acknowledgment cannot hide the substantive
+recommendation. A new or overlapping user turn stops that grouping; a segment
+crossing such a boundary remains inconclusive because its pre-repair content
+cannot be isolated. No-query success is never counted as completed clarification.
+The assessment records response segment IDs, exposure counts, judge model,
+protocol version and separate request/repair/no-query denominators.
+
 ## ModelHub gateway and reproducible validation
 
 The explicitly selected `--byted-gateway` route uses `TERUMI_BT_AK` for every
@@ -186,6 +203,6 @@ agent output without stretching either timeline. Original source and provider
 input recordings remain separately auditable.
 
 The [2026-11-02 validation record](acoustic-clarification-validation.md) reports
-all real attempts, excluded inputs, actual no-query outcomes, a pending semantic
-candidate-selection defect and the local kernel distributions. It distinguishes
-service success, model behavior and the remaining evaluator review.
+all real attempts, excluded inputs, actual no-query outcomes, the frozen-evidence
+reassessment after review fixes and the local kernel distributions. It distinguishes
+service success, model behavior and controlled repair coverage.

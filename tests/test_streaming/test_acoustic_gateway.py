@@ -304,7 +304,16 @@ def test_final_acoustic_judgment_requests_json_on_the_gateway(monkeypatch):
         "target_samples": [10, 20],
         "alignment_response": {"words": [{}]},
         "modified_intervals_samples": [[11, 19]],
-        "delivery": [{"sample_start": 0, "sample_end": 100, "received": True}],
+        "sample_rate": 100,
+        "delivery": [
+            {
+                "sample_start": 0,
+                "sample_end": 100,
+                "start_seconds": 0,
+                "end_seconds": 1,
+                "received": True,
+            }
+        ],
     }
     report = {
         "status": "complete",
@@ -345,6 +354,7 @@ def test_final_acoustic_judgment_requests_json_on_the_gateway(monkeypatch):
             }
             if schema == "Discovery"
             else {
+                "response_relevance": "target_relevant",
                 "result": "supported_inference",
                 "reason": "Interest is in received ASR.",
                 "evidence": [{"id": "u1", "quote": "birdwatching"}],

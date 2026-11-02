@@ -49,6 +49,17 @@ def _load_scenario(path):
     return DuplexScenario.model_validate_json(path.read_text(encoding="utf-8"))
 
 
+def _acoustic_config(args, current=None):
+    """Apply the same acoustic options and validation for prepare and run."""
+    if args.acoustic_clarification:
+        current = AcousticClarificationConfig(mode=args.acoustic_clarification)
+    if args.dns_noise_path:
+        if current is None:
+            raise ValueError("--dns-noise-path requires an acoustic task")
+        current.noise_path = args.dns_noise_path
+    return current
+
+
 def prepare(args):
     """Save event types and options, without event content, ordering or timing."""
     if args.output.exists():
@@ -57,12 +68,7 @@ def prepare(args):
         selected_events=[
             value.strip() for value in (args.events or "").split(",") if value.strip()
         ],
-        acoustic_clarification=AcousticClarificationConfig(
-            mode=args.acoustic_clarification,
-            **({"noise_path": args.dns_noise_path} if args.dns_noise_path else {}),
-        )
-        if args.acoustic_clarification
-        else None,
+        acoustic_clarification=_acoustic_config(args),
         seed=args.seed,
         language=args.language,
         user_model=args.user_model,
@@ -207,23 +213,12 @@ def _run(args):
                 for value in (args.events or "").split(",")
                 if value.strip()
             ],
-            acoustic_clarification=AcousticClarificationConfig(
-                mode=args.acoustic_clarification,
-                **({"noise_path": args.dns_noise_path} if args.dns_noise_path else {}),
-            )
-            if args.acoustic_clarification
-            else None,
+            acoustic_clarification=_acoustic_config(args),
         )
     )
-    if args.acoustic_clarification:
-        scenario.acoustic_clarification = AcousticClarificationConfig(
-            mode=args.acoustic_clarification,
-            **({"noise_path": args.dns_noise_path} if args.dns_noise_path else {}),
-        )
-    if args.dns_noise_path:
-        if scenario.acoustic_clarification is None:
-            raise ValueError("--dns-noise-path requires an acoustic task")
-        scenario.acoustic_clarification.noise_path = args.dns_noise_path
+    scenario.acoustic_clarification = _acoustic_config(
+        args, scenario.acoustic_clarification
+    )
     if (
         args.byted_gateway
         and args.background_voice == "onyx"
