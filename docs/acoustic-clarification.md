@@ -1,8 +1,8 @@
 # Acoustic clarification tasks
 
 An acoustic task uses the existing live user conversation and complete TTS
-pipeline. The same user model decision includes a neutral keyword and its exact
-character occurrence. The private audio executor aligns the complete clean audio,
+pipeline. The same user model decision includes a neutral keyword and its explicit
+textual occurrence. The private audio executor aligns the complete clean audio,
 degrades the selected span once, and passes the waveform to the existing tick
 slicer. Later user turns are clear. The agent decides whether and when to ask for
 clarification; the user model receives no degradation state.
@@ -118,3 +118,74 @@ and missing/judge-failure counts. A timeout or incomplete evidence cannot pass.
 `python -m experiments.tau_voice.duplex_bench assess --output RUN_DIR` reuses saved
 ASR and cropped prefixes; it never synthesizes, aligns, transcribes or opens an
 agent session. Add `--judge-model MODEL` to rerun only semantic judgment.
+
+## ModelHub gateway and reproducible validation
+
+The explicitly selected `--byted-gateway` route uses `TERUMI_BT_AK` for every
+service: `byted/gpt-5.6-luna` for the user and semantic judges,
+`byted/gpt-realtime-2.1` for the actual audio agent, ElevenLabs
+`eleven_multilingual_v2` for complete TTS, `scribe_v1` for perception/final ASR,
+and ElevenLabs forced alignment. Original official provider defaults remain
+available. No credential is passed through model kwargs or written to reports.
+Gateway chat uses the Azure-compatible ModelHub endpoint; realtime uses the
+internal `/openai/realtime` WebSocket with `Api-Key`, rather than guessing a URL
+from the text endpoint. See central `tau2.config` constants for these routes.
+
+```bash
+uv run python -m experiments.tau_voice.duplex_bench prepare \
+  --acoustic-clarification dropchunk --language English --seed 42 \
+  --user-model byted/gpt-5.6-luna --output /tmp/acoustic-scenario.json
+uv run python -m experiments.tau_voice.duplex_bench run \
+  --scenario /tmp/acoustic-scenario.json --byted-gateway --env-file .env \
+  --max-seconds 180 --output /tmp/acoustic-modelhub-run
+```
+
+For DNS, change the mode to `dns_noise` and supply `--dns-noise-path` on either
+command. A single mounted WAV avoids scanning a large corpus. `--tts-model`
+selects the actual ElevenLabs model ID; `--primary-voice` accepts its voice ID.
+The gateway default foreground voice is the verified Sarah voice
+`EXAVITQu4vr4xnSDxMaL`. Acoustic-only trials do not synthesize a background
+speaker. For event sets using background speech, provide a distinct available
+ElevenLabs `--background-voice`; OpenAI voice names are not ElevenLabs IDs.
+No live request is made during preparation. An explicitly supplied scenario may
+contain ordinary background goals and style preferences, without a spoken script
+or prescribed agent action. Model trajectories are stochastic despite a fixed
+local corruption seed; retain every trial rather than overwrite a directory.
+
+The runtime model now annotates `{text, occurrence}`: an exact keyword substring
+and zero-based **non-overlapping** occurrence number. The executor resolves that
+explicit occurrence to character offsets before alignment. Existing exact
+`{text, start_char, end_char}` annotations still work. Missing, conflicting or
+out-of-range annotations fail explicitly; an incorrect character range is never
+silently repaired using a text search. This avoids asking the model to count
+hundreds of characters while retaining the intended occurrence in the same call.
+The original annotation and resolved range are private audit fields.
+
+To measure local processing independently of all API calls:
+
+```bash
+uv run python -m experiments.tau_voice.clarification_benchmark \
+  --source-wav /path/to/complete-clean-tts.wav \
+  --noise-path /path/to/dns-noise.wav --seed 42 \
+  --warmup 50 --iterations 500 --output /tmp/acoustic-kernels.json
+```
+
+This runs both actual kernels over 1, 10 and 60 second waveforms with 0.1 and
+0.4 second target spans. It preloads noise once, measures warm calls including
+full-waveform copy, local RNG and operation metadata, and saves every duration,
+per-case p50/p95/max, hardware, source hashes and conditions. Noise preparation
+is a separate cold observation; Python imports are excluded. Alignment and
+TTS postprocessing timings remain in each conversation's private input record.
+No external project is imported at runtime, and no API key is read by this
+benchmark. There is no numerical latency SLA or claimed speedup against the old
+Torch implementation.
+
+The conversation preview normalizes both tracks to their highest sample rate
+before concatenation and padding. This permits 16 kHz user PCM beside 8 kHz native
+agent output without stretching either timeline. Original source and provider
+input recordings remain separately auditable.
+
+The [2026-11-02 validation record](acoustic-clarification-validation.md) reports
+all real attempts, excluded inputs, actual no-query outcomes, a pending semantic
+candidate-selection defect and the local kernel distributions. It distinguishes
+service success, model behavior and the remaining evaluator review.

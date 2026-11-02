@@ -270,3 +270,16 @@ DEFAULT_ACOUSTIC_ALIGNMENT_GATEWAY_URL = "https://aidp.bytedance.net/api/modelhu
 DEFAULT_ACOUSTIC_DNS_NOISE_PATH = (
     "/mnt/bn/audio-visual-llm-data3/datasets/DNS/datasets_fullband/noise_fullband"
 )
+
+# Explicit ByteDance ModelHub routes; credentials are resolved inside clients.
+BYTED_CHAT_ENDPOINT = "https://aidp.bytedance.net/api/modelhub/online/v2/crawl"
+BYTED_CHAT_API_VERSION = "2024-02-01"
+BYTED_ELEVENLABS_BASE_URL = (
+    "https://aidp.bytedance.net/api/modelhub/online/multimodal/crawl/11labs/v1"
+)
+BYTED_REALTIME_BASE_URL = "wss://aidp.bytedance.net/openai/realtime"
+
+BYTED_DEFAULT_TEXT_MODEL = "byted/gpt-5.6-luna"
+BYTED_DEFAULT_REALTIME_MODEL = "byted/gpt-realtime-2.1"
+BYTED_DEFAULT_TTS_MODEL = "eleven_multilingual_v2"
+BYTED_DEFAULT_VOICE = "EXAVITQu4vr4xnSDxMaL"

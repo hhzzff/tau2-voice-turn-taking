@@ -42,6 +42,7 @@ TranscriptionModel = Literal[
     "gpt-4o-transcribe",
     "gpt-4o-mini-transcribe",
     "doubao-asr",
+    "scribe_v1",
 ]
 
 
@@ -89,6 +90,7 @@ class ElevenLabsTTSConfig(BaseModel):
     model_id: str = Field(default="eleven_v3")
     voice_id: Optional[str] = Field(default=None)
     api_key: Optional[str] = Field(default=None)
+    gateway: bool = Field(default=False)
     voice_settings: Any = Field(default=DEFAULT_ELEVENLABS_VOICE_SETTINGS)
 
     @property

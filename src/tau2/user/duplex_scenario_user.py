@@ -86,8 +86,10 @@ pause_seconds, observation_seconds, noise and reason. Schema is supplied below.
   do not introduce new requests just to extend this sample.
 
 For every ordinary primary spoken text, also annotate one semantically important
-keyword as {text, start_char, end_char}: exact zero-based Python character offsets
-into text (end exclusive). Choose the intended occurrence when a word repeats.
+keyword as {text, occurrence}: exact substring plus its zero-based occurrence
+index in text (0 for the first non-overlapping match). Choose the intended
+occurrence when a word repeats. Do not count character offsets; leave start_char
+and end_char null.
 This is neutral semantic annotation, never extra spoken words. A response to an
 assistant question should answer naturally from your original intent and what
 was actually asked, without assuming what the assistant understood.
@@ -337,11 +339,13 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
         primary_voice="nova",
         background_voice="onyx",
         tts_model=None,
+        perception_config=None,
         **kwargs,
     ):
         if primary_voice == background_voice:
             raise ValueError("Primary and background voices must differ")
         self.scenario = scenario
+        self.perception_config = perception_config
         self.acoustic_noise = prepare_noise(
             scenario.acoustic_clarification, PCM_SAMPLE_RATE, scenario.seed
         )
@@ -387,7 +391,7 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
         if self.scenario.assistant_observation == "played_audio":
             from tau2.user.duplex_perception import PlayedAudioPerception
 
-            return PlayedAudioPerception(self.scenario.language)
+            return PlayedAudioPerception(self.scenario.language, self.perception_config)
         return None
 
     def speech_detection(self, chunk):
@@ -563,14 +567,15 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
         if not text:
             return np.zeros(0, dtype="<i2")
         voice = self.background_voice if background else self.primary_voice
-        audio = synthesize_voice(
-            text,
-            "openai",
-            OpenAITTSConfig(
-                model=self.tts_model,
-                voice=voice,
-            ),
-        )
+        synthesis = self.voice_settings.synthesis_config
+        provider = synthesis.provider
+        provider_config = synthesis.provider_config.model_copy(deep=True)
+        if provider == "elevenlabs":
+            provider_config.voice_id = voice
+        elif provider == "openai":
+            provider_config.voice = voice
+            provider_config.model = self.tts_model
+        audio = synthesize_voice(text, provider, provider_config)
         self._acoustic_last_tts_return = time.perf_counter()
         # The script is an intention, not an ASR transcript: TTS can omit words.
         # Preserve its response before any resampling, chunking or audio effects.

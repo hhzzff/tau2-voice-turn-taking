@@ -15,7 +15,7 @@ from typing import Literal
 
 import httpx
 import numpy as np
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from tau2.config import (
     DEFAULT_ACOUSTIC_ALIGNMENT_ATTEMPTS,
@@ -39,8 +39,28 @@ class KeywordAnnotation(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     text: str = Field(min_length=1)
-    start_char: int = Field(ge=0)
-    end_char: int = Field(gt=0)
+    start_char: int | None = Field(default=None, ge=0)
+    end_char: int | None = Field(default=None, gt=0)
+    occurrence: int | None = Field(default=None, ge=0)
+
+    @model_validator(mode="after")
+    def one_location(self):
+        """Require one explicit location representation; never guess a match."""
+        coordinates = self.start_char is not None or self.end_char is not None
+        if coordinates:
+            if (
+                self.start_char is None
+                or self.end_char is None
+                or self.occurrence is not None
+            ):
+                raise ValueError(
+                    "Use either a complete character range or an occurrence index"
+                )
+        elif self.occurrence is None:
+            raise ValueError(
+                "An explicit occurrence index or character range is required"
+            )
+        return self
 
 
 class AlignmentError(ValueError):
@@ -333,6 +353,18 @@ def degrade_utterance(
     try:
         if keyword is None:
             raise AlignmentError("missing_keyword_annotation")
+        record["keyword_annotation"] = keyword.model_dump(exclude_none=True)
+        if keyword.occurrence is not None:
+            cursor = 0
+            for _ in range(keyword.occurrence + 1):
+                position = text.find(keyword.text, cursor)
+                if position < 0:
+                    raise AlignmentError("keyword_occurrence_not_found")
+                cursor = position + len(keyword.text)
+            keyword = KeywordAnnotation(
+                text=keyword.text, start_char=position, end_char=cursor
+            )
+        record["keyword"] = keyword.model_dump(exclude_none=True)
         if (
             not (0 <= keyword.start_char < keyword.end_char <= len(text))
             or text[keyword.start_char : keyword.end_char] != keyword.text
