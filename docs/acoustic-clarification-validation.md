@@ -15,7 +15,7 @@ audio and credentials are not checked into Git.
 | English dropchunk attempt01 | Invalid keyword character offsets; no alignment | max_steps, 90 seconds | Excluded from acoustic behavior population | Not evaluated |
 | Chinese DNS attempt01 | Invalid keyword character offsets; no alignment | max_steps, 90 seconds | Excluded from acoustic behavior population | Not evaluated |
 | English dropchunk attempt02 | Valid; birdwatching, 4.50–5.08 s | user_stop | Pocket bird guide suggested; no clarification request | Supported inference, pass |
-| Chinese DNS attempt02 | Valid; 观鸟, 1.28–1.70 s | user_stop | Mini-tripod suggested; no clarification request | Candidate-selection defect; review fix pending |
+| Chinese DNS attempt02 | Valid; 观鸟, 1.28–1.70 s | user_stop | Mini-tripod suggested; no clarification request | Supported inference, pass |
 
 Attempt01 also exposed the preview exporter's mismatch between 16 kHz user PCM
 and decoded 8 kHz agent audio. Both failures remain preserved. Explicit same-call
@@ -31,15 +31,35 @@ The valid population is **2 conversations**, both naturally complete; there were
 interrupting and after-user clarification, queue cancellation and clear repair;
 these are separate from the real-model population.
 
-At this snapshot the Chinese discovery judge chose an acknowledgment before the
-later substantive recommendation, causing a misleading `no_response` assessment.
-This is an evaluator correctness defect pending review, not proof that the agent
-failed to answer. Its raw ASR and judgment are retained. Final semantic acceptance
-must wait for that fix. Initial semantic calls also exposed the gateway JSON-mode
-requirement: the prompt must explicitly contain “JSON.” The provider returned
-code `-4003`, parameter `messages`. The instruction was fixed and the same frozen
-ASR/prefix evidence was rejudged, without repeating TTS, alignment, ASR or an agent
-session. Original assessments are `assessment-before-json-fix.json`.
+The initial Chinese discovery judge selected an acknowledgment before the later
+substantive recommendation, producing a misleading `no_response`. Final review
+fixed that defect and two other evaluation issues: discovery now receives each
+segment's own actual prior audio context, distinguishes a new-slot question from
+repair clarification, and no-query success requires earlier delivery of modified
+target samples plus a response relevant to the affected task. Adjacent native
+answer pieces are retained, bounded by any new/overlapping user turn. Truncated
+WAV headers now produce explicit failed inputs with clean ticks; CLI acoustic
+options share validation.
+
+Exactly one frozen offline reassessment per valid attempt then used the original
+saved ASR/prefixes, with **zero new TTS, alignment, ASR or native sessions**.
+`review-fix-reassessment.json` records unchanged evidence hashes, source hash,
+model-log directory and exposure counts. The English response followed 7,831
+modified samples; the Chinese substantive response followed 6,720. Both were
+judged `supported_inference/pass` from delivered context; neither counts as a
+completed clarification. The Chinese judge used the recorded portability and
+cost constraints to support the tripod recommendation. This does not establish
+recovery of the intended masked hobby, which damaged-audio ASR transcribed as
+逛街. The valid population still contains no actual clarification or repair.
+Original assessments and model calls remain in `assessment-before-review-fix.json`
+and `llm_calls/`; the corrected calls are under `llm_calls-review-fix/`.
+`validation-summary-before-review-fix.json` preserves the old summary.
+
+Initial semantic calls also exposed the gateway JSON-mode requirement: the
+prompt must explicitly contain “JSON.” The provider returned code `-4003`,
+parameter `messages`. The instruction was fixed and the same frozen ASR/prefix
+evidence was rejudged, without repeating TTS, alignment, ASR or an agent session.
+Those original assessments remain `assessment-before-json-fix.json`.
 
 Early progress updates inferred successful alignment from waveform files; this
 was incorrect for attempt01. Its private records show zero alignment time and
@@ -108,7 +128,13 @@ There is no agreed millisecond SLA, and no old-Torch speedup factor is claimed.
 ## Automated checks
 
 The final targeted regression covers actual simulator ticks/native input, final
-assessment, both hard modes, existing duplex events and audio effects. External
+assessment, both hard modes, existing duplex events and audio effects: **145
+passed**, with two preexisting warnings. Repository-wide `make check-all` and
+`git diff --check` also passed. Review regressions cover pre-target answers,
+ordinary slot questions before later clarification, a contiguous early backchannel
+before a later question, complete recommendations after preambles, intervening
+and overlapping user repairs, unrelated answers, truncated RIFF headers and CLI
+noise-path validation. External
 services are replaced only in default automated tests. The standalone provider
 suite ran as required: **0 passed, 77 skipped, 0 errors** because its official-key
 gates do not recognize TERUMI credentials. Those skips are not provider behavior

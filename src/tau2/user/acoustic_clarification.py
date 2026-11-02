@@ -8,6 +8,7 @@ import hashlib
 import io
 import math
 import os
+import struct
 import time
 import wave
 from pathlib import Path
@@ -268,7 +269,7 @@ def prepare_noise(config, sample_rate, seed):
         prepared.samples = values
     except AlignmentError as exc:
         prepared.failure_reason = str(exc)
-    except (OSError, ValueError, EOFError):
+    except (OSError, ValueError, EOFError, struct.error):
         prepared.failure_reason = "noise_asset_unavailable_or_invalid"
     prepared.preparation_seconds = time.perf_counter() - started
     return prepared

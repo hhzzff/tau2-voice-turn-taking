@@ -135,14 +135,17 @@ def fake_judge(
         payload = json.loads(kwargs["messages"][0].content.split("\n")[-1])
         calls.append((stage, payload))
         if stage == "acoustic_question_discovery":
+            ids = {item["id"] for item in payload["assistant_segments"]}
             content = {
                 "request": None
-                if no_query
+                if no_query or "a0" not in ids
                 else {"segment_id": "a0", "quote": "Which city?"},
                 "answer": {
                     "segment_id": "a1",
                     "quote": "I will look for a quiet hotel in Paris.",
-                },
+                }
+                if "a1" in ids
+                else None,
                 "no_query_certain": True,
                 "reason": "Recorded speech reviewed.",
             }
@@ -167,6 +170,7 @@ def fake_judge(
             }
         else:
             content = {
+                "response_relevance": "target_relevant",
                 "result": "supported_inference",
                 "reason": "Earlier delivered context identifies city.",
                 "evidence": [{"id": "u0-prefix-a0", "quote": "[unclear]"}],
@@ -438,3 +442,250 @@ def test_mechanical_summary_keeps_missing_evidence_and_excluded_denominators_exp
     assert all(
         group["count"] == 0 for group in row["summary"]["timing_groups"].values()
     )
+
+
+def test_noquery_answer_before_modified_target_cannot_pass(monkeypatch):
+    from tau2.user.duplex_evaluation import judge_report
+
+    report = evidence_report()
+    calls = fake_judge(monkeypatch, no_query=True)
+    evidence = report["acoustic_clarification"]["evidence"]
+    evidence["transcripts"][-1].update(start_seconds=0.1, end_seconds=0.2)
+    evidence["context_prefixes"]["a1"] = evidence["context_prefixes"]["a0"]
+    row = judge_report(
+        scenario(), assess_report(scenario(), report, 0.1), "offline-judge"
+    )["acoustic_clarification"]["assessment"]
+    assert row["verdict"] == "inconclusive"
+    assert row["no_query"]["delivered_modified_before_response_samples"] == 0
+    assert row["summary"]["noquery_evaluated_denominator"] == 0
+    assert all(stage == "acoustic_question_discovery" for stage, _ in calls)
+
+
+def test_discovery_distinguishes_new_slot_question_from_later_repair(monkeypatch):
+    import json
+
+    from tau2.data_model.message import AssistantMessage
+    from tau2.user.duplex_evaluation import judge_report
+
+    report = evidence_report()
+    evidence = report["acoustic_clarification"]["evidence"]
+    evidence["transcripts"].insert(
+        0,
+        {
+            "id": "ordinary",
+            "role": "assistant",
+            "start_seconds": -2,
+            "end_seconds": -1,
+            "transcript": "Which city?",
+        },
+    )
+    evidence["context_prefixes"]["ordinary"] = []
+    fake_judge(monkeypatch)
+    downstream = __import__("tau2.utils.llm_utils", fromlist=["generate"]).generate
+    seen = []
+
+    def generate(**kwargs):
+        if kwargs["call_name"] != "acoustic_question_discovery":
+            return downstream(**kwargs)
+        payload = json.loads(kwargs["messages"][0].content.split("\n")[-1])
+        seen.append(payload)
+        context = payload.get("context")
+        selected = "a0" if context else "ordinary"
+        return AssistantMessage(
+            role="assistant",
+            content=json.dumps(
+                {
+                    "request": {"segment_id": selected, "quote": "Which city?"}
+                    if context
+                    else None,
+                    "answer": None,
+                    "no_query_certain": True,
+                    "reason": "Actual prior context distinguishes repair from a new slot.",
+                }
+            ),
+        )
+
+    monkeypatch.setattr("tau2.utils.llm_utils.generate", generate)
+    row = judge_report(
+        scenario(), assess_report(scenario(), report, 0.1), "offline-judge"
+    )["acoustic_clarification"]["assessment"]
+    assert row["question"]["segment_id"] == "a0"
+    assert row["verdict"] == "pass"
+    assert len(seen) == 2
+    assert [item["id"] for item in seen[0]["assistant_segments"]] == ["ordinary"]
+    assert seen[0]["context"] == []
+    assert "repair.wav" not in json.dumps(seen)
+    assert "Private intent" not in json.dumps(seen)
+    assert "script_text" not in json.dumps(seen)
+
+
+@pytest.mark.parametrize("repair_start", [None, 3.2, 4.0])
+def test_noquery_uses_complete_native_response_but_never_postrepair_audio(
+    monkeypatch, repair_start
+):
+    import json
+
+    from tau2.data_model.message import AssistantMessage
+    from tau2.user.duplex_evaluation import judge_report
+
+    report = evidence_report()
+    evidence = report["acoustic_clarification"]["evidence"]
+    user = evidence["transcripts"][0]
+    first = {
+        "id": "preamble",
+        "role": "assistant",
+        "start_seconds": 3,
+        "end_seconds": 4,
+        "transcript": "Let me suggest something.",
+    }
+    second = {
+        "id": "recommendation",
+        "role": "assistant",
+        "start_seconds": 4,
+        "end_seconds": 5,
+        "transcript": "A pocket guide for the city is useful.",
+    }
+    evidence["transcripts"] = [user, first, second]
+    if repair_start is not None:
+        evidence["transcripts"].append(
+            {
+                "id": "repair",
+                "role": "user",
+                "start_seconds": repair_start,
+                "end_seconds": 4.8,
+                "transcript": "Paris.",
+            }
+        )
+    evidence["context_prefixes"] = {
+        "preamble": evidence["context_prefixes"]["a0"],
+        "recommendation": [],
+    }
+    seen = []
+
+    def generate(**kwargs):
+        payload = json.loads(kwargs["messages"][0].content.split("\n")[-1])
+        if kwargs["call_name"] == "acoustic_question_discovery":
+            content = {
+                "request": None,
+                "answer": {"segment_id": "preamble", "quote": first["transcript"]}
+                if payload["assistant_segments"][0]["id"] == "preamble"
+                else None,
+                "no_query_certain": True,
+                "reason": "No clarification.",
+            }
+        else:
+            seen.append(payload)
+            full = "recommendation" in {
+                item["id"] for item in payload.get("response_segments", [])
+            }
+            content = {
+                "response_relevance": "target_relevant",
+                "result": "supported_inference" if full else "no_response",
+                "reason": "Review all actual response pieces.",
+                "evidence": [{"id": "u0-prefix-a0", "quote": "[unclear]"}],
+            }
+        return AssistantMessage(role="assistant", content=json.dumps(content))
+
+    monkeypatch.setattr("tau2.utils.llm_utils.generate", generate)
+    row = judge_report(
+        scenario(), assess_report(scenario(), report, 0.1), "offline-judge"
+    )["acoustic_clarification"]["assessment"]
+    assert row["verdict"] == ("pass" if repair_start is None else "inconclusive")
+    if repair_start == 3.2:
+        assert seen == []
+        assert row["summary"]["noquery_evaluated_denominator"] == 0
+        return
+    assert [item["id"] for item in seen[0]["response_segments"]] == (
+        ["preamble", "recommendation"] if repair_start is None else ["preamble"]
+    )
+    assert "Paris." not in json.dumps(seen[0])
+
+
+def test_unrelated_supported_response_after_target_is_not_acoustic_success(monkeypatch):
+    import json
+
+    from tau2.data_model.message import AssistantMessage
+    from tau2.user.duplex_evaluation import judge_report
+
+    report = evidence_report()
+    evidence = report["acoustic_clarification"]["evidence"]
+    evidence["context_prefixes"]["a1"] = evidence["context_prefixes"]["a0"]
+    fake_judge(monkeypatch, no_query=True)
+    downstream = __import__("tau2.utils.llm_utils", fromlist=["generate"]).generate
+
+    def generate(**kwargs):
+        result = downstream(**kwargs)
+        if kwargs["call_name"] == "acoustic_inference_judge":
+            content = json.loads(result.content)
+            content["response_relevance"] = "unrelated"
+            result = AssistantMessage(role="assistant", content=json.dumps(content))
+        return result
+
+    monkeypatch.setattr("tau2.utils.llm_utils.generate", generate)
+    row = judge_report(
+        scenario(), assess_report(scenario(), report, 0.1), "offline-judge"
+    )["acoustic_clarification"]["assessment"]
+    assert row["verdict"] == "inconclusive"
+    assert row["no_query"]["response_relevance"] == "unrelated"
+
+
+def test_contiguous_backchannel_does_not_replace_later_question_context(monkeypatch):
+    import json
+
+    from tau2.data_model.message import AssistantMessage
+    from tau2.user.duplex_evaluation import judge_report
+
+    report = evidence_report()
+    evidence = report["acoustic_clarification"]["evidence"]
+    evidence["transcripts"].insert(
+        1,
+        {
+            "id": "backchannel",
+            "role": "assistant",
+            "start_seconds": 0.9,
+            "end_seconds": 2.5,
+            "transcript": "Mm-hm.",
+        },
+    )
+    evidence["context_prefixes"]["backchannel"] = [
+        {
+            "id": "early-prefix",
+            "role": "user",
+            "transcript": "Go to",
+            "start_seconds": 0,
+            "end_seconds": 0.9,
+        }
+    ]
+    fake_judge(monkeypatch)
+    downstream = __import__("tau2.utils.llm_utils", fromlist=["generate"]).generate
+    seen = []
+
+    def generate(**kwargs):
+        if kwargs["call_name"] == "acoustic_question_discovery":
+            payload = json.loads(kwargs["messages"][0].content.split("\n")[-1])
+            seen.append(payload)
+            if payload["assistant_segments"][0]["id"] == "backchannel":
+                return AssistantMessage(
+                    role="assistant",
+                    content=json.dumps(
+                        {
+                            "request": None,
+                            "answer": None,
+                            "no_query_certain": True,
+                            "reason": "Only acknowledgment before missing information.",
+                        }
+                    ),
+                )
+        return downstream(**kwargs)
+
+    monkeypatch.setattr("tau2.utils.llm_utils.generate", generate)
+    row = judge_report(
+        scenario(), assess_report(scenario(), report, 0.1), "offline-judge"
+    )["acoustic_clarification"]["assessment"]
+    assert row["verdict"] == "pass"
+    assert row["timing"]["question_onset_bounds_seconds"] == [2.5, 2.9]
+    assert seen[0]["context"][0]["transcript"] == "Go to"
+    assert seen[1]["context"][0]["transcript"] == "Go to [unclear]"
+    assert seen[0]["received_modified_before_segment_samples"] == 0
+    assert seen[1]["received_modified_before_segment_samples"] == 60
+    assert seen[1]["private_target_intent_not_heard_transcript"]["text"] == "Paris"

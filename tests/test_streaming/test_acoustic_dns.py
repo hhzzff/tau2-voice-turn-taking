@@ -187,6 +187,7 @@ def test_short_dns_target_uses_cached_resampled_noise_after_source_removed(
     [
         ("missing", "noise_asset_unavailable_or_invalid"),
         ("malformed", "noise_asset_unavailable_or_invalid"),
+        ("truncated_header", "noise_asset_unavailable_or_invalid"),
         ("silent", "noise_below_rms_threshold"),
         ("no_fragment", "noise_no_valid_fragment"),
     ],
@@ -197,6 +198,8 @@ def test_unusable_dns_is_explicit_failed_input_with_clean_ticks(
     path = tmp_path / "noise.wav"
     if asset == "malformed":
         path.write_bytes(b"not a wav")
+    elif asset == "truncated_header":
+        path.write_bytes(b"RIFF")
     elif asset in {"silent", "no_fragment"}:
         values = np.zeros(32000, dtype="<i2")
         if asset == "no_fragment":
@@ -257,3 +260,22 @@ def test_dns_only_corrupts_original_utterance_and_keeps_natural_repair_clear(
     future = "\n".join(payloads[1:])
     for private in ("dns_noise", "target_snr_db", str(path), "noise_scale"):
         assert private not in future
+
+
+def test_prepare_rejects_noise_path_without_acoustic_mode(tmp_path):
+    from experiments.tau_voice.duplex_bench import build_parser
+
+    args = build_parser().parse_args(
+        [
+            "prepare",
+            "--events",
+            "follow_up",
+            "--dns-noise-path",
+            "noise.wav",
+            "--output",
+            str(tmp_path / "scenario.json"),
+        ]
+    )
+    with pytest.raises(ValueError, match="requires an acoustic task"):
+        args.func(args)
+    assert not args.output.exists()
