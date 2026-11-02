@@ -17,7 +17,7 @@ from tau2.data_model.audio import (
 )
 from tau2.data_model.message import TurnTakingAction, UserMessage
 from tau2.data_model.voice import OpenAITTSConfig
-from tau2.user.acoustic_clarification import degrade_utterance, pcm_wav
+from tau2.user.acoustic_clarification import degrade_utterance, pcm_wav, prepare_noise
 from tau2.user.duplex_events import (
     EVENT_CATALOG,
     DuplexDecision,
@@ -342,6 +342,9 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
         if primary_voice == background_voice:
             raise ValueError("Primary and background voices must differ")
         self.scenario = scenario
+        self.acoustic_noise = prepare_noise(
+            scenario.acoustic_clarification, PCM_SAMPLE_RATE, scenario.seed
+        )
         self.output_dir = Path(output_dir)
         self.primary_voice = primary_voice
         self.background_voice = background_voice
@@ -679,7 +682,12 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
             }
             if not self.acoustic_records and not background and not noise:
                 preparation_started = time.perf_counter()
-                record.update({"mode": "dropchunk", "severity": "hard"})
+                record.update(
+                    {
+                        "mode": self.scenario.acoustic_clarification.mode,
+                        "severity": "hard",
+                    }
+                )
                 self.acoustic_records.append(record)
                 clean = samples
                 samples = degrade_utterance(
@@ -689,6 +697,8 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
                     PCM_SAMPLE_RATE,
                     self.scenario.seed,
                     record,
+                    mode=self.scenario.acoustic_clarification.mode,
+                    noise=self.acoustic_noise,
                 )
                 directory = self.output_dir / "acoustic_audio"
                 directory.mkdir(parents=True, exist_ok=True)
