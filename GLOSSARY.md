@@ -14,3 +14,6 @@ A clock policy in which simulation time waits for the current step's computation
 
 **Tick computation time**:
 The elapsed wall-clock time required to complete one simulation step. It is recorded separately from conversation audio time.
+
+**Acoustic clarification task**:
+A conversation task in which selected words in user speech are acoustically degraded and the agent can request clarification. The user simulator knows its intended meaning but is unaware of the degradation; the evaluator knows the targeted words and applied degradation.
