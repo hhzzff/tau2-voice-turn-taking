@@ -4,6 +4,9 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+from tau2.user.acoustic_evidence import (
+    finalize_acoustic_evidence as finalize_acoustic_evidence,
+)
 from tau2.user.duplex_events import EVENT_CATALOG, DuplexScenario, terra_llm_args
 
 
@@ -288,7 +291,7 @@ def assess_report(plan: DuplexScenario, report: dict, tick_seconds: float) -> di
                     "No assistant speech overlapped the user after the trigger."
                 )
         rows.append(row)
-    return {
+    result = {
         **report,
         "execution_status": report["status"],
         "status": "complete"
@@ -304,6 +307,18 @@ def assess_report(plan: DuplexScenario, report: dict, tick_seconds: float) -> di
             "not_evaluated": sum(row["verdict"] == "not_evaluated" for row in rows),
         },
     }
+    if "acoustic_clarification" in report:
+        from tau2.user.acoustic_evaluation import assess_acoustic
+
+        result["acoustic_clarification"] = assess_acoustic(report, tick_seconds)
+        acoustic = result["acoustic_clarification"]["assessment"]
+        result["summary"]["acoustic_clarification"] = acoustic["summary"]
+        if (
+            acoustic["conversation_status"] != "complete"
+            or acoustic["input_validity"] != "valid"
+        ):
+            result["status"] = "incomplete"
+    return result
 
 
 def judge_report(plan: DuplexScenario, assessed: dict, model: str) -> dict:
@@ -380,4 +395,8 @@ def judge_report(plan: DuplexScenario, assessed: dict, model: str) -> dict:
         assessed["summary"][verdict] = sum(
             row["verdict"] == verdict for row in assessed["events"]
         )
+    if "acoustic_clarification" in assessed:
+        from tau2.user.acoustic_evaluation import judge_acoustic
+
+        judge_acoustic(assessed, model)
     return assessed
