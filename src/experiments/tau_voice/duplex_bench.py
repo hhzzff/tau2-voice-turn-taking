@@ -58,7 +58,8 @@ def prepare(args):
             value.strip() for value in (args.events or "").split(",") if value.strip()
         ],
         acoustic_clarification=AcousticClarificationConfig(
-            mode=args.acoustic_clarification
+            mode=args.acoustic_clarification,
+            **({"noise_path": args.dns_noise_path} if args.dns_noise_path else {}),
         )
         if args.acoustic_clarification
         else None,
@@ -168,7 +169,8 @@ def _run(args):
                 if value.strip()
             ],
             acoustic_clarification=AcousticClarificationConfig(
-                mode=args.acoustic_clarification
+                mode=args.acoustic_clarification,
+                **({"noise_path": args.dns_noise_path} if args.dns_noise_path else {}),
             )
             if args.acoustic_clarification
             else None,
@@ -176,8 +178,13 @@ def _run(args):
     )
     if args.acoustic_clarification:
         scenario.acoustic_clarification = AcousticClarificationConfig(
-            mode=args.acoustic_clarification
+            mode=args.acoustic_clarification,
+            **({"noise_path": args.dns_noise_path} if args.dns_noise_path else {}),
         )
+    if args.dns_noise_path:
+        if scenario.acoustic_clarification is None:
+            raise ValueError("--dns-noise-path requires an acoustic task")
+        scenario.acoustic_clarification.noise_path = args.dns_noise_path
     if args.user_model:
         scenario.user_model = args.user_model
     if args.language:
@@ -363,8 +370,11 @@ def build_parser():
     )
     planning.add_argument(
         "--acoustic-clarification",
-        choices=["dropchunk"],
+        choices=["dropchunk", "dns_noise"],
         help="Degrade one complete primary user utterance; can run without semantic events",
+    )
+    planning.add_argument(
+        "--dns-noise-path", help="DNS WAV file or directory to preload for dns_noise"
     )
     planning.add_argument("--seed", type=int, default=42)
     planning.add_argument(
@@ -390,8 +400,11 @@ def build_parser():
     )
     execution.add_argument(
         "--acoustic-clarification",
-        choices=["dropchunk"],
+        choices=["dropchunk", "dns_noise"],
         help="Enable an acoustic clarification input with optional semantic events",
+    )
+    execution.add_argument(
+        "--dns-noise-path", help="Override DNS preload WAV file or directory"
     )
     execution.add_argument(
         "--output",

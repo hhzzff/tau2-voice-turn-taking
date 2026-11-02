@@ -37,6 +37,26 @@ the exact keyword occurrence to actual character or word boundaries; there is
 no timing estimate or random fallback. Alignment failures and unchanged audio
 are failed inputs. Only one utterance is attempted per task, including failures.
 
+Hard DNS noise uses the same full-TTS alignment and tick path. Select it with
+`--acoustic-clarification dns_noise --dns-noise-path /path/to/noise.wav`
+on `prepare` or `run`; a directory is also accepted. Without an override, the
+configured DNS corpus path is used. The simulator scans a directory once and
+preloads one seeded asset, decoding, converting to mono and resampling before
+utterance processing. It retains that in-memory asset across state resets;
+dropchunk and ordinary tasks do not load noise. Missing, malformed or too-quiet
+assets produce explicit failed input evidence rather than a fallback span.
+
+DNS hard means a target SNR of -20 dB before clipping: noise RMS is approximately
+10 times the clean target RMS. The source recipe selects an in-memory fragment
+with RMS at least 0.01 using up to 12 seeded offsets, repeating short assets when
+necessary. Failure to find a qualified fragment is explicit. Only the keyword
+span is mixed; samples are clipped to [-1, 1] and quantized to PCM16. This does
+not guarantee unintelligibility or imply that the clipped audio achieved -20 dB.
+Private records include asset path/hash, fragment offset, repetition, scale,
+preclip RMS values, target SNR and clipped-sample count. Asset preparation time is
+separate from local degradation and TTS postprocessing. No per-utterance asset
+scan, decode, resample or download occurs in the timed degradation operation.
+
 The acoustic task builder disables incidental random effects and telephony
 compression so output ticks carry the resampled PCM waveform. Other duplex
 modes retain their channel configuration. At the native agent boundary, actual
