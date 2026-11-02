@@ -70,8 +70,13 @@ Agent 可以中途打断追问，也可以等用户说完再追问；user simula
 4. **对齐服务。** 使用 ElevenLabs `POST https://api.elevenlabs.io/v1/forced-alignment`，
    multipart 请求提交完整干净 TTS 的 `file` 和对应原文 `text`；读取字符及词的 `text/start/end`。
    不需要额外 ASR，也不改用源工程英文限定的本地 MMS 对齐。
-5. **凭据。** 使用现有 dotenv 加载机制，从 `ELEVENLABS_API` 读取凭据并按服务认证要求使用。
-   不要求另配其他变量名，不记录凭据或认证头。
+5. **凭据。** 官方直连使用现有 dotenv 中的 `ELEVENLABS_API`。
+   实施时用户补充确认：本环境使用 `TERUMI_BT_AK` 和已有
+   `tutorials/byted-elevenlabs.md` 教程，通过 ModelHub 调用 ElevenLabs；
+   其对齐请求仍为 multipart `file` / `text`，网关使用 `ak` 查询参数鉴权。
+   同一 AK 可调用用户指定的 OpenAI 网关
+   `https://aidp.bytedance.net/api/modelhub/online/v2/crawl`，文本模型使用 `gpt-5.6-luna`。
+   不记录凭据、认证头或含 AK 的完整 URL；文本模型调用与语音 agent 接入分别验收。
 6. **精确范围。** 文本位置必须匹配到对齐响应的具体出现位置，再映射到用于切片的完整波形采样范围。
    时间戳在重采样前后指向同一段实际发音；明确边界取整和裁剪，禁止按字符长度比例估计音频位置。
    对齐响应和 loss 作为审计证据保存，不将未经验证的阈值当作语言质量保证。
