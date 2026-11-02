@@ -11,6 +11,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
+from tau2.user.acoustic_clarification import AcousticClarificationConfig
 from tau2.user.duplex_events import (
     EVENT_CATALOG,
     DuplexScenario,
@@ -54,8 +55,13 @@ def prepare(args):
         raise FileExistsError(f"Scenario already exists: {args.output}")
     scenario = DuplexScenario(
         selected_events=[
-            value.strip() for value in args.events.split(",") if value.strip()
+            value.strip() for value in (args.events or "").split(",") if value.strip()
         ],
+        acoustic_clarification=AcousticClarificationConfig(
+            mode=args.acoustic_clarification
+        )
+        if args.acoustic_clarification
+        else None,
         seed=args.seed,
         language=args.language,
         user_model=args.user_model,
@@ -101,7 +107,9 @@ def build_dynamic_user(
             ),
         ),
         speech_environment=SpeechEnvironment(
-            complexity="control", use_llm_backchannel=False
+            complexity="control",
+            use_llm_backchannel=False,
+            telephony_enabled=scenario.acoustic_clarification is None,
         ),
     )
     return DuplexUserSimulator(
@@ -155,10 +163,21 @@ def _run(args):
         if args.scenario
         else DuplexScenario(
             selected_events=[
-                value.strip() for value in args.events.split(",") if value.strip()
-            ]
+                value.strip()
+                for value in (args.events or "").split(",")
+                if value.strip()
+            ],
+            acoustic_clarification=AcousticClarificationConfig(
+                mode=args.acoustic_clarification
+            )
+            if args.acoustic_clarification
+            else None,
         )
     )
+    if args.acoustic_clarification:
+        scenario.acoustic_clarification = AcousticClarificationConfig(
+            mode=args.acoustic_clarification
+        )
     if args.user_model:
         scenario.user_model = args.user_model
     if args.language:
@@ -190,6 +209,7 @@ def _run(args):
         encoding="utf-8",
     )
     user = None
+    agent = None
     orchestrator = None
     simulation = None
     assessment = None
@@ -219,6 +239,9 @@ def _run(args):
                 "discrete_time_audio_native_agent",
                 environment,
                 audio_native_config=config,
+                audio_taps_dir=args.output / "agent_audio"
+                if scenario.acoustic_clarification is not None
+                else None,
             )
             orchestrator = FullDuplexOrchestrator(
                 domain="mock",
@@ -241,9 +264,13 @@ def _run(args):
         )
         raise
     finally:
+        if agent is not None and scenario.acoustic_clarification is not None:
+            (args.output / "agent_input_conversion.json").write_text(
+                json.dumps(agent.input_audio_conversions, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
         if user is not None:
-            user.save_report()
-            report = user.controller.report()
+            report = user.save_report()
             if user.perception is not None:
                 report = attach_asr_evidence(report, user.perception.snapshots)
                 (args.output / "events.json").write_text(
@@ -271,6 +298,14 @@ def _run(args):
         0
         if assessment
         and assessment["summary"]["observed"] == len(scenario.selected_events)
+        and (
+            scenario.acoustic_clarification is None
+            or (
+                user.acoustic_records
+                and user.acoustic_records[0].get("delivered_modified_samples", 0) > 0
+                and user.acoustic_records[0]["status"] != "failed"
+            )
+        )
         else 1
     )
 
@@ -324,8 +359,12 @@ def build_parser():
     )
     planning.add_argument(
         "--events",
-        required=True,
         help="Comma-separated event subset; execution order is chosen at runtime",
+    )
+    planning.add_argument(
+        "--acoustic-clarification",
+        choices=["dropchunk"],
+        help="Degrade one complete primary user utterance; can run without semantic events",
     )
     planning.add_argument("--seed", type=int, default=42)
     planning.add_argument(
@@ -343,11 +382,16 @@ def build_parser():
     execution = commands.add_parser(
         "run", help="Let Terra choose live duplex actions against a voice model"
     )
-    source = execution.add_mutually_exclusive_group(required=True)
+    source = execution.add_mutually_exclusive_group()
     source.add_argument("--scenario", type=Path)
     source.add_argument(
         "--events",
         help="Comma-separated event types; no scripted content or trigger timing",
+    )
+    execution.add_argument(
+        "--acoustic-clarification",
+        choices=["dropchunk"],
+        help="Enable an acoustic clarification input with optional semantic events",
     )
     execution.add_argument(
         "--output",
