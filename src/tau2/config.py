@@ -264,6 +264,7 @@ SALMONN_BEFORE_SFT_CHECKPOINT = "/mnt/bn/audio-visual-llm-data6/yuwenyi/playgrou
 # Whole-utterance acoustic clarification alignment.
 DEFAULT_ACOUSTIC_ALIGNMENT_TIMEOUT_SECONDS = 30.0
 DEFAULT_ACOUSTIC_ALIGNMENT_ATTEMPTS = 3
+DEFAULT_ACOUSTIC_KEYWORD_LIMIT = 4
 DEFAULT_ACOUSTIC_ALIGNMENT_URL = "https://api.elevenlabs.io/v1/forced-alignment"
 DEFAULT_ACOUSTIC_ALIGNMENT_GATEWAY_URL = "https://aidp.bytedance.net/api/modelhub/online/multimodal/crawl/11labs/v1/forced-alignment"
 

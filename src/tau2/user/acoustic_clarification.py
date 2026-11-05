@@ -24,6 +24,7 @@ from tau2.config import (
     DEFAULT_ACOUSTIC_ALIGNMENT_TIMEOUT_SECONDS,
     DEFAULT_ACOUSTIC_ALIGNMENT_URL,
     DEFAULT_ACOUSTIC_DNS_NOISE_PATH,
+    DEFAULT_ACOUSTIC_KEYWORD_LIMIT,
 )
 
 
@@ -170,7 +171,7 @@ def aligned_samples(response, text, keyword, sample_rate, sample_count):
     return start, end
 
 
-def hard_dropchunk(samples, target, seed):
+def hard_dropchunk(samples, target, seed, *, output=None):
     """Silence two locally sampled 65–90 percent gaps, allowing overlap.
 
     Preserves the source recipe's integer length clamps and full-gap placement
@@ -183,7 +184,7 @@ def hard_dropchunk(samples, target, seed):
     high = max(low, min(int(0.90 * length), maximum))
     rng = np.random.default_rng(seed)
     intervals = []
-    result = samples.copy()
+    result = samples.copy() if output is None else output
     for _ in range(2):
         count = int(rng.integers(low, high + 1))
         onset = int(rng.integers(start, end - count + 1))
@@ -275,7 +276,7 @@ def prepare_noise(config, sample_rate, seed):
     return prepared
 
 
-def hard_dns_noise(samples, target, seed, noise):
+def hard_dns_noise(samples, target, seed, noise, *, output=None):
     """Mix source hard (-20 dB) noise locally, then clip and quantize PCM16.
 
     The source recipe's epsilon, threshold and 12-offset selection are retained.
@@ -308,7 +309,7 @@ def hard_dns_noise(samples, target, seed, noise):
     scale = (clean_rms + 1e-8) * 10 / (rms + 1e-8)
     scaled = segment * scale
     mixed = clean + scaled
-    result = samples.copy()
+    result = samples.copy() if output is None else output
     result[start:end] = np.clip(
         np.rint(np.clip(mixed, -1.0, 1.0) * 32768), -32768, 32767
     ).astype("<i2")
@@ -341,7 +342,9 @@ def degrade_utterance(
             "sample_rate": sample_rate,
             "sample_count": len(samples),
             "script_text": text,
-            "keyword": keyword.model_dump() if keyword else None,
+            "keyword": keyword.model_dump()
+            if isinstance(keyword, KeywordAnnotation)
+            else None,
             "seed": seed,
             "clean_sha256": hashlib.sha256(samples.tobytes()).hexdigest(),
             "timing": {},
@@ -352,25 +355,45 @@ def degrade_utterance(
         }
     )
     try:
-        if keyword is None:
+        annotations = (
+            keyword if isinstance(keyword, list) else [keyword] if keyword else []
+        )
+        if not annotations:
             raise AlignmentError("missing_keyword_annotation")
-        record["keyword_annotation"] = keyword.model_dump(exclude_none=True)
-        if keyword.occurrence is not None:
-            cursor = 0
-            for _ in range(keyword.occurrence + 1):
-                position = text.find(keyword.text, cursor)
-                if position < 0:
-                    raise AlignmentError("keyword_occurrence_not_found")
-                cursor = position + len(keyword.text)
-            keyword = KeywordAnnotation(
-                text=keyword.text, start_char=position, end_char=cursor
-            )
-        record["keyword"] = keyword.model_dump(exclude_none=True)
-        if (
-            not (0 <= keyword.start_char < keyword.end_char <= len(text))
-            or text[keyword.start_char : keyword.end_char] != keyword.text
+        if len(annotations) > DEFAULT_ACOUSTIC_KEYWORD_LIMIT:
+            raise AlignmentError("too_many_keyword_annotations")
+        record["keyword_annotations"] = [
+            item.model_dump(exclude_none=True) for item in annotations
+        ]
+        resolved = []
+        for annotation in annotations:
+            original = annotation.model_dump(exclude_none=True)
+            if annotation.occurrence is not None:
+                cursor = 0
+                for _ in range(annotation.occurrence + 1):
+                    position = text.find(annotation.text, cursor)
+                    if position < 0:
+                        raise AlignmentError("keyword_occurrence_not_found")
+                    cursor = position + len(annotation.text)
+                annotation = KeywordAnnotation(
+                    text=annotation.text, start_char=position, end_char=cursor
+                )
+            if (
+                not (0 <= annotation.start_char < annotation.end_char <= len(text))
+                or text[annotation.start_char : annotation.end_char] != annotation.text
+            ):
+                raise AlignmentError("keyword_text_position_mismatch")
+            resolved.append((annotation, original))
+        resolved.sort(key=lambda item: item[0].start_char)
+        if any(
+            a.end_char > b.start_char for (a, _), (b, _) in zip(resolved, resolved[1:])
         ):
-            raise AlignmentError("keyword_text_position_mismatch")
+            raise AlignmentError("overlapping_keyword_annotations")
+        record["keyword_annotation"] = resolved[0][1]
+        record["keyword"] = resolved[0][0].model_dump(exclude_none=True)
+        record["keywords"] = [
+            item.model_dump(exclude_none=True) for item, _ in resolved
+        ]
         alignment_start = time.perf_counter()
         try:
             response = forced_alignment(samples, sample_rate, text)
@@ -379,21 +402,70 @@ def degrade_utterance(
                 time.perf_counter() - alignment_start
             )
         record["alignment_response"] = response
-        target = aligned_samples(response, text, keyword, sample_rate, len(samples))
-        record["target_samples"] = list(target)
+        targets = []
+        for index, (annotation, original) in enumerate(resolved):
+            bounds = aligned_samples(
+                response, text, annotation, sample_rate, len(samples)
+            )
+            if targets and targets[-1]["target_samples"][1] > bounds[0]:
+                raise AlignmentError("overlapping_aligned_targets")
+            targets.append(
+                {
+                    "id": f"target-{index + 1:02d}",
+                    "keyword": annotation.model_dump(exclude_none=True),
+                    "keyword_annotation": original,
+                    "target_samples": list(bounds),
+                    "seed": seed + index,
+                }
+            )
+        record["targets"] = targets
+        record["target_samples"] = targets[0]["target_samples"]
+        record["target_ranges_samples"] = [item["target_samples"] for item in targets]
         operation_start = time.perf_counter()
         try:
-            if mode == "dns_noise":
-                samples, details = hard_dns_noise(samples, target, seed, noise)
-            else:
-                samples, details = hard_dropchunk(samples, target, seed)
+            # One waveform copy for all disjoint spans. Kernels still read clean PCM.
+            result = samples.copy()
+            for target in targets:
+                bounds = target["target_samples"]
+                if mode == "dns_noise":
+                    _, details = hard_dns_noise(
+                        samples, bounds, target["seed"], noise, output=result
+                    )
+                else:
+                    _, details = hard_dropchunk(
+                        samples, bounds, target["seed"], output=result
+                    )
+                target.update(details)
+            # Preserve the historical single-target fields for existing consumers.
+            if len(targets) == 1:
+                record.update(details)
         finally:
             record["timing"]["degradation_seconds"] = (
                 time.perf_counter() - operation_start
             )
-        record.update(details)
+        for target in targets:
+            a, b = target["target_samples"]
+            changed = np.flatnonzero(samples[a:b] != result[a:b]) + a
+            if not changed.size:
+                raise AlignmentError(
+                    "no_effective_modification"
+                    if len(targets) == 1
+                    else "no_effective_target_modification"
+                )
+            breaks = np.flatnonzero(np.diff(changed) > 1)
+            target["modified_intervals_samples"] = [
+                [int(left), int(right) + 1]
+                for left, right in zip(
+                    np.r_[changed[0], changed[breaks + 1]],
+                    np.r_[changed[breaks], changed[-1]],
+                )
+            ]
+        samples = result
         record["status"] = "prepared"
     except (AlignmentError, TypeError, AttributeError) as exc:
+        # No partially modified waveform is returned if any target fails.
+        for item in record.get("targets", []):
+            item["modified_intervals_samples"] = []
         record["failure_reason"] = (
             str(exc) if isinstance(exc, AlignmentError) else "alignment_invalid_schema"
         )

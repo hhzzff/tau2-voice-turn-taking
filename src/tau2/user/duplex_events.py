@@ -9,6 +9,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from tau2.config import (
+    DEFAULT_ACOUSTIC_KEYWORD_LIMIT,
     DEFAULT_DUPLEX_MEMORY_RESPONSE_TIMEOUT_SECONDS,
     DEFAULT_DUPLEX_RESPONSE_QUIET_SECONDS,
     DEFAULT_DUPLEX_USER_MODEL,
@@ -260,6 +261,9 @@ class DuplexDecision(BaseModel):
     text: str = ""
     continuation: str = ""
     keyword: KeywordAnnotation | None = None
+    keywords: list[KeywordAnnotation] = Field(
+        default_factory=list, max_length=DEFAULT_ACOUSTIC_KEYWORD_LIMIT
+    )
     pause_seconds: float = Field(default=0, ge=0, le=10)
     observation_seconds: float = Field(default=6, ge=2, le=20)
     noise: Literal["door_knock", "phone_ring", "rustle"] = "door_knock"
@@ -269,6 +273,8 @@ class DuplexDecision(BaseModel):
     @model_validator(mode="after")
     def valid_action(self):
         """Check executable actions, without imposing when or what to say."""
+        if self.keyword is not None and self.keywords:
+            raise ValueError("Use keywords or the legacy single keyword, not both")
         is_event = self.action in {"prepare_event", "trigger_event"}
         if is_event and self.event_id not in EVENT_CATALOG:
             raise ValueError("Event actions require a known event_id")

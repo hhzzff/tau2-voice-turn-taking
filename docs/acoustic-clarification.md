@@ -1,9 +1,9 @@
 # Acoustic clarification tasks
 
 An acoustic task uses the existing live user conversation and complete TTS
-pipeline. The same user model decision includes a neutral keyword and its explicit
+pipeline. The same user model decision includes up to four neutral keywords, each with an explicit
 textual occurrence. The private audio executor aligns the complete clean audio,
-degrades the selected span once, and passes the waveform to the existing tick
+degrades the nonoverlapping selected spans together once, and passes the waveform to the existing tick
 slicer. Later user turns are clear. The agent decides whether and when to ask for
 clarification; the user model receives no degradation state.
 
@@ -206,3 +206,50 @@ The [2026-11-02 validation record](acoustic-clarification-validation.md) reports
 all real attempts, excluded inputs, actual no-query outcomes, the frozen-evidence
 reassessment after review fixes and the local kernel distributions. It distinguishes
 service success, model behavior and controlled repair coverage.
+
+
+## Multiple essential information values (2026-11-05)
+
+The same ordinary user LM decision now returns `keywords: [{text, occurrence}, ...]`
+with up to four entries. It prefers 2–4 concrete values needed to fulfil the
+request (places, dates/times, quantities, names or identifiers), when present. It
+does not invent extra speech merely to annotate more values. This neutral schema
+is used for ordinary speech regardless of whether acoustic execution is enabled.
+The legacy `keyword` field still works; supplying both representations is rejected.
+
+All occurrences are resolved before upload. Duplicates/overlapping character or
+aligned audio ranges fail explicitly. There is still **one complete TTS and one
+forced-alignment operation**, not a call per keyword. Each disjoint range receives
+the same hard DNS or two-gap dropchunk recipe. One full waveform copy is shared by
+the local kernels; noise stays preloaded. Span seeds are `scenario.seed + index`
+in text order. If any target is invalid or cannot be effectively changed, the
+whole construction fails and clean audio is retained; a partially modified
+utterance is not silently treated as valid. There is still one eligible utterance
+attempt per conversation and later user repairs stay clear.
+
+Private records add `keywords`, `targets` (individual ranges, operation parameters
+and effective modifications), and `target_ranges_samples`. The historical
+`keyword`/`target_samples` refer to the first span for compatibility. Aggregate
+delivery counts cover all disjoint ranges. The evaluator separately counts the
+modified samples actually consumed for each target, so a canceled/unplayed late
+keyword is not counted as a damaged value the agent heard. Question discovery
+receives private intent only for values exposed before that question.
+
+After the conversation, multi-value assessment adds `information_targets` and
+`information_completed`. Each delivered value is labeled `used_correctly`,
+`incorrect`, `not_addressed` or `uncertain`; unplayed ones remain `not_delivered`.
+Correct use requires an actual assistant quote plus cited user evidence predating
+the answer. Private intended values are reference answers, not heard context.
+A supported generic recommendation cannot pass multi-value completion while any
+received value remains unaddressed. Question adequacy remains separate from user
+willingness to reply. Missing evidence and per-value judge errors stay explicit.
+Default tests still make no network calls.
+
+New final ASR uses the native runner's actual decoded provider-input recording
+`agent_audio/agent_user-input.wav`, accepting the older `agent_input.wav` alias
+for saved fixtures. Earlier single-word snapshots remain unchanged.
+
+The multi-value real-run artifacts are under
+`data/simulations/acoustic-clarification-multikeyword-20261105/`. Their conversation
+goals require concrete meeting or delivery-note details; the old birthday-gift
+cases are kept as prior examples, not a controlled comparison of keyword count.

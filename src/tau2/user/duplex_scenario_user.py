@@ -85,11 +85,15 @@ pause_seconds, observation_seconds, noise and reason. Schema is supplied below.
   Once coverage and observation are complete, finish at the next quiet moment;
   do not introduce new requests just to extend this sample.
 
-For every ordinary primary spoken text, also annotate one semantically important
-keyword as {text, occurrence}: exact substring plus its zero-based occurrence
-index in text (0 for the first non-overlapping match). Choose the intended
-occurrence when a word repeats. Do not count character offsets; leave start_char
-and end_char null.
+For every ordinary primary spoken text, also annotate its essential information
+in keywords: a list of up to four {text, occurrence} entries. Prefer 2–4 distinct
+specific values needed to fulfil the request when present: names, places, times,
+quantities, identifiers or constraints, rather than filler words. Do not invent
+facts or extra speech to populate the list. A short acknowledgment may have none.
+Each text is an exact substring; occurrence is its zero-based non-overlapping
+match index (0 for the first). Mark the intended occurrence when a value repeats.
+Entries must not overlap. Do not count character offsets; leave start_char and
+end_char null. Leave the legacy single keyword field null.
 This is neutral semantic annotation, never extra spoken words. A response to an
 assistant question should answer naturally from your original intent and what
 was actually asked, without assuming what the assistant understood.
@@ -698,7 +702,7 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
                 samples = degrade_utterance(
                     samples,
                     record["script_text"],
-                    decision.keyword,
+                    decision.keywords or decision.keyword,
                     PCM_SAMPLE_RATE,
                     self.scenario.seed,
                     record,
@@ -814,11 +818,12 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
                     max(0, min(end, b) - a)
                     for a, b in record.get("modified_intervals_samples", [])
                 )
-                target = record.get("target_samples")
-                if target:
-                    record["delivered_target_samples"] = max(
-                        0, min(end, target[1]) - target[0]
-                    )
+                ranges = record.get("target_ranges_samples", [])
+                if not ranges and record.get("target_samples"):
+                    ranges = [record["target_samples"]]
+                record["delivered_target_samples"] = sum(
+                    max(0, min(end, stop) - start) for start, stop in ranges
+                )
                 if end == record["sample_count"]:
                     record["actual_stop_seconds"] = (
                         now + (end - start) / PCM_SAMPLE_RATE

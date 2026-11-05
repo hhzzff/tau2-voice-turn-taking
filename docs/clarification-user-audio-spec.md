@@ -176,3 +176,17 @@ Agent 可以中途打断追问，也可以等用户说完再追问；user simula
   移植前后要核对实际规则，不能只复制 hard 名称。
 - 本规格本身不是实现结果。代码接入、真实 API、延迟数据和实际模型澄清行为仍需分别验证。
 - 用户已确认上述测试边界；本规格发布到本仓库 GitHub Issues，标记 `ready-for-agent`。
+
+
+## Follow-up approved in conversation: 2026-11-05
+
+User feedback on the listening demo: one damaged keyword in an open-ended gift
+recommendation lets a generic answer hide whether the important information was
+understood. Extend same-call neutral annotation to multiple essential values
+(up to four concrete spans), one shared whole-TTS alignment and local processing,
+then the existing ticks. Keep hard rules, privacy, one utterance attempt and clear
+repairs. The demo should show each value, actual modified delivery and final
+value-use evidence. Use ordinary goals whose specific values matter, retain every
+real attempt, and do not script/force an agent question or user repair. This
+updates the original single-keyword wording; all other timing/evidence boundaries
+remain in force.

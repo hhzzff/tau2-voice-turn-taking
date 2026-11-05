@@ -65,13 +65,23 @@ def finalize_acoustic_evidence(
     receiving = {
         item["tick_id"] if isinstance(item, dict) else item.tick_id for item in ticks
     }
-    provider_path = output_dir / "agent_audio/agent_input.wav"
+    provider_path = next(
+        (
+            output_dir / name
+            for name in (
+                "agent_audio/agent_user-input.wav",
+                "agent_audio/agent_input.wav",
+            )
+            if (output_dir / name).exists()
+        ),
+        output_dir / "agent_audio/agent_user-input.wav",
+    )
     provider = None
     if provider_path.exists():
         try:
             provider = _read_wav(provider_path)
             evidence["provider_input"] = {
-                "audio_file": "agent_audio/agent_input.wav",
+                "audio_file": str(provider_path.relative_to(output_dir)),
                 "first_receiver_tick": 1,
                 "audio_origin_seconds": tick_seconds,
                 "sha256": hashlib.sha256(provider[0]).hexdigest(),

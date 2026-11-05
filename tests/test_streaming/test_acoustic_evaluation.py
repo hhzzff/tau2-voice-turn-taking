@@ -15,6 +15,122 @@ def scenario():
     )
 
 
+def test_multiple_targets_count_only_each_actually_consumed_damaged_span():
+    report = recorded_report()
+    target = report["acoustic_clarification"]["utterances"][0]
+    target["target_ranges_samples"] = [[100, 200], [350, 400]]
+    target["targets"] = [
+        {
+            "id": "target-01",
+            "keyword": {"text": "Paris"},
+            "target_samples": [100, 200],
+            "modified_intervals_samples": [[120, 180]],
+        },
+        {
+            "id": "target-02",
+            "keyword": {"text": "seven"},
+            "target_samples": [350, 400],
+            "modified_intervals_samples": [[360, 390]],
+        },
+    ]
+    target["modified_intervals_samples"].append([360, 390])
+    row = assess_report(scenario(), report, 0.1)["acoustic_clarification"]["assessment"]
+    assert row["input_validity"] == "valid"
+    assert [
+        item["delivered_modified_samples"] for item in row["information_targets"]
+    ] == [60, 0]
+    assert [item["delivery_status"] for item in row["information_targets"]] == [
+        "delivered",
+        "not_delivered",
+    ]
+    assert row["summary"]["information_targets_planned"] == 2
+    assert row["summary"]["information_targets_delivered_denominator"] == 1
+
+
+@pytest.mark.parametrize("support", ["prior_user", "assistant_only", "future_user"])
+def test_generic_supported_answer_does_not_complete_missing_information(
+    monkeypatch, support
+):
+    import json
+
+    from tau2.data_model.message import AssistantMessage
+    from tau2.user.duplex_evaluation import judge_report
+
+    report = evidence_report()
+    target = report["acoustic_clarification"]["utterances"][0]
+    target["targets"] = [
+        {
+            "id": "target-01",
+            "keyword": {"text": "Paris"},
+            "target_samples": [100, 200],
+            "modified_intervals_samples": [[120, 180]],
+        },
+        {
+            "id": "target-02",
+            "keyword": {"text": "seven"},
+            "target_samples": [210, 270],
+            "modified_intervals_samples": [[220, 260]],
+        },
+    ]
+    target["modified_intervals_samples"].append([220, 260])
+    evidence = report["acoustic_clarification"]["evidence"]
+    if support == "future_user":
+        evidence["transcripts"][2].update(start_seconds=10, end_seconds=11)
+    evidence["context_prefixes"]["a1"] = evidence["context_prefixes"]["a0"]
+    fake_judge(monkeypatch, no_query=True)
+    downstream = __import__("tau2.utils.llm_utils", fromlist=["generate"]).generate
+    seen = []
+
+    def generate(**kwargs):
+        if kwargs["call_name"] != "acoustic_information_coverage":
+            return downstream(**kwargs)
+        seen.append(json.loads(kwargs["messages"][0].content.split("\n")[-1]))
+        return AssistantMessage(
+            role="assistant",
+            content=json.dumps(
+                {
+                    "targets": [
+                        {
+                            "id": "target-01",
+                            "outcome": "used_correctly",
+                            "reason": "City used.",
+                            "evidence": [{"id": "a1", "quote": "Paris"}]
+                            + (
+                                []
+                                if support == "assistant_only"
+                                else [{"id": "u1", "quote": "Paris."}]
+                            ),
+                        },
+                        {
+                            "id": "target-02",
+                            "outcome": "not_addressed",
+                            "reason": "Quantity absent.",
+                            "evidence": [],
+                        },
+                    ]
+                }
+            ),
+        )
+
+    monkeypatch.setattr("tau2.utils.llm_utils.generate", generate)
+    row = judge_report(
+        scenario(), assess_report(scenario(), report, 0.1), "offline-judge"
+    )["acoustic_clarification"]["assessment"]
+    assert row["verdict"] == "inconclusive"
+    assert not row["information_completed"]
+    if support != "prior_user":
+        assert row["information_error"] == "ValueError"
+        assert row["summary"]["information_judge_failure"] == 1
+        return
+    assert [item["outcome"] for item in row["information_targets"]] == [
+        "used_correctly",
+        "not_addressed",
+    ]
+    assert row["summary"]["information_targets_used_correctly"] == 1
+    assert len(seen) == 1
+    assert "script_text" not in json.dumps(seen)
+
+
 def recorded_report(mode="dropchunk"):
     target = {
         "id": "user-0001",
@@ -287,8 +403,11 @@ def test_incomplete_and_nonclarification_outcomes_remain_explicit(monkeypatch, c
         assert len(calls) == 1
 
 
+@pytest.mark.parametrize(
+    "provider_filename", ["agent_input.wav", "agent_user-input.wav"]
+)
 def test_final_audio_evidence_crops_received_prefix_and_offline_replay_never_transcribes(
-    monkeypatch, tmp_path
+    monkeypatch, tmp_path, provider_filename
 ):
     import json
     import wave
@@ -322,7 +441,7 @@ def test_final_audio_evidence_crops_received_prefix_and_offline_replay_never_tra
         for i in range(3)
     ]
     wav("target.wav", [1] * 100 + [2] * 100 + [99] * 100)
-    wav("agent_audio/agent_input.wav", [11] * 100 + [22] * 100)
+    wav(f"agent_audio/{provider_filename}", [11] * 100 + [22] * 100)
     wav("question.wav", [33] * 100)
     report["acoustic_clarification"]["assistant_observations"] = [
         {
@@ -689,3 +808,39 @@ def test_contiguous_backchannel_does_not_replace_later_question_context(monkeypa
     assert seen[0]["received_modified_before_segment_samples"] == 0
     assert seen[1]["received_modified_before_segment_samples"] == 60
     assert seen[1]["private_target_intent_not_heard_transcript"]["text"] == "Paris"
+
+
+def test_question_word_in_a_drafted_note_is_not_an_adequate_clarification(monkeypatch):
+    import json
+
+    from tau2.data_model.message import AssistantMessage
+    from tau2.user.duplex_evaluation import judge_report
+
+    report = evidence_report(question_end=4.5)
+    report["acoustic_clarification"]["evidence"]["transcripts"][1]["transcript"] = (
+        "Draft note: Which city? Please arrive on time."
+    )
+    fake_judge(monkeypatch)
+    downstream = __import__("tau2.utils.llm_utils", fromlist=["generate"]).generate
+
+    def generate(**kwargs):
+        result = downstream(**kwargs)
+        if kwargs["call_name"] == "acoustic_request_judge":
+            payload = json.loads(kwargs["messages"][0].content.split("\n")[-1])
+            if "Draft note:" in payload.get("request_segment", {}).get(
+                "transcript", ""
+            ):
+                answer = json.loads(result.content)
+                answer.update(
+                    adequacy="misdirected",
+                    reason="This is a placeholder in a draft, not a directed repair request.",
+                )
+                return AssistantMessage(role="assistant", content=json.dumps(answer))
+        return result
+
+    monkeypatch.setattr("tau2.utils.llm_utils.generate", generate)
+    row = judge_report(
+        scenario(), assess_report(scenario(), report, 0.1), "offline-judge"
+    )["acoustic_clarification"]["assessment"]
+    assert row["question"]["adequacy"] == "misdirected"
+    assert row["verdict"] == "fail"
