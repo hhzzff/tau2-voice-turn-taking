@@ -8,20 +8,26 @@ from tau2.data_model.simulation import OpenModelConfig
 @pytest.mark.parametrize(
     "model, milliseconds, identity",
     [
-        ("salmonn", 80, "SALMONN-Omni-before-SFT-checkpoint-44000"),
+        (
+            "salmonn",
+            80,
+            "SALMONN-Omni-0519-fc180-aes-er0-chunk30-llama31-checkpoint-44000",
+        ),
         ("minicpm", 1000, "MiniCPM-o-4.5"),
     ],
 )
 def test_open_model_native_duration(model, milliseconds, identity):
-    config = OpenModelConfig(model=model)
+    config = OpenModelConfig(pacing="frozen", model=model)
     assert config.tick_duration_ms == milliseconds
     assert config.model_identity == identity
     assert (
-        OpenModelConfig(model=model, tick_duration_seconds=milliseconds / 1000)
+        OpenModelConfig(
+            pacing="frozen", model=model, tick_duration_seconds=milliseconds / 1000
+        )
         == config
     )
-    with pytest.raises(ValueError, match="native tick"):
-        OpenModelConfig(model=model, tick_duration_seconds=0.2)
+    with pytest.raises(ValueError, match="scheduler tick"):
+        OpenModelConfig(pacing="frozen", model=model, tick_duration_seconds=0.2)
 
 
 def test_frozen_adapter_preserves_overflow_without_realtime_sleep(monkeypatch):

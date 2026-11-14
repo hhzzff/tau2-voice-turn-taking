@@ -289,6 +289,14 @@ class FDBSpeechPlayback:
         kwargs = {"text_idx_num": self._text_index, "token_input": self._embedded_y}
         if self._embedded_y is not None:
             kwargs["generated"] = self._generated
+            if (
+                self._text_index >= current_length
+                and len(self._generated) >= current_length * 2
+            ):
+                # CosyVoice's final drain counts its default 2x minimum from
+                # zero again. Prefix synthesis has already met that minimum;
+                # permit EOS here without changing prefix sampling or retries.
+                kwargs["min_token_text_ratio"] = 0.0
         result = self.model.cosy.llm.inference_salmonn_stream(
             projected, lengths, **kwargs
         )

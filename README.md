@@ -119,6 +119,9 @@ Results are saved to `data/simulations/`. Use `tau2 view` to browse them.
 
 ### Voice & Audio
 
+本分支的动态双工评估：[当前评估与 Topic 覆盖报告](docs/duplex-evaluation-report.html) ·
+[主脚本使用说明](src/experiments/tau_voice/DUPLEX_BENCH.md)。
+
 | Document | Description |
 |----------|-------------|
 | [Voice (Full-Duplex)](src/tau2/voice/README.md) | Providers, speech complexity, CLI options, and output structure for voice evaluation |
@@ -215,3 +218,13 @@ If you use a specific component of $\tau^3$-bench, please cite the corresponding
       url={https://openreview.net/forum?id=En2z9dckgP},
 }
 ```
+
+### Open-model scheduling
+
+Open-model agents and `open_model_demo` now default to 100ms asynchronous
+scheduler windows. SALMONN still consumes native 80ms blocks and MiniCPM consumes
+native 1000ms blocks; the adapter buffers input independently of the output
+collection clock. Explicit `OpenModelConfig(pacing="frozen", ...)` or demo
+`--pacing frozen` retains the historical native-step replay. The shared voice
+tick default is also 100ms. See [timing results and decision](docs/open-model-equivalence-50-plan.md);
+this engineering choice is not a claim that all events meet a 100ms error bound.

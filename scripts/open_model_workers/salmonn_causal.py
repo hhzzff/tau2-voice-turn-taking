@@ -339,6 +339,94 @@ class AppendableCausalSpeechBridge:
         return projected, ledger
 
 
+class ChunkedCausalSpeechBridge:
+    """Match independent native encoder chunks without reading future frames.
+
+    The checkpoint's encode_chunk_size is in seconds. At each complete chunk,
+    discard that encoder's KV cache, carrying projection residuals across chunks.
+    Fbank extraction remains continuous across the boundary.
+    """
+
+    def __init__(self, model: Any, torch_module: Any | None = None) -> None:
+        if torch_module is None:
+            import torch as torch_module
+        seconds = float(model.encode_chunk_size)
+        frames = round(seconds * SAMPLE_RATE / FBANK_FRAME_SHIFT_SAMPLES)
+        if frames <= 0 or frames % (SUBSAMPLING_FACTOR * SPEECH_PROJECTION_GROUP):
+            raise ValueError(
+                "encoder chunk must contain a positive multiple of 8 fbank frames"
+            )
+        if abs(frames * FBANK_FRAME_SHIFT_SAMPLES / SAMPLE_RATE - seconds) > 1e-9:
+            raise ValueError("encoder chunk is not aligned to fbank frames")
+        self.model, self.torch = model, torch_module
+        self.chunk_frames = frames
+        self.current = None
+        self.current_frames = 0
+        self.total_frames = 0
+        self.total_tokens = 0
+        self.appends = 0
+        self.completed = 0
+        self.projection = SpeechProjectionAccumulator(model, torch_module)
+
+    def append_stable_fbank(
+        self, fbank_chunk: Any
+    ) -> tuple[Any | None, dict[str, Any]]:
+        """Append currently available features, resetting only complete chunks."""
+        if self.torch.is_grad_enabled():
+            raise RuntimeError("causal speech append requires inference_mode/no_grad")
+        if fbank_chunk.ndim != 3 or int(fbank_chunk.shape[0]) != 1:
+            raise ValueError("fbank chunk must have shape [1, time, feature]")
+        count = int(fbank_chunk.shape[1])
+        if count <= 0:
+            raise ValueError("fbank chunk must be non-empty")
+        outputs = []
+        position = 0
+        while position < count:
+            if self.current is None:
+                self.current = AppendableCausalSpeechBridge(self.model, self.torch)
+                self.current.projection = self.projection
+            take = min(count - position, self.chunk_frames - self.current_frames)
+            projected, _ = self.current.append_stable_fbank(
+                fbank_chunk[:, position : position + take]
+            )
+            if projected is not None:
+                outputs.append(projected)
+            position += take
+            self.current_frames += take
+            if self.current_frames == self.chunk_frames:
+                self.current = None
+                self.current_frames = 0
+                self.completed += 1
+        projected = self.torch.cat(outputs, dim=1) if outputs else None
+        new_tokens = int(projected.shape[1]) if projected is not None else 0
+        self.total_frames += count
+        self.total_tokens += new_tokens
+        ledger = {
+            "schema_version": BRIDGE_SCHEMA_VERSION + "-chunked",
+            "append_index": self.appends,
+            "new_stable_fbank_frames": count,
+            "total_stable_fbank_frames": self.total_frames,
+            "new_speech_tokens": new_tokens,
+            "total_speech_tokens": self.total_tokens,
+            "encoder_chunk_frames": self.chunk_frames,
+            "completed_encoder_chunks": self.completed,
+            "current_chunk_frames": self.current_frames,
+            "projection_boundary_zero_pad_frames": 0,
+            "projection_residual_encoder_frames": (
+                0
+                if self.projection.residual is None
+                else int(self.projection.residual.shape[1])
+            ),
+            "speech_encoder_cache_frames": (
+                self.current.transformer.position if self.current is not None else 0
+            ),
+            "future_fbank_frames_supplied": 0,
+            "reflected_right_boundary_fbank_frames_supplied": 0,
+        }
+        self.appends += 1
+        return projected, ledger
+
+
 class CanonicalStreamingFbank:
     """Expose only Fbank frames complete in the waveform revealed so far."""
 

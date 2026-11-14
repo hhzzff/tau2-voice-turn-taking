@@ -22,9 +22,9 @@ def load_worker():
         sys.path.remove(str(WORKERS))
 
 
-def test_after_sft_checkpoint_rejected_before_runtime_load():
+def test_missing_training_config_rejected_before_runtime_load():
     worker = load_worker()
-    with pytest.raises(ValueError, match="before-SFT"):
+    with pytest.raises(ValueError, match="adjacent training config"):
         worker.connect({"checkpoint": "/models/cla_bc/checkpoint-8000"}, "hello")
 
 
@@ -36,12 +36,15 @@ def test_disconnected_worker_cannot_consume_audio():
     worker.disconnect()
 
 
-def test_tick_mismatch_rejected_before_loading_checkpoint():
+def test_tick_mismatch_rejected_before_loading_checkpoint(tmp_path):
+    checkpoint = tmp_path / "checkpoint-44000"
+    checkpoint.mkdir()
+    (tmp_path / "config.json").write_text("{}")
     worker = load_worker()
     with pytest.raises(ValueError, match="80"):
         worker.connect(
             {
-                "checkpoint": "/models/cu12_stage2_v2_tfv2_short_sm1_sp_longs1/checkpoint-44000",
+                "checkpoint": str(checkpoint),
                 "settings": {"chunk_ms": 1000},
             },
             "hello",
@@ -66,4 +69,22 @@ def test_native_cpu_stream_contract():
         timeout=180,
     )
     assert result.returncode == 0, result.stdout + result.stderr
-    assert "32 causal ticks" in result.stdout
+    assert "fresh episodes" in result.stdout and "causal ticks" in result.stdout
+
+
+def test_tts_cumulative_minimum_and_normal_drain():
+    """Keep EOS eligible after the prefix has met the native speech minimum."""
+    import os
+    import subprocess
+
+    python = os.environ.get("SALMONN_NATIVE_PYTHON")
+    if not python:
+        pytest.skip("set SALMONN_NATIVE_PYTHON for the CPU playback contract")
+    result = subprocess.run(
+        [python, str(Path(__file__).with_name("tts_minimum_cpu_contract.py"))],
+        capture_output=True,
+        text=True,
+        timeout=180,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "normal waveform drain passed" in result.stdout

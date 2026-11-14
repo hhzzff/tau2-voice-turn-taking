@@ -401,6 +401,7 @@ class DiscreteTimeGeminiAdapter(DiscreteTimeAdapter):
     ) -> None:
         """Process a Gemini event."""
         result.events.append(event)
+        self.record_control_signal("gemini", event, result)
 
         if isinstance(event, GeminiAudioDeltaEvent):
             item_id = event.item_id or self._current_item_id

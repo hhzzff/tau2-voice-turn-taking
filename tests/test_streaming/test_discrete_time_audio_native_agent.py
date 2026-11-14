@@ -19,7 +19,6 @@ from typing import List, Optional
 from unittest.mock import MagicMock, patch
 
 import pytest
-from tau2.voice.audio_native.openai.tick_runner import TickResult
 
 from tau2.agent.discrete_time_audio_native_agent import (
     DiscreteTimeAgentState,
@@ -33,6 +32,7 @@ from tau2.data_model.message import (
     UserMessage,
 )
 from tau2.environment.tool import Tool
+from tau2.voice.audio_native.tick_result import TickResult
 
 # =============================================================================
 # Mock TickResult Helper
@@ -701,3 +701,34 @@ class TestConfiguration:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "-s"])
+
+
+@pytest.mark.parametrize(
+    "fixture_name,expected_speech", [("gpt_live_quiet", False), ("hello", True)]
+)
+def test_native_audio_presence_is_distinct_from_speech_activity(
+    fixture_name, expected_speech, agent_with_mock_adapter, mock_adapter
+):
+    """A real GPT Live quiet interval advances audio time without speech activity."""
+    from pathlib import Path
+
+    fixture = (
+        Path(__file__).parents[1]
+        / "test_voice/test_audio_native/testdata"
+        / f"{fixture_name}.ulaw"
+    ).read_bytes()
+    audio = fixture[:8000].ljust(8000, b"\xff")
+    mock_adapter.run_tick.return_value = TickResult(
+        tick_number=1,
+        audio_sent_bytes=8000,
+        audio_sent_duration_ms=1000,
+        bytes_per_tick=8000,
+        bytes_per_second=8000,
+        agent_audio_chunks=[(audio, "native-output")],
+    )
+    state = agent_with_mock_adapter.get_init_state()
+    message, state = agent_with_mock_adapter.get_next_chunk(state)
+    assert message.contains_speech is expected_speech
+    assert message.get_audio_bytes() == audio
+    assert len(message.get_audio_bytes()) == 8000
+    assert state.last_tick_result.agent_audio_bytes == 8000

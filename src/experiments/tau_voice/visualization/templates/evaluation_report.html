@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>双工语音评估：当前范围与 Topic 覆盖审计</title>
+<style>
+:root{color-scheme:light;--ink:#182e3d;--muted:#536572;--line:#d9e1e5;--teal:#086a65;--paper:#f6f8f7;--amber:#8a4b08}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.85 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif}main{max-width:1200px;margin:auto;padding:48px 32px 80px}header{border-top:6px solid var(--teal);padding-top:24px}.eyebrow{color:var(--teal);font-size:13px;font-weight:750;letter-spacing:.13em}h1{font-size:clamp(29px,4vw,46px);line-height:1.35;max-width:950px;margin:14px 0 20px}h2{font-size:25px;margin:0 0 20px}h3{font-size:19px;margin:24px 0 10px}p{margin:10px 0}a{color:var(--teal);text-underline-offset:3px}nav{display:flex;gap:10px 22px;flex-wrap:wrap;padding:20px 0;margin:20px 0;border-block:1px solid var(--line)}nav a{font-size:14px;text-decoration:none}section{margin-top:42px;scroll-margin-top:20px}.lead{font-size:20px;max-width:1000px}.muted,.meta{color:var(--muted);font-size:14px}.callout{padding:20px 24px;border-left:4px solid var(--teal);background:#e8f2ef;margin:22px 0}.warning{border-color:#bc741e;background:#fff3de}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}.card{background:white;border:1px solid var(--line);padding:20px}.card strong{display:block;font-size:42px;color:var(--teal);line-height:1.2;margin-bottom:10px}.card b{display:block}.card p{font-size:14px;color:var(--muted)}.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:20px 0}.step{padding:18px;background:white;border-top:3px solid var(--teal);font-size:14px}.step b{display:block;margin-bottom:8px}.table-wrap{overflow-x:auto;border:1px solid var(--line);background:white}table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:13px 16px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}th{background:#edf2f2;font-weight:700}td code{overflow-wrap:anywhere}code{font:13px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace}pre{padding:20px;background:#172e3b;color:#eaf3ef;overflow-x:auto;border-radius:4px}pre code{color:inherit}.filters{display:flex;gap:8px;flex-wrap:wrap;margin:15px 0}button{font:inherit;font-size:14px;background:white;border:1px solid #afc3c4;border-radius:4px;padding:7px 14px;color:var(--ink);cursor:pointer}button[aria-pressed="true"]{background:var(--teal);color:white}button:focus-visible,a:focus-visible{outline:3px solid #c87b24;outline-offset:3px}.hash{max-width:220px;word-break:break-all}.badge{display:inline-block;background:#dcece7;padding:2px 9px;border-radius:3px;color:#12594d;font-size:13px}details{margin:18px 0}summary{cursor:pointer;font-weight:650}li{margin:8px 0}footer{margin-top:48px;padding-top:18px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}[hidden]{display:none!important}@media(max-width:760px){main{padding:25px 18px 50px}.cards{grid-template-columns:repeat(2,1fr)}.flow{grid-template-columns:1fr}.lead{font-size:18px}th,td{padding:10px}}@media print{body{background:white}main{padding:0;max-width:none}nav,.filters{display:none}section{break-inside:auto}.card,.callout,tr{break-inside:avoid}a{color:inherit}details>*{display:block}h2{break-after:avoid}}
+.event-table{table-layout:fixed;min-width:760px}.event-name{width:12%}.event-trigger{width:29%}.event-assessment{width:41%}.event-id{width:18%}.event-table details{margin:10px 0 0}.event-table summary{font-size:13px;color:var(--teal)}.event-table pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:320px;margin:10px 0;padding:12px}#event-judge-prompt pre{white-space:pre-wrap;overflow-wrap:anywhere}
+.event-table pre.logic{max-height:none;background:#edf3f2;color:var(--ink);margin:0;padding:12px;border:1px solid var(--line);line-height:1.75}#event-common-pseudocode pre{white-space:pre-wrap;overflow-wrap:anywhere}
+.event-name{width:21%}.event-trigger{width:33%}.event-assessment{width:32%}.event-id{width:14%}.event-choice{font-size:13px;line-height:1.7;color:var(--muted);overflow-wrap:anywhere}.timing-cell{background:#eef5f2}.timing-cell pre.logic{background:transparent;border:0;padding:0}.scheduler-code{white-space:pre-wrap;overflow-wrap:anywhere}#runtime-policy pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:420px}
+</style>
+</head>
+<body><main>
+<header>
+<div class="eyebrow">TAU VOICE / EVALUATION SCOPE / SOURCE AUDIT</div>
+<h1>我们在评估什么，<br>Topic 从哪里来，覆盖是否足够？</h1>
+<p class="lead"><strong>当前动态 bench 已定义 19 类双工事件；Topic 由模型现场生成，但尚未建立可审计的主题覆盖体系。</strong>它适合验证交互机制与发现案例问题；目前证据不足以支持“广泛主题上的能力已充分评估”。</p>
+<p class="meta">生成时间 {{DATE}} · 拉取的 origin/main <code>{{MAIN}}</code> · 当前 HEAD <code>{{HEAD}}</code><br>工作分支 <code>{{BRANCH}}</code> · 工作树：{{DIRTY}}。本文依据当前源码；逐文件哈希见文末。</p>
+</header>
+<nav aria-label="报告导航"><a href="#scope">评估范围</a><a href="#events">19 类事件</a><a href="#pipeline">如何运行与判分</a><a href="#topics">Topic 来源</a><a href="#coverage">覆盖判断</a><a href="#next">补充方案</a><a href="#reproduce">主脚本与复现</a><a href="#evidence">证据索引</a></nav>
+
+<section id="scope"><h2>01 · 当前评估范围</h2>
+<p>主入口是 <code>python -m experiments.tau_voice.duplex_bench</code>。输入事件类型子集，运行时用户模型根据真实对话决定事件顺序、时机与措辞。被测助手只收到普通对话策略和实际音频；私有事件清单、期望行为与评审标准不注入助手策略。{{SOURCE_主入口}} · {{SOURCE_动态用户策略}}</p>
+<div class="table-wrap"><table><thead><tr><th>路径</th><th>实际评估对象</th><th>解释边界</th></tr></thead><tbody>
+<tr><td><strong>当前动态 duplex bench</strong></td><td>让渡话轮、抑制误响应、跨轮记忆、主动参与；时序证据 + 逐事件语义判断。</td><td>自由生活对话，无工具和账号查询。不是客服任务完成率，也没有自动生成统一自然度／音质分数。</td></tr>
+<tr><td>旧 contextual interruption 实验</td><td>5 类打断；固定主题计划／可选事件顺序；独立 A prompt 评助手回复，B prompt 评整场用户自然度。</td><td>这套旧 judge 仍可单独运行；当前主脚本未自动调用 A/B 评分。{{SOURCE_旧主题池}}</td></tr>
+<tr><td>开源模型 frozen-time demo</td><td>SALMONN / MiniCPM 的音频交换、ASR 观察、纠正与附和机会、同协议录音。</td><td>6 个场景 ID 均围绕北京旅行，不能当成 6 个主题。原生 tick 为 80 ms / 1000 ms；本次合并保留其独立入口。{{SOURCE_开源模型场景}}</td></tr>
+<tr><td>原 τ-bench / τ-voice</td><td>业务任务成功、工具／策略遵循；另有响应／让渡延迟、响应率、让渡率、误打断、选择性指标。</td><td>这些框架能力不等于当前自由讨论 bench 已自动计算全部指标；不要混用分母或对外合并排名。{{SOURCE_原框架交互指标}}</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="events"><h2>02 · 事件目录</h2>
+<p>相同的时间触发条件已跨行合并；事件名称下列出模型选择该事件的语义依据，评估仍逐事件保留。{{SOURCE_事件目录}}</p>
+<div class="callout"><strong>8 类 interruption 共用同一套时机判定。</strong>代码没有逐类独立的秒数、字数、语义完成度或错误置信度阈值。用户模型看到实际上下文后，自行决定等待、选择哪种事件以及说什么；prompt 只为部分事件给出简短意图说明，不能把这些意图当成已经实现的检测器。</div>
+<h3>共用时间调度：什么时候检查、模型依据什么决定</h3>
+<pre class="scheduler-code"><code>{{EVENT_SCHEDULER_PSEUDOCODE}}</code></pre>
+<p class="muted">源码入口：{{SOURCE_决策检查时机}} · {{SOURCE_运行时决策输入}} · {{SOURCE_触发准入检查}} · {{SOURCE_助手音频活动判定}} · {{SOURCE_实际刺激生成}}。</p>
+<p class="muted">具体某次为何开始打断，查看 <code>events.json → decisions[]</code> 中的 <code>seconds / decision.event_id / decision.reason / accepted / feedback</code>；实际刺激起点看 <code>events[].start_seconds</code>。合成后未重新刷新助手发声快照，因此准入通过仍可能没有真实重叠，事后会记为无效触发。</p>
+<details id="runtime-policy"><summary>查看运行时原始 prompt</summary><pre><code>{{RUNTIME_POLICY}}</code></pre></details>
+<details id="event-common-pseudocode"><summary>共用评估伪代码与变量约定</summary><pre><code>{{EVENT_COMMON_PSEUDOCODE}}</code></pre></details>
+{{EVENT_TABLES}}
+<details id="event-judge-prompt"><summary>共用 judge prompt（除记忆专项外）</summary>
+<p class="muted">各行的 expected_behavior 与下列共用指令一起传入 judge，并附上实际刺激、ASR、时序指标及上下文。先检查刺激有效性，再评审助手行为；未完成记为 not_evaluated，证据不足记为 inconclusive。{{SOURCE_语义评审}}</p>
+<pre><code>{{EVENT_JUDGE_PROMPT}}</code></pre>
+</details>
+</section>
+
+<section id="pipeline"><h2>03 · 从事件选择到判分</h2>
+<div class="flow"><div class="step"><b>1 / 指定事件子集</b>配置语言、用户模型与 seed；prepare 仅保存配置，不生成台词。</div><div class="step"><b>2 / 生成 Topic</b>Topic 为空时生成主题和私有用户背景；已有 Topic 时沿用配置。</div><div class="step"><b>3 / 动态对话</b>听已播放的助手音频，经 ASR 得到上下文，再决定等待、发言或触发事件。</div><div class="step"><b>4 / 保存证据</b>记录实际刺激、音频播放、观察窗口、逐 tick 轨迹和模型调用日志。</div><div class="step"><b>5 / 时序与语义评审</b>先检查事件有效性，再评助手行为；不完整与证据不足单独保留。</div></div>
+<p>默认观察方式是 <code>played_audio</code>：对已交付的助手音频前缀重新识别并替换旧假设，避免使用未来 transcript。它仍是同步 ASR，不是词级对齐；识别和模型／TTS 调用耗时会影响运行。默认 1 秒的决策检查间隔不是固定事件触发时间。{{SOURCE_已播放音频观察}} · {{SOURCE_动态用户策略}}</p>
+<div class="table-wrap"><table><thead><tr><th>层次</th><th>实际做法</th><th>不能推出的结论</th></tr></thead><tbody>
+<tr><td>物理有效性</td><td>只有刺激合成并开始播放才算触发；需重叠的事件若无实际重叠，标记 invalid_trigger / not_evaluated。</td><td>请求 trigger_event 不代表有效事件；运行退出码 0 只表示所选事件均被 observed，不表示全部判为 pass。</td></tr>
+<tr><td>时序评审</td><td>统计刺激期间／之后的助手活动秒数、刺激结束后首次发声延迟、首次安静延迟；特定事件增加停顿期发声与主动插话延迟。</td><td>首次安静可能是自然停顿；再次发声不代表回答正确。当前 bench 也未按统一延迟阈值为全部打断判成功。{{SOURCE_时序评审}}</td></tr>
+<tr><td>语义评审</td><td>先验证用户刺激是否符合事件，再依据实际 transcript、ASR 与时序证据输出 pass / fail / inconclusive；运行不完整另记 not_evaluated。</td><td>不能只用有声／无声代替内容判断。相同模型既生成用户又做 judge，需人工与独立 judge 校准。{{SOURCE_语义评审}}</td></tr>
+<tr><td>记忆专项</td><td>事实须先实际说出，中间有交流，再问不复述事实值的回忆问题。听完整回答后逐事实评审，使用最新更正。</td><td>私有 user_context 不等于助手听过；提问是否重叠不计分。记忆回答期间禁止用户插话，持续静默默认 1 秒后结束，默认 120 秒超时视为观察未完成。{{SOURCE_记忆评审}}</td></tr>
+</tbody></table></div>
+<div class="callout"><strong>推荐同时报告三个分母。</strong><br>执行覆盖率 = 有效 observed 数 / selected 数；可判定率 = (pass + fail) / selected 数；已判定通过率 = pass / (pass + fail)。同时列出 inconclusive、not_evaluated 与未触发数。上述为建议的报告口径，当前 summary 保存原始计数，不自动提供这些比率。</div>
+<p class="muted">时序以轨迹 tick 为粒度；普通 API 默认 200 ms，实际值读取 run_config。用户输出与助手输入有一 tick 的传递延迟。音频时间、tick 时间与模型计算墙钟时间须分开解释。</p>
+</section>
+
+<section id="topics"><h2>04 · Topic 到底从哪里来？</h2>
+<h3>当前主流程：{{MODEL}} 生成生活对话情境</h3>
+<p><code>DuplexScenario.topic</code> 默认空字符串。run 遇到空 Topic 时调用 <code>generate_topic(scenario)</code>；非空则直接使用已有配置。默认用户模型来自 <code>config.py</code>，也允许显式覆盖。{{SOURCE_Topic 生成}} · {{SOURCE_主入口}}</p>
+<div class="callout"><strong>生成请求包含：</strong>配置语言、Variation seed，以及每个已选事件的完整目录契约。要求“具体日常对话主题，能自然提供所有已选事件的机会”，返回 <code>{topic, user_context}</code>；禁止预写开场、事件台词、顺序、时间表或固定脚本。</div>
+<p>所以，当前 Topic 来源是<strong>模型按项目 prompt 生成</strong>；此函数没有检索外部主题语料，也没有从原 τ-bench 任务库采样。seed 在此处作为 prompt 文本传入，并非保证复现或去重的采样器。prepare 和直接 run 的默认 seed 都是 42。相同配置不保证相同对话，换 seed 也不保证换语义主题。</p>
+<p>Topic 与用户背景保存至 <code>scenario.json</code>；成功返回的话题生成、动态决策和评审调用保存至 <code>llm_calls/</code>。私有背景和事件契约供用户模拟器使用；被测助手通过实际用户语音逐步获知背景。</p>
+<h3>旧脚本：固定的四个讨论主题</h3>
+<p>旧的 <code>interruption_type_experiment.py --topic-source discussion</code> 使用下面四个源码模板，并按 <code>sample_idx % 4</code> 轮转；每个模板有四个侧话题。这是旧路径的主题来源，不能用它解释新动态 bench 的生成结果。{{SOURCE_旧主题池}}</p>
+<details><summary>展开四个主题和侧话题原文</summary><div class="table-wrap"><table><thead><tr><th>#</th><th>主话题</th><th>侧话题池</th></tr></thead><tbody>{{OLD_ROWS}}</tbody></table></div></details>
+<div class="callout warning"><strong>旧采样存在结构性限制。</strong>主话题索引与侧话题索引使用同一个 sample_idx，四个主话题和每主题四个侧话题周期相同。因此同一个主话题总选同一对相邻侧话题：即使增加样本，计划层面仍只使用每主题 2/4 个侧话题槽位，总计 8/16。默认每类型 10 个计划中的主话题数为 3、3、2、2；五类型共 50 个计划也仍只有四个主主题。这是配置推演，不是实跑计数。{{SOURCE_旧主题采样}}</div>
+<p>旧脚本另有 <code>--topic-source domain</code>：使用 retail、airline、telecom、banking_knowledge、mock 五组领域模板。开源模型 demo 的六个场景则都围绕北京旅行。这些入口应分别核算主题分布。</p>
+</section>
+
+<section id="coverage"><h2>05 · 是否覆盖足够多的 Topic？</h2>
+<div class="callout warning"><strong>目前不能证明充分。</strong>“能够生成新 Topic”只说明生成机制开放；“事件类型齐全”只说明交互行为维度有定义。源码中尚未建立主题分类、抽样配额、语义去重、主题 × 事件统计或预先设定的充分性标准。</div>
+<div class="table-wrap"><table><thead><tr><th>问题</th><th>当前证据</th><th>判断</th></tr></thead><tbody>
+<tr><td>交互行为是否够宽？</td><td>19 类目录，四组能力；运行子集由用户指定。</td><td><span class="badge">已定义</span> 仍需逐类有效运行的计数。</td></tr>
+<tr><td>主题是否够多、够分散？</td><td>模型自由生成 everyday topic，无分类与配额。</td><td>未知。不同表述可能仍属于备餐／出游等同一主题。</td></tr>
+<tr><td>主题与事件是否相互独立？</td><td>生成 prompt 要求同时适配所有所选事件。</td><td>可能偏向容易承载事件的计划类情境；这是机制风险，尚未测量其程度。</td></tr>
+<tr><td>语义任务是否够广？</td><td>无工具的日常对话；现有示例多为规划、偏好和约束。</td><td>无法据此宣称覆盖专业知识、工具任务或高风险场景。</td></tr>
+<tr><td>语言、说话人与声学条件是否充分？</td><td>配置支持中／英；默认固定主用户／背景 TTS 声线，关闭无关随机音效。</td><td>支持选项不等于两种语言都已测。噪声事件有三种离散刺激；多人混音和口音分层尚不能据此确认。</td></tr>
+</tbody></table></div>
+<h3>本报告的实跑数据口径</h3>
+<p>明确纳入的动态 bench 运行目录：<strong>{{RUN_COUNT}}</strong>；非空 Topic 的规范化字符串去重数：<strong>{{TOPIC_COUNT}}</strong>。只按显式 <code>--run-dir</code> 纳入，避免误计失败重试和历史目录。该字符串计数不是语义主题数，也不证明主题已在实际音频中充分展开。</p>
+<div class="table-wrap"><table><thead><tr><th>运行</th><th>保存的 Topic</th><th>语言</th><th>原始 assessment summary</th></tr></thead><tbody>{{RUN_ROWS}}</tbody></table></div>
+<p class="muted">本次检出的本地 data/simulations 包含开源模型 demo 产物，未发现动态 bench 的 scenario.json。HANDOFF.md 记载了另一工作区的六组真实英文运行（30 个所选事件）；其 manifest、场景、录音与逐项评审不随 Git 同步。因此本文未把交接中的历史通过数或六组数作为本次核验结果。未纳入运行不意味着从未运行。{{SOURCE_交接记录}}</p>
+</section>
+
+<section id="next"><h2>06 · 怎样把“Topic 够不够”变成可回答的问题</h2>
+<p><strong>先用已有产物做主题归类，再针对空白补样本。</strong>建议给最终运行清单增加 <code>topic_family</code>、子场景、语言、事实／约束结构、事件子集和有效刺激标记。分类可人工复核，不靠 Topic 字符串数量判断多样性。</p>
+<div class="table-wrap"><table><thead><tr><th>建议的生活主题层</th><th>可变任务与约束示例</th></tr></thead><tbody>
+<tr><td>饮食与家庭生活</td><td>备餐、采购、家务分工；预算、过敏／偏好、设备与时间约束。</td></tr>
+<tr><td>旅行与本地活动</td><td>行程、交通、活动选择；体力、天气、人数、可达性和计划变更。</td></tr>
+<tr><td>工作与协作</td><td>会议、沟通、任务取舍；多方偏好、截止时间、优先级冲突。</td></tr>
+<tr><td>学习与知识解释</td><td>解释概念、学习计划、方法比较；理解误区、追问与澄清。</td></tr>
+<tr><td>数码与日常排障</td><td>设置、故障诊断、方案选择；逐步补充线索、否定假设、回忆已尝试步骤。</td></tr>
+<tr><td>社交与情绪交流</td><td>邀请、协调、倾诉与回应；指代、隐含意图、情绪语气和旁话辨别。</td></tr>
+</tbody></table></div>
+<p class="muted">以上是建议的抽样分类，不是已存在的数据集；可按产品目标调整。增加主题时保持用户动态反应，不预写事件台词或把评审标准注入被测助手。</p>
+<ol><li><strong>做主题 × 事件矩阵。</strong>每格同时列 selected、有效 observed、pass、fail、inconclusive、not_evaluated。遇到事件不适合主题时标注不适用并解释，不强行制造刺激。</li><li><strong>先做覆盖试点。</strong>例如 6 个主题层 × 每层 3 个不同子场景 × 中英 2 种语言 = 36 场／被测模型。按事件计数反向配额，避免每场都堆所有事件。36 只是试点预算示例，不是统计充分性的证明。</li><li><strong>控制比较条件。</strong>先冻结 topic／用户背景与事件集合，再让各模型动态交互；多 seed 重复。既报按主题宏平均，也报事件计数汇总，防止高频主题主导结果。</li><li><strong>用不确定性决定是否足够。</strong>按会话聚类估计区间，检查各主题和关键事件的有效样本量、误差范围及结论稳定性；预先约定可接受误差。新主题上结果不稳定时继续补样本。</li><li><strong>独立检查刺激和评审。</strong>抽听用户 TTS 是否完整、事件是否自然有效，并用人工／独立 judge 复核。保留生成来源与 prompt 版本，避免生成器与评审器共同偏好掩盖失败。</li></ol>
+</section>
+
+<section id="reproduce"><h2>07 · 已接入主脚本的报告入口</h2>
+<p>下面命令生成本报告及 <code>.evidence.json</code>，读取源码与显式指定的已有运行，不启动对话、不调用生成、ASR、TTS 或 judge API。</p>
+<pre><code># 源码范围报告（当前交付）
+.venv/bin/python -m experiments.tau_voice.duplex_bench report \
+  --output docs/duplex-evaluation-report.html
+
+# 如需纳入已有最终样本，逐个显式指定目录
+.venv/bin/python -m experiments.tau_voice.duplex_bench report \
+  --output /tmp/duplex-evaluation-with-runs.html \
+  --run-dir /path/to/final/group_01 \
+  --run-dir /path/to/final/group_02_retry</code></pre>
+<p>把 manifest 中认可的最终目录作为纳入清单；无需为更新报告重跑对话。缺少 assessment 的运行保持未知，不作为通过。报告不嵌入原音频、私有 user_context 或完整 API 日志。</p>
+</section>
+
+<section id="evidence"><h2>08 · 可追溯的源码证据</h2>
+<p>以下链接指向生成报告时的相对仓库路径，离线页面本身无需外部资源。文件行号用于定位；SHA-256 固定本次读取的源码版本。<a href="{{EVIDENCE_FILE}}">下载完整机器可读证据</a>。</p>
+<div class="table-wrap"><table><thead><tr><th>依据</th><th>文件</th><th>SHA-256</th></tr></thead><tbody>{{SOURCE_ROWS}}</tbody></table></div>
+</section>
+<footer>本报告解释当前实现与证据边界，不将离线测试、事件定义、配置数量或历史交接记录等同于真实模型行为验证。结论“Topic 充分性尚未证明”来自当前抽样机制与可用证据，不是对所有历史运行主题数的断言。</footer>
+</main>
+</body></html>

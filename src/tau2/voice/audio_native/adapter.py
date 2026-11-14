@@ -180,6 +180,45 @@ class DiscreteTimeAdapter(ABC):
         self._pending_tool_results.clear()
         self._skip_item_id = None
 
+    def cancel_pending_playback(self, result: TickResult) -> int:
+        """Cancel unheard audio, including the tail already moved into this tick.
+
+        Call before appending audio from a replacement response. Transcript history
+        and pending tool results belong to the session and are preserved.
+        """
+        discarded = result.agent_audio_bytes + sum(
+            len(audio) for audio, _ in self._buffered_agent_audio
+        )
+        result.agent_audio_chunks.clear()
+        result.pending_playback_cancelled = True
+        self._buffered_agent_audio.clear()
+        result.truncated_audio_bytes += discarded
+        result.was_truncated = result.was_truncated or discarded > 0
+        return discarded
+
+    def record_control_signal(self, profile, event, result):
+        """Record a provider's declared control contract alongside raw events."""
+        from tau2.voice.audio_native.control_signals import control_event
+
+        signal = (
+            event.get("type", event.get("event_type"))
+            if isinstance(event, dict)
+            else getattr(event, "type", getattr(event, "event_type", None))
+        )
+        runtime_model = (
+            getattr(self, "model", None)
+            or getattr(getattr(self, "_provider", None), "model", None)
+            or DEFAULT_AUDIO_NATIVE_MODELS.get(profile)
+        )
+        normalized = control_event(
+            profile,
+            signal,
+            event if isinstance(event, dict) else vars(event),
+            model_id=runtime_model,
+        )
+        if normalized is not None:
+            result.serializable_events.append(normalized)
+
     # -----------------------------------------------------------------------
     # Tick lifecycle template
     # -----------------------------------------------------------------------

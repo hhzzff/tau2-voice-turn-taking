@@ -233,6 +233,7 @@ class DiscreteTimeOpenAIAdapter(DiscreteTimeAdapter):
     async def _process_event(self, result: TickResult, event: Any) -> None:
         """Process an OpenAI Realtime event."""
         result.events.append(event)
+        self.record_control_signal("openai", event, result)
 
         if isinstance(event, AudioDeltaEvent):
             item_id = getattr(event, "item_id", None)

@@ -97,10 +97,11 @@ def test_gateway_user_same_call_annotation_delivers_audio_without_logging_key(
         user_context="去上海",
         acoustic_clarification={"mode": "dropchunk"},
     )
+    config = AudioNativeConfig()
     user = build_dynamic_user(
         scenario,
         tmp_path,
-        AudioNativeConfig(),
+        config,
         "voice-one",
         "voice-two",
         "eleven_multilingual_v2",
@@ -108,7 +109,7 @@ def test_gateway_user_same_call_annotation_delivers_audio_without_logging_key(
     )
     state = user.get_init_state()
     outputs = []
-    for _ in range(5):
+    for _ in range(round(1.0 / config.tick_duration_seconds)):
         output, state = user.get_next_chunk(
             state, AssistantMessage(role="assistant", content="", contains_speech=False)
         )

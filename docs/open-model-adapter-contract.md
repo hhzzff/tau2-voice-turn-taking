@@ -1,9 +1,18 @@
 # Open-model adapter integration
 
+> 2026-11-14 决策：默认采用 **100ms 异步调度窗口**，不等待原生推理完成才推进。
+> 原生输入块仍为 SALMONN 80ms、MiniCPM 1000ms，由接入层缓冲拼接。
+> 注册的 SALMONN/MiniCPM agent 和 demo 默认采用此模式；`pacing="frozen"`
+> （demo 的 `--pacing frozen`）仅用于显式复现旧实验。Moshi/Freeze-Omni
+> 仍通过实验入口接入。本决策不表示已通过全事件误差 ≤100ms 的公平性认证。
+> 下文原生 tick / 冻结时间的描述保留作历史方案记录。
+
+
 Use `OpenModelConfig(model="salmonn" | "minicpm")` before starting a model
 runtime. `tick_duration_seconds` may be supplied explicitly but must match the
 native duration. `tick_duration_ms` is 80 or 1000 respectively. `model_identity`
-fixes SALMONN to before-SFT checkpoint-44000 and MiniCPM to MiniCPM-o-4.5.
+fixes SALMONN to the user-selected 0519 / Llama 3.1 checkpoint-44000 and
+MiniCPM to MiniCPM-o-4.5. See [current checkpoint and validation](open-model-contract-20261102.md).
 These defaults live in `tau2.config`.
 
 ## Adapter
@@ -63,7 +72,8 @@ provider in the API evaluation CLI before a real adapter exists.
 `tau2.voice.audio_native.open_model.adapter.OpenModelAdapter(config,
 runtime_config=None, transport=None)` implements the public lifecycle. Native
 assets default to the explicit manifests in `tau2.config`; SALMONN always
-selects the agreed before-SFT checkpoint by default. The registry factory
+selects the checkpoint in `SALMONN_DEFAULT_CHECKPOINT` and its own parent
+training config by default. The registry factory
 `open_model_agent` (`create_open_model_agent`) takes `open_model_config`,
 `runtime_config`, and `transport` keyword arguments and wraps this adapter in
 `DiscreteTimeAudioNativeAgent`. Tools are rejected.
@@ -94,3 +104,84 @@ extended from the last available sample once at the first input boundary;
 conversion filter state then persists across ticks. This does not read future
 audio. Native-generated sample count and text are retained as events separately
 from played/capped audio. No annotation-derived forced interruption is enabled.
+
+## Control signals and interruption semantics
+
+`src/tau2/voice/audio_native/control_signals.py::CONTROL_SIGNALS` admits only
+signals observed in actual endpoint/native-weight probes. The eight requested
+targets, exact versions, source (provider/native/controller), playback action,
+and evidence are recorded separately. Untested legacy-provider mappings and
+unobserved SALMONN native interruption remain candidates. GPT Live and Moshi
+use continuous audio including quiet frames: quiet preserves media time and
+never implies queue cancellation. Closed-provider handlers retain their own
+playback implementations; this registry is not an end-to-end adapter guarantee.
+See [the live audit](control-signals-audit.md) and its trace-hash evidence ledger.
+
+For MiniCPM:
+
+| Signal/context | Playback action | Interpretation |
+| --- | --- | --- |
+| `is_listen=True`, unfinished turn | Cancel all unheard old audio, including the tail moved into the current tick | Native runtime listening transition; cause is not inferred |
+| `end_of_turn=True` | Drain generated audio | Natural generation end; playback may still have a tail |
+| Listening after a completed turn | Continue draining until new speech starts | Completion state persists across subsequent listening ticks |
+| No listening/ending signal | Preserve normal playback | Silence alone does not imply cancellation |
+| Explicit `interrupt=True` | Cancel unheard old audio; call SDK `set_break()` before prefill and `generate(force_listen=True)` | External controller interruption |
+| Explicit `force_listen=True` | Cancel unheard old audio; force current generation to listen without issuing another break | External controller listening hold |
+
+The public MiniCPM integration entry point is
+`adapter.run_tick(audio, interrupt=True)`; subsequent listening holds can use
+`force_listen=True`. Both controls apply to the current tick only and are
+forwarded through stdio/mailbox transport. No energy threshold, scenario script,
+or automatic barge-in detector is added. Existing orchestrator calls remain on
+the native path. A caller implementing the pi-bench policy must explicitly send
+its break and listening-hold decisions; the default path is not equivalent to
+that policy.
+
+Worker responses include `control.source`, `interrupt_requested`, and
+`force_listen`; connect provenance declares `native_with_explicit_control`.
+`native_runtime` means an observed SDK result, not an autonomous model decision:
+the SDK can rewrite predicted LISTEN during an unfinished speaking turn.
+`external_policy` must not count toward autonomous interruption success.
+`was_truncated` and byte counts describe audio removal; they do not establish
+who initiated the transition. Only an explicit interrupt request adds the
+`interrupted` VAD event on this MiniCPM path.
+
+Cancellation removes old unheard audio before appending the current response.
+New response audio can still buffer normally, while transcript history and
+pending tool results remain intact. Tests use adapter/worker public interfaces
+with runtime boundary doubles; they establish integration mechanics, not
+real-weight interruption quality or wall-clock gap effects.
+
+### Earlier offline integration verification (superseded in scope by live audit)
+
+- Offline regressions: 52 passed, covering open-model adapters/workers, the shared
+  control registry, Gemini event parsing and SALMONN adapter behavior.
+- Original `/tmp/tau_minicpm_interrupt_probe.py --assert-stop`: passes; both the
+  immediate call and 0.2-second gap discard the old 1280-byte / 160-ms tail.
+- Native SDK gate probe remains unchanged: predicted LISTEN is rewritten during
+  an unfinished speaking turn unless forced. This uses a decoder double, not
+  real weights, and establishes no real-weight wall-clock gap result.
+- Official provider suite: 77 skipped because its provider test credentials are
+  absent; no live-provider pass is claimed. The suite was run with unrelated
+  conftest/plugin initialization disabled after the default runner stalled.
+- Ruff lint/format and `git diff --check` pass for the changed integration files.
+
+### Eight-model audit update
+
+See [control-signals-audit.md](control-signals-audit.md) for the per-model evidence
+and remaining gaps. Entries now expose `verification`, `evidence`, and
+`native_signal`. `EVALUATION_MODELS` includes the eight requested targets;
+reference-only profiles do not imply a usable tau-voice adapter. OpenAI
+`response.done` normalization checks status; Gemini `turn.complete` means
+`turn_closed`, which can follow interruption.
+
+### Real endpoint/native-weight verification (2026-11-12)
+
+All eight target protocols were exercised. See [control-signals-audit.md](control-signals-audit.md)
+for exact model versions, completed and failed cases, and remaining adapter gaps.
+MiniCPM explicit break/hold was verified with weights; it remains external policy.
+SALMONN now closes natural playback by injecting EOS into the next input only
+after text EOT and playback drain, then returns to listening. Real weights
+produced a second response after this handshake. These events are labeled
+`playback_controller`; native interruption was not observed in these probes.
+Do not wait for a model-predicted EOS or equate natural completion with interruption.

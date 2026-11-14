@@ -384,6 +384,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model", required=True, choices=["salmonn", "minicpm"])
     parser.add_argument("--tick-ms", type=int)
+    parser.add_argument("--pacing", choices=["realtime", "frozen"], default="realtime")
     parser.add_argument("--scenario", choices=SCENARIOS, required=True)
     parser.add_argument("--mailbox", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
@@ -392,6 +393,7 @@ def main(argv=None):
     args = parser.parse_args(argv)
     config = OpenModelConfig(
         model=args.model,
+        pacing=args.pacing,
         **(
             {"tick_duration_seconds": args.tick_ms / 1000}
             if args.tick_ms is not None
@@ -442,7 +444,7 @@ def main(argv=None):
             user_scenario=UserScenario(instructions=SCENARIOS[args.scenario]),
         ),
         tick_duration_seconds=config.tick_duration_seconds,
-        pacing="frozen",
+        pacing=config.pacing,
     )
     try:
         run_demo(

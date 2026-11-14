@@ -47,8 +47,16 @@ def serve(model, mailbox=None, idle_timeout=1800):
                         raise RuntimeError("Session or sequence mismatch")
                     sequence = request["sequence"]
                     if request["op"] == "step":
+                        controls = {
+                            key: request[key]
+                            for key in ("interrupt", "force_listen")
+                            if key in request
+                        }
+                        if controls and model != "minicpm":
+                            raise ValueError("Explicit listening requires MiniCPM")
                         result = worker.step(
-                            base64.b64decode(request["audio_pcm16_b64"], validate=True)
+                            base64.b64decode(request["audio_pcm16_b64"], validate=True),
+                            **controls,
                         )
                     elif request["op"] == "disconnect":
                         worker.disconnect()

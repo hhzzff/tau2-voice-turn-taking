@@ -32,7 +32,9 @@ class Runtime:
 
 def test_salmonn_startup_does_not_consume_future_tick_and_reconnect_is_fresh():
     adapter = OpenModelAdapter(
-        OpenModelConfig(model="salmonn"), runtime_config={}, transport=Runtime()
+        OpenModelConfig(pacing="frozen", model="salmonn"),
+        runtime_config={},
+        transport=Runtime(),
     )
     for _ in range(2):
         adapter.connect("Listen naturally.", [], None)

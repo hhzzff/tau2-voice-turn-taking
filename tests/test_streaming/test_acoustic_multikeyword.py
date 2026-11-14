@@ -90,11 +90,10 @@ def test_three_keywords_share_full_alignment_and_preserve_other_tick_samples(
         topic="集合安排",
         user_context="地点、时间和数量都需要对方准确记录。",
     )
-    user = build_dynamic_user(
-        scenario, tmp_path, AudioNativeConfig(), "nova", "onyx", "test"
-    )
+    config = AudioNativeConfig()
+    user = build_dynamic_user(scenario, tmp_path, config, "nova", "onyx", "test")
     state, chunks = user.get_init_state(), []
-    for _ in range(10):
+    for _ in range(round(len(clean) / 16000 / config.tick_duration_seconds)):
         chunk, state = user.get_next_chunk(
             state, AssistantMessage(role="assistant", content="", contains_speech=False)
         )
@@ -141,7 +140,7 @@ def test_three_keywords_share_full_alignment_and_preserve_other_tick_samples(
             ] == pytest.approx(10, rel=1e-5)
             assert item["clipped_samples"] == 3200
     assert all(not chunk.content and not chunk.audio_script_gold for chunk in chunks)
-    for _ in range(25):
+    for _ in range(round(5.0 / config.tick_duration_seconds)):
         _, state = user.get_next_chunk(
             state, AssistantMessage(role="assistant", content="", contains_speech=False)
         )

@@ -1,0 +1,88 @@
+{
+  "started_at_utc": "2026-11-02T06:40:55.430489+00:00",
+  "base_url": "https://aidp.bytedance.net/api/modelhub/online/multimodal/crawl/11labs/v1",
+  "success": true,
+  "calls": [
+    {
+      "method": "GET",
+      "endpoint": "/voices",
+      "log_id": "e3441921b54f498f87d19ce546fae32c",
+      "status": 200,
+      "content_type": "application/json",
+      "response_bytes": 67529,
+      "wall_seconds": 99.192
+    },
+    {
+      "method": "POST",
+      "endpoint": "/text-to-speech/EXAVITQu4vr4xnSDxMaL",
+      "log_id": "f131b7afac22493093d32381bc8d0ea9",
+      "status": 200,
+      "content_type": "audio/pcm",
+      "response_bytes": 96596,
+      "wall_seconds": 0.778
+    },
+    {
+      "method": "POST",
+      "endpoint": "/speech-to-text",
+      "log_id": "00669b9f64134b5780e49d5604e03c77",
+      "status": 200,
+      "content_type": "application/json",
+      "response_bytes": 1753,
+      "wall_seconds": 0.81
+    },
+    {
+      "method": "POST",
+      "endpoint": "/forced-alignment",
+      "log_id": "877f0e6b2ae1403fb6ff30ba0477ab9f",
+      "status": 200,
+      "content_type": "application/json",
+      "response_bytes": 3604,
+      "wall_seconds": 0.42
+    }
+  ],
+  "voice_id": "EXAVITQu4vr4xnSDxMaL",
+  "voice_name": "Sarah - Mature, Reassuring, Confident",
+  "tts_model": "eleven_multilingual_v2",
+  "asr_model": "scribe_v1",
+  "output_format": "pcm_16000",
+  "text": "Good morning everyone, thank you for joining the meeting today.",
+  "audio": {
+    "file": "tts.wav",
+    "sha256": "7103f2b73ca708fc83d8d92721196d3e9cb3b91f4e878fdffebc1cfcf9f0b80e",
+    "pcm_bytes": 96596,
+    "duration_seconds": 3.018625,
+    "sample_rate": 16000,
+    "channels": 1,
+    "sample_width_bytes": 2,
+    "rms_pcm16": 6243.606
+  },
+  "asr": {
+    "text": "Good morning, everyone. Thank you for joining the meeting today.",
+    "language_code": "eng",
+    "word_entries": 19,
+    "normalized_exact_match": true,
+    "nonspace_word_entries": 10
+  },
+  "alignment": {
+    "word_entries": 19,
+    "character_entries": 63,
+    "loss": 0.5266883184039404,
+    "timestamps_valid": true,
+    "normalized_exact_match": true,
+    "first_word": {
+      "text": "Good",
+      "start": 0.16,
+      "end": 0.28,
+      "loss": 0.628199577331543
+    },
+    "last_word": {
+      "text": "today.",
+      "start": 2.28,
+      "end": 2.66,
+      "loss": 0.6344655354817709
+    },
+    "nonspace_word_entries": 10
+  },
+  "finished_at_utc": "2026-11-02T06:42:36.707684+00:00",
+  "source_artifacts": "artifacts/byted-elevenlabs/20261102-smoke"
+}

@@ -5,9 +5,10 @@ import base64
 import json
 from pathlib import Path
 
-from tau2.config import OPEN_MODEL_RUNTIME_MANIFESTS, SALMONN_BEFORE_SFT_CHECKPOINT
+from tau2.config import OPEN_MODEL_RUNTIME_MANIFESTS, SALMONN_DEFAULT_CHECKPOINT
 from tau2.voice.audio_native.adapter import DiscreteTimeAdapter
 from tau2.voice.audio_native.audio_converter import StreamingTelephonyConverter
+from tau2.voice.audio_native.control_signals import control_event
 from tau2.voice.audio_native.open_model.transport import SubprocessTransport
 from tau2.voice.audio_native.tick_result import UtteranceTranscript
 
@@ -16,7 +17,18 @@ def load_runtime_config(model):
     """Resolve explicit model assets without importing its GPU dependencies."""
     config = json.loads(Path(OPEN_MODEL_RUNTIME_MANIFESTS[model]).read_text())
     if model == "salmonn":
-        config["checkpoint"] = SALMONN_BEFORE_SFT_CHECKPOINT
+        config["checkpoint"] = SALMONN_DEFAULT_CHECKPOINT
+        training_path = Path(SALMONN_DEFAULT_CHECKPOINT).parent / "config.json"
+        config["assets"] = {
+            key: value
+            for key, value in config["assets"].items()
+            if not key.startswith(("before_sft_", "after_sft_"))
+        }
+        config["assets"]["training_config"] = str(training_path)
+        training = json.loads(training_path.read_text())
+        config["settings"]["echo_ratio"] = float(
+            training["data_args"].get("simple_mode_echo_ratio", 1.0)
+        )
     return config
 
 
@@ -54,6 +66,8 @@ class OpenModelAdapter(DiscreteTimeAdapter):
             self.disconnect()
         self.clear_buffers()
         self._tick_count = self._cumulative_user_audio_ms = 0
+        self._native_turn_ended = False
+        self._step_control = {}
         try:
             self.provenance = self.transport.request(
                 "connect", config=self.runtime_config, system_prompt=system_prompt
@@ -78,7 +92,9 @@ class OpenModelAdapter(DiscreteTimeAdapter):
             self.transport.close()
             self.clear_buffers()
 
-    def run_tick(self, user_audio, tick_number=None):
+    def run_tick(
+        self, user_audio, tick_number=None, *, interrupt=False, force_listen=False
+    ):
         """Consume exactly one input tick and play at most one output tick."""
         if not self.is_connected:
             raise RuntimeError("Open model is not connected")
@@ -86,6 +102,18 @@ class OpenModelAdapter(DiscreteTimeAdapter):
             raise ValueError(
                 "Input audio must contain exactly one native simulation tick"
             )
+        if (interrupt or force_listen) and self.config.model != "minicpm":
+            raise ValueError("Explicit forced listening is only supported by MiniCPM")
+        if type(interrupt) is not bool or type(force_listen) is not bool:
+            raise ValueError("Interruption controls must be booleans")
+        self._step_control = {
+            key: value
+            for key, value in {
+                "interrupt": interrupt,
+                "force_listen": force_listen,
+            }.items()
+            if value
+        }
         self._tick_count += 1
         return asyncio.run(
             self._async_run_tick(
@@ -106,10 +134,12 @@ class OpenModelAdapter(DiscreteTimeAdapter):
             self.transport.request,
             "step",
             audio_pcm16_b64=base64.b64encode(pcm).decode(),
+            **self._step_control,
         )
         self._process_event(event, result, tick_number)
 
     def _process_event(self, event, result, tick_number):
+        buffered_bytes = result.agent_audio_bytes
         if event["sample_rate"] != self.converter.output_sample_rate:
             raise RuntimeError("Runtime changed its output sample rate")
         pcm = base64.b64decode(event["audio_pcm16_b64"], validate=True)
@@ -118,6 +148,43 @@ class OpenModelAdapter(DiscreteTimeAdapter):
         audio = self.converter.convert_output(pcm)
         if pcm and not any(pcm):
             audio = b""
+        event_start = len(result.events)
+        signals = []
+        if self.config.model == "minicpm":
+            if self._step_control.get("interrupt"):
+                signals.append("external_interrupt")
+            elif self._step_control.get("force_listen"):
+                signals.append("forced_listen")
+            elif event.get("end_of_turn"):
+                signals.append("end_of_turn")
+            elif event.get("is_listen"):
+                # A completed turn drains its already generated waveform, even
+                # if the next native generation resets end_of_turn to False.
+                signals.append("is_listen")
+            if event.get("end_of_turn"):
+                self._native_turn_ended = True
+            elif not event.get("is_listen", True):
+                self._native_turn_ended = False
+        else:
+            signals.extend(
+                e.get("type", e.get("event")) for e in event.get("events", [])
+            )
+        for signal in signals:
+            control = control_event(
+                self.config.model,
+                signal,
+                model_id=getattr(self.config, "model_identity", None),
+            )
+            if control is None:
+                continue
+            if signal == "is_listen" and self._native_turn_ended:
+                control["playback"] = "drain"
+                control["reason"] = "previous_turn_ended"
+            if control["playback"] == "cancel_pending":
+                control["cancelled_audio_bytes"] = self.cancel_pending_playback(result)
+                if signal == "external_interrupt":
+                    result.vad_events.append("interrupted")
+            result.events.append(control)
         item = f"{tick_number}"
         text = event.get("text", "")
         self._utterance_transcripts[item] = UtteranceTranscript(
@@ -125,7 +192,24 @@ class OpenModelAdapter(DiscreteTimeAdapter):
         )
         if audio:
             result.agent_audio_chunks.append((audio, item))
-        event_start = len(result.events)
+        if "is_listen" in event:
+            result.events.append(
+                {
+                    "type": "native_state",
+                    "buffered_audio_bytes": buffered_bytes,
+                    **{
+                        key: event[key]
+                        for key in (
+                            "is_listen",
+                            "end_of_turn",
+                            "current_time",
+                            "cost_all_ms",
+                            "control",
+                        )
+                        if key in event
+                    },
+                }
+            )
         result.events.append(
             {
                 "type": "native_generation",

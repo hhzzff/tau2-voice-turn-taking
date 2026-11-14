@@ -1,6 +1,14 @@
 # Shared English dialogue protocol
 
-`ordered_conversation` compares SALMONN before-SFT and MiniCPM-o-4.5 with the same
+> 2026-11-14 决策：默认采用 **100ms 异步调度窗口**，不等待原生推理完成才推进。
+> 原生输入块仍为 SALMONN 80ms、MiniCPM 1000ms，由接入层缓冲拼接。
+> 注册的 SALMONN/MiniCPM agent 和 demo 默认采用此模式；`pacing="frozen"`
+> （demo 的 `--pacing frozen`）仅用于显式复现旧实验。Moshi/Freeze-Omni
+> 仍通过实验入口接入。本决策不表示已通过全事件误差 ≤100ms 的公平性认证。
+> 下文原生 tick / 冻结时间的描述保留作历史方案记录。
+
+
+`ordered_conversation` compares the [currently selected SALMONN checkpoint](open-model-contract-20261102.md) and MiniCPM-o-4.5 with the same
 stage order and English-only user generation and agent instructions. Scheduling
 uses actual played audio and heard ASR; stage changes do not rely on fixed
 recording timestamps or future model output.

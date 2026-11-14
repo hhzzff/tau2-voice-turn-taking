@@ -85,6 +85,7 @@ from tau2.environment.tool import Tool
 from tau2.utils.utils import get_now
 from tau2.voice.audio_native.adapter import DiscreteTimeAdapter, create_adapter
 from tau2.voice.audio_native.tick_result import TickResult
+from tau2.voice.utils.audio_activity import is_audible_chunk
 
 # Provider type alias
 AudioNativeProvider = Literal["openai", "gemini", "xai", "nova", "qwen", "livekit"]
@@ -703,8 +704,9 @@ class DiscreteTimeAudioNativeAgent(FullDuplexAgent[DiscreteTimeAgentState]):
         # Use the configured audio format
         audio_format = self.audio_format
 
-        # Check if there was actual speech (not just silence padding)
-        has_speech = len(tick_result.agent_audio_data) > 0
+        # Presence is only a fallback when audio cannot be inspected. Continuous
+        # providers also deliver quiet frames, which must retain their media time.
+        has_native_audio = len(tick_result.agent_audio_data) > 0
 
         audio_content = base64.b64encode(agent_audio).decode("utf-8")
         content = transcript if transcript else None
@@ -717,10 +719,11 @@ class DiscreteTimeAudioNativeAgent(FullDuplexAgent[DiscreteTimeAgentState]):
             audio_content=audio_content,  # Always included for time alignment
             audio_format=audio_format,
             timestamp=get_now(),
-            contains_speech=has_speech,
+            contains_speech=has_native_audio,
             raw_data=tick_result.model_dump(serialize_as_any=True),
             utterance_ids=tick_result.item_ids if tick_result.item_ids else None,
         )
+        message.contains_speech = is_audible_chunk(message)
         # Check if this is a stop message (done or transfer tool call)
         message = self._check_if_stop_toolcall(message)
         return message

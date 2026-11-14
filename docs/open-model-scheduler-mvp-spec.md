@@ -1,5 +1,17 @@
 # Open-model τ-voice frozen-time scheduler MVP
 
+> 2026-11-14 决策：默认采用 **100ms 异步调度窗口**，不等待原生推理完成才推进。
+> 原生输入块仍为 SALMONN 80ms、MiniCPM 1000ms，由接入层缓冲拼接。
+> 注册的 SALMONN/MiniCPM agent 和 demo 默认采用此模式；`pacing="frozen"`
+> （demo 的 `--pacing frozen`）仅用于显式复现旧实验。Moshi/Freeze-Omni
+> 仍通过实验入口接入。本决策不表示已通过全事件误差 ≤100ms 的公平性认证。
+> 下文原生 tick / 冻结时间的描述保留作历史方案记录。
+
+
+> Checkpoint amendment (2026-11-02): the user replaced the original before-SFT
+> selection below with `cu12_stage2-0519_fc-180_aes_er0_chunk30_llama31/checkpoint-44000`.
+> The native tick remains 80 ms. See [runtime contract and evidence](open-model-contract-20261102.md).
+
 ## Problem Statement
 
 τ-voice needs to evaluate bidirectional voice interaction with open models, starting with SALMONN-Omni and MiniCPM-o, in addition to API-backed models. The existing configurable tick duration does not by itself supply a stateful, causal local-model execution interface. The models operate at different native audio granularities, and inference may take longer than the audio represented by one step.

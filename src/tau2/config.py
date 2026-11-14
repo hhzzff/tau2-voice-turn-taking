@@ -105,7 +105,7 @@ DEFAULT_AUDIO_NATIVE_USER_IMPLEMENTATION = "voice_streaming_user_simulator"
 DEFAULT_AUDIO_NATIVE_PROVIDER = (
     "openai"  # overridable: openai, gemini, xai, nova, qwen, livekit
 )
-DEFAULT_TICK_DURATION_SECONDS = 0.20  # overridable
+DEFAULT_TICK_DURATION_SECONDS = 0.10  # overridable
 DEFAULT_MAX_STEPS_SECONDS = 1200  # overridable
 DEFAULT_SEND_AUDIO_INSTANT = False  # overridable
 
@@ -235,9 +235,10 @@ AUDIO_NATIVE_PROVIDER_TYPES = {
 TERM_DARK_MODE = True
 
 # Native open-model identities and simulation granularity.
+OPEN_MODEL_SCHEDULER_TICK_MS = 100
 OPEN_MODEL_TICK_DURATION_MS = {"salmonn": 80, "minicpm": 1000}
 OPEN_MODEL_IDENTITIES = {
-    "salmonn": "SALMONN-Omni-before-SFT-checkpoint-44000",
+    "salmonn": "SALMONN-Omni-0519-fc180-aes-er0-chunk30-llama31-checkpoint-44000",
     "minicpm": "MiniCPM-o-4.5",
 }
 
@@ -259,7 +260,7 @@ OPEN_MODEL_RUNTIME_MANIFESTS = {
     "minicpm": "/mnt/bn/audio-visual-llm-data6/terumi/pi-bench/inference/minicpm_o/runtime.json",
     "salmonn": "/mnt/bn/audio-visual-llm-data6/terumi/pi-bench/inference/salmonn-omni/runtime.json",
 }
-SALMONN_BEFORE_SFT_CHECKPOINT = "/mnt/bn/audio-visual-llm-data6/yuwenyi/playground/salmonn-omni-dev/logs/cu12_stage2_v2_tfv2_short_sm1_sp_longs1/checkpoint-44000"
+SALMONN_DEFAULT_CHECKPOINT = "/mnt/bn/audio-visual-llm-data2/yuwenyi/playground/exp_results/cu12_stage2-0519_fc-180_aes_er0_chunk30_llama31/checkpoint-44000"
 
 # Whole-utterance acoustic clarification alignment.
 DEFAULT_ACOUSTIC_ALIGNMENT_TIMEOUT_SECONDS = 30.0
