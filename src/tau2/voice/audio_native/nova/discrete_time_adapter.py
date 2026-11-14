@@ -419,6 +419,7 @@ class DiscreteTimeNovaAdapter(DiscreteTimeAdapter):
     def _process_event(self, result: TickResult, event: Any) -> None:
         """Process a Nova Sonic event."""
         result.events.append(event)
+        self.record_control_signal("nova", event, result)
 
         if isinstance(event, NovaAudioOutputEvent):
             content_id = event.content_id or self._current_content_id

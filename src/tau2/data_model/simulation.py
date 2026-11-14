@@ -50,6 +50,7 @@ from tau2.config import (
     DEFAULT_YIELD_THRESHOLD_WHEN_INTERRUPTED_SECONDS,
     DEFAULT_YIELD_THRESHOLD_WHEN_INTERRUPTING_SECONDS,
     OPEN_MODEL_IDENTITIES,
+    OPEN_MODEL_SCHEDULER_TICK_MS,
     OPEN_MODEL_TICK_DURATION_MS,
 )
 from tau2.data_model.audio_effects import EffectTimeline
@@ -66,36 +67,37 @@ SIMULATIONS_DIR = "simulations"
 
 
 class OpenModelConfig(BaseModel):
-    """Select a fixed open-model variant and its native simulation tick.
-
-    Validate before loading weights. Duration overrides document a run; they
-    cannot aggregate or subdivide a model's native streaming step.
-    """
+    """Use 100ms realtime windows; retain explicit frozen native replay."""
 
     model: Literal["salmonn", "minicpm"]
     tick_duration_seconds: float = Field(gt=0)
-    pacing: Literal["frozen"] = "frozen"
+    pacing: Literal["frozen", "realtime"] = "realtime"
 
     @model_validator(mode="before")
     @classmethod
     def native_duration(cls, values):
-        """Default the duration from model identity and reject mismatches."""
+        """Validate scheduler width independently of native inference blocks."""
         if (
             isinstance(values, dict)
             and values.get("model") in OPEN_MODEL_TICK_DURATION_MS
         ):
             values = dict(values)
-            native = OPEN_MODEL_TICK_DURATION_MS[values["model"]] / 1000
-            supplied = values.get("tick_duration_seconds", native)
-            if supplied != native:
-                raise ValueError(f"{values['model']} requires native tick {native}s")
-            values["tick_duration_seconds"] = native
+            duration = (
+                OPEN_MODEL_TICK_DURATION_MS[values["model"]] / 1000
+                if values.get("pacing", "realtime") == "frozen"
+                else OPEN_MODEL_SCHEDULER_TICK_MS / 1000
+            )
+            if values.get("tick_duration_seconds", duration) != duration:
+                raise ValueError(
+                    f"{values['model']} requires scheduler tick {duration}s"
+                )
+            values["tick_duration_seconds"] = duration
         return values
 
     @property
     def tick_duration_ms(self) -> int:
-        """Native tick duration in milliseconds."""
-        return OPEN_MODEL_TICK_DURATION_MS[self.model]
+        """Scheduler window in milliseconds."""
+        return round(self.tick_duration_seconds * 1000)
 
     @property
     def model_identity(self) -> str:

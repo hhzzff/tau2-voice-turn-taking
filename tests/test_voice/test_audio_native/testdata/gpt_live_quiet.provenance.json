@@ -1,0 +1,12 @@
+{
+  "model_id": "gpt-live-1",
+  "source": "data/simulations/control-signals/20261112-live-audit-long/gpt_live/normal/response-native.wav",
+  "source_wav_sha256": "2a74df37fb9fd46d912fbdf54ff7b3c58c1fa4af0de91b893169816a1c997656",
+  "slice_seconds": [
+    0,
+    1
+  ],
+  "source_pcm16_rms": 6,
+  "conversion": "24kHz exact ratio sample decimation on quiet PCM, then audioop.lin2ulaw",
+  "fixture_sha256": "5e7b2c02b5c4384d19687572f7747804920d87bb1f52b851dbdd2504bd92d6c8"
+}

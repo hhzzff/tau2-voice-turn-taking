@@ -1,5 +1,16 @@
 # 动态双工事件 bench（实验版）
 
+当前评估范围与 Topic 覆盖解释见 [HTML 报告](../../../docs/duplex-evaluation-report.html)。
+报告已接入同一主入口，可以离线重新生成；不会启动对话或付费评审：
+
+```bash
+python -m experiments.tau_voice.duplex_bench report --output docs/duplex-evaluation-report.html
+```
+
+需要统计已有运行时，对每个最终有效清单中的目录显式追加 `--run-dir PATH`。
+默认只做源码审计，不扫描历史／重试目录，也不将交接文档的历史结果当成本次实跑统计。
+同时输出 `.evidence.json`，记录源码哈希、事件目录、明确纳入的运行和 Topic 字符串去重口径。
+
 输入是一组事件类型。默认使用项目里的 `gpt-6.1-terra` 自动生成 Topic，并在实际对话过程中决定何时说话、执行哪个待测事件、具体说什么。没有预写事件台词、固定事件顺序或“说够多少字就打断”的事件时间表。
 
 ```powershell

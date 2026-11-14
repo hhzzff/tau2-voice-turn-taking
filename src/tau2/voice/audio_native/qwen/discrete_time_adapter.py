@@ -311,6 +311,7 @@ class DiscreteTimeQwenAdapter(DiscreteTimeAdapter):
     def _process_event(self, result: TickResult, event: Any) -> None:
         """Process a Qwen event."""
         result.events.append(event)
+        self.record_control_signal("qwen", event, result)
 
         if isinstance(event, QwenAudioDeltaEvent):
             item_id = event.item_id or self._current_item_id

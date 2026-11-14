@@ -62,15 +62,23 @@ class MiniCPMWorker:
             "python": sys.executable,
             "processors": processors.__file__,
             "settings": settings,
+            "interruption_policy": "native_with_explicit_control",
         }
 
-    def step(self, pcm16):
+    def step(self, pcm16, *, interrupt=False, force_listen=False):
         """Ingest only current input, finish native generation, preserve cache."""
         if len(pcm16) != 32000:
             raise ValueError("MiniCPM input must be 16000 PCM16 samples")
+        if type(interrupt) is not bool or type(force_listen) is not bool:
+            raise ValueError("Interruption controls must be booleans")
+        # Controller requests are distinct from native model transitions. Break
+        # cancels the SDK speaking turn; force_listen bypasses its LISTEN gate.
+        if interrupt:
+            self.duplex.set_break()
+        forced = interrupt or force_listen
         audio = self.np.frombuffer(pcm16, dtype="<i2").astype(self.np.float32) / 32768
         self.duplex.prefill(audio_waveform=audio)
-        result = self.duplex.generate(force_listen=False)
+        result = self.duplex.generate(force_listen=forced)
         self.duplex.finalize()
         waveform = (
             self.np.frombuffer(base64.b64decode(result.audio_data), dtype="<f4")
@@ -84,6 +92,15 @@ class MiniCPMWorker:
             "audio_pcm16_b64": base64.b64encode(pcm).decode(),
             "sample_rate": 24000,
             "text": result.text or "",
+            "is_listen": result.is_listen,
+            "end_of_turn": result.end_of_turn,
+            "current_time": result.current_time,
+            "cost_all_ms": result.cost_all_ms,
+            "control": {
+                "source": "external_policy" if forced else "native_runtime",
+                "interrupt_requested": interrupt,
+                "force_listen": forced,
+            },
             "events": [],
         }
 

@@ -1,4 +1,4 @@
-"""Persistent SALMONN before-SFT session for the native Python 3.10 worker.
+"""Persistent SALMONN session for the native Python 3.10 worker.
 
 This module deliberately does not import tau2 or the GPU runtime at import time.
 """
@@ -11,13 +11,12 @@ class SalmonnWorker:
     """Consume only the current 80 ms input and retain native model state."""
 
     def connect(self, config: dict, system_prompt: str) -> dict:
-        """Load the supported before-SFT checkpoint and start a fresh session."""
+        """Load the selected checkpoint with its own training configuration."""
         checkpoint = Path(config.get("checkpoint", ""))
-        if (
-            checkpoint.name != "checkpoint-44000"
-            or checkpoint.parent.name != "cu12_stage2_v2_tfv2_short_sm1_sp_longs1"
-        ):
-            raise ValueError("SALMONN MVP requires before-SFT checkpoint-44000")
+        if not checkpoint.is_dir() or not (checkpoint.parent / "config.json").is_file():
+            raise ValueError(
+                "SALMONN requires a checkpoint with adjacent training config"
+            )
         if config.get("settings", {}).get("chunk_ms", 80) != 80:
             raise ValueError("SALMONN requires an 80 ms tick")
         if getattr(self, "session", None) is not None:

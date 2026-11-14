@@ -305,6 +305,15 @@ def assess(args):
     return 0
 
 
+def report(args):
+    """Generate a source-backed report without model, ASR or TTS calls."""
+    from experiments.tau_voice.evaluation_report import write_report
+
+    write_report(args.output, args.run_dir)
+    print(f"Saved HTML report and evidence: {args.output}")
+    return 0
+
+
 def build_parser():
     """Expose event selection, preparation, execution and offline assessment."""
     from tau2.config import DEFAULT_DUPLEX_USER_MODEL
@@ -312,6 +321,18 @@ def build_parser():
 
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
+    reporting = commands.add_parser(
+        "report", help="Write an offline HTML explanation and topic coverage audit"
+    )
+    reporting.add_argument("--output", type=Path, required=True)
+    reporting.add_argument(
+        "--run-dir",
+        type=Path,
+        action="append",
+        default=[],
+        help="Explicit final run directory to audit; repeat for each eligible run",
+    )
+    reporting.set_defaults(func=report)
     listing = commands.add_parser("list", help="List supported event IDs")
     listing.set_defaults(
         func=lambda args: print(

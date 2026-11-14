@@ -120,7 +120,7 @@ def test_demo_exports_previous_handoff_stereo_and_honest_overlap(
         def is_stop(message):
             return False
 
-    config = OpenModelConfig(model="minicpm")
+    config = OpenModelConfig(pacing="frozen", model="minicpm")
     orchestrator = FullDuplexOrchestrator(
         domain="mock",
         agent=Participant("assistant"),
@@ -264,7 +264,7 @@ def test_real_user_scenario_uses_only_delivered_asr_and_triggers_backchannel(
         def is_stop(message):
             return False
 
-    config = OpenModelConfig(model=model)
+    config = OpenModelConfig(pacing="frozen", model=model)
     user = build_demo_user(config, scenario)
     orchestrator = FullDuplexOrchestrator(
         domain="mock",
@@ -374,7 +374,7 @@ def test_observed_trigger_follows_utterance_through_silent_chunks(
         def is_stop(message):
             return False
 
-    config = OpenModelConfig(model="minicpm")
+    config = OpenModelConfig(pacing="frozen", model="minicpm")
     orchestrator = FullDuplexOrchestrator(
         domain="mock",
         agent=Participant("assistant"),
@@ -501,7 +501,7 @@ def test_qa_waits_through_asr_no_speech_then_responds_to_real_transcript(
         def is_stop(message):
             return False
 
-    config = OpenModelConfig(model="minicpm")
+    config = OpenModelConfig(pacing="frozen", model="minicpm")
     user = build_demo_user(config, "qa")
     orchestrator = FullDuplexOrchestrator(
         domain="mock",

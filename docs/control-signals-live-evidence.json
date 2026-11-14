@@ -1,0 +1,4450 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-12",
+  "scope": "Real endpoint/native-weight signal and PCM observations; not autonomous interruption success or complete tau adapter live acceptance",
+  "input_data": "Generic synthetic repository test fixtures and newly generated fixed synthetic text; no historical user conversations uploaded",
+  "audio_activity_thresholds": {
+    "trace_pcm16_rms": 100,
+    "production_shared_rms": 80
+  },
+  "signals": {
+    "doubao_s2s": {
+      "conversation.item.input_audio_transcription.started": {
+        "witnesses": [
+          {
+            "artifact": "data/simulations/control-signals/20261112-doubao-1260/doubao_s2s/backchannel",
+            "scenario": "backchannel",
+            "model_id": "1.2.6.0",
+            "checkpoint": null,
+            "trace_sha256": "caabb33abb6f3160d5a86ae6a0d073821e3926002c1310cce683e94bb1a611e8",
+            "matched_occurrences": 1,
+            "first_example": {
+              "kind": "interruption",
+              "wall_ms": 13543.256726115942,
+              "arrival_tick_id": 131,
+              "source_ms": 13180.0,
+              "stream_ms": 13180.0,
+              "event_type": "conversation.item.input_audio_transcription.started",
+              "old_response_id": "61490294794068994",
+              "discarded_bytes": 78272
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-doubao-1260/doubao_s2s/interruption",
+            "scenario": "interruption",
+            "model_id": "1.2.6.0",
+            "checkpoint": null,
+            "trace_sha256": "b3e81d958bae7236717b31035c2858a3282d3be603c372ddecb0779e6f83c258",
+            "matched_occurrences": 1,
+            "first_example": {
+              "kind": "interruption",
+              "wall_ms": 17428.26609313488,
+              "arrival_tick_id": 170,
+              "source_ms": 17080.0,
+              "stream_ms": 17080.0,
+              "event_type": "conversation.item.input_audio_transcription.started",
+              "old_response_id": "61521632723885570",
+              "discarded_bytes": 846144
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-doubao-late/doubao_s2s/interruption",
+            "scenario": "interruption",
+            "model_id": "1.2.6.1",
+            "checkpoint": null,
+            "trace_sha256": "58efb3b3ab56b0a41e92c46e95d902172c14b76b4fdf1f1222fd4d220a6d8fc5",
+            "matched_occurrences": 1,
+            "first_example": {
+              "kind": "interruption",
+              "wall_ms": 20018.95721629262,
+              "arrival_tick_id": 196,
+              "source_ms": 19640.0,
+              "stream_ms": 19640.0,
+              "event_type": "conversation.item.input_audio_transcription.started",
+              "old_response_id": "61501086355804418",
+              "discarded_bytes": 1534336
+            }
+          }
+        ]
+      },
+      "response.output_audio.done": {
+        "witnesses": [
+          {
+            "artifact": "data/simulations/control-signals/20261112-doubao-1260/doubao_s2s/interruption",
+            "scenario": "interruption",
+            "model_id": "1.2.6.0",
+            "checkpoint": null,
+            "trace_sha256": "b3e81d958bae7236717b31035c2858a3282d3be603c372ddecb0779e6f83c258",
+            "matched_occurrences": 1,
+            "first_example": {
+              "question_id": "61521632723891970",
+              "response_id": "61521632723893250",
+              "type": "response.output_audio.done",
+              "event_id": "event_355"
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-doubao-1260/doubao_s2s/normal",
+            "scenario": "normal",
+            "model_id": "1.2.6.0",
+            "checkpoint": null,
+            "trace_sha256": "89a4ce88f81f345b19023e8c2b7542da13a72b211859a9285b6e3e1786e67323",
+            "matched_occurrences": 1,
+            "first_example": {
+              "question_id": "61537487719929090",
+              "response_id": "61537487719928578",
+              "type": "response.output_audio.done",
+              "event_id": "event_602"
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-doubao-late/doubao_s2s/interruption",
+            "scenario": "interruption",
+            "model_id": "1.2.6.1",
+            "checkpoint": null,
+            "trace_sha256": "58efb3b3ab56b0a41e92c46e95d902172c14b76b4fdf1f1222fd4d220a6d8fc5",
+            "matched_occurrences": 1,
+            "first_example": {
+              "event_id": "event_477",
+              "question_id": "61501086355811074",
+              "response_id": "61501086355811586",
+              "type": "response.output_audio.done"
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit/doubao_s2s/backchannel",
+            "scenario": "backchannel",
+            "model_id": "1.2.6.1",
+            "checkpoint": null,
+            "trace_sha256": "79a9639df100cbf10202462bf1a19da17893662c4cdd3b18331713d3f4179f87",
+            "matched_occurrences": 1,
+            "first_example": {
+              "type": "response.output_audio.done",
+              "event_id": "event_215",
+              "question_id": "61497111547095042",
+              "response_id": "61497111547094786"
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit/doubao_s2s/interruption",
+            "scenario": "interruption",
+            "model_id": "1.2.6.1",
+            "checkpoint": null,
+            "trace_sha256": "d432ad235730616ec6477b733a2fabf0bd45f088b4729af3b82e82477b6397e5",
+            "matched_occurrences": 1,
+            "first_example": {
+              "event_id": "event_119",
+              "question_id": "61500414353646594",
+              "response_id": "61500414353645826",
+              "type": "response.output_audio.done"
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit/doubao_s2s/normal",
+            "scenario": "normal",
+            "model_id": "1.2.6.1",
+            "checkpoint": null,
+            "trace_sha256": "67639cac6070d6491187a87af4470103926f719540c6ef831a1181a8a8233048",
+            "matched_occurrences": 1,
+            "first_example": {
+              "type": "response.output_audio.done",
+              "event_id": "event_262",
+              "question_id": "61498612860463106",
+              "response_id": "61498612860462850"
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit-long/doubao_s2s/normal",
+            "scenario": "normal",
+            "model_id": "1.2.6.1",
+            "checkpoint": null,
+            "trace_sha256": "d5f7f56ea7f921795d83d06fa1f442a1804766988a68e82ae5579a6e2101daf5",
+            "matched_occurrences": 1,
+            "first_example": {
+              "response_id": "61481225759185154",
+              "type": "response.output_audio.done",
+              "event_id": "event_873",
+              "question_id": "61481225759185410"
+            }
+          }
+        ]
+      }
+    },
+    "freeze_omni": {
+      "listening.stat=cl": {
+        "witnesses": [
+          {
+            "artifact": "data/simulations/control-signals/20261112-freeze-separated-turn/freeze_omni/backchannel",
+            "scenario": "backchannel",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+            "trace_sha256": "d02a5bfcd7635481cb7fa01e7322c383dbee1655c1ac9bbb2833b28224dcf62f",
+            "matched_occurrences": 38,
+            "first_example": {
+              "phase": "listening",
+              "stat": "cl"
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-freeze-separated-turn/freeze_omni/interruption",
+            "scenario": "interruption",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+            "trace_sha256": "5b4cff787457ac5caf4bc7687e2bb1bf289490eccf69e590d982cb7fe554dc33",
+            "matched_occurrences": 42,
+            "first_example": {
+              "phase": "listening",
+              "stat": "cl"
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-native-v2/freeze_omni/backchannel",
+            "scenario": "backchannel",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+            "trace_sha256": "f5b5cdfc17d7ba9899f36314ec0bff70acd8d961e784bf78cef0ffbe3e4542d6",
+            "matched_occurrences": 25,
+            "first_example": {
+              "phase": "listening",
+              "stat": "cl"
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-native-v2/freeze_omni/interruption",
+            "scenario": "interruption",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+            "trace_sha256": "2ee5c8987870af741321aecc35ee2cfa27db20bc70b8d4907956efe4f36d4d35",
+            "matched_occurrences": 25,
+            "first_example": {
+              "phase": "listening",
+              "stat": "cl"
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-native-v2/freeze_omni/normal",
+            "scenario": "normal",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+            "trace_sha256": "7e04a493d0afd9226013a2cc1e96767cf1e0c0be929517d919b943f0776d20f6",
+            "matched_occurrences": 25,
+            "first_example": {
+              "phase": "listening",
+              "stat": "cl"
+            }
+          }
+        ]
+      },
+      "listening.stat=ss": {
+        "witnesses": [
+          {
+            "artifact": "data/simulations/control-signals/20261112-freeze-separated-turn/freeze_omni/backchannel",
+            "scenario": "backchannel",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+            "trace_sha256": "d02a5bfcd7635481cb7fa01e7322c383dbee1655c1ac9bbb2833b28224dcf62f",
+            "matched_occurrences": 2,
+            "first_example": {
+              "phase": "listening",
+              "stat": "ss"
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-freeze-separated-turn/freeze_omni/interruption",
+            "scenario": "interruption",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+            "trace_sha256": "5b4cff787457ac5caf4bc7687e2bb1bf289490eccf69e590d982cb7fe554dc33",
+            "matched_occurrences": 2,
+            "first_example": {
+              "phase": "listening",
+              "stat": "ss"
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit/freeze_omni/backchannel",
+            "scenario": "backchannel",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+            "trace_sha256": "ee5517670fc875cc4be52454352fc1132326897c52037af89b7a028065c5556b",
+            "matched_occurrences": 1,
+            "first_example": {
+              "phase": "listening",
+              "stat": "ss"
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit/freeze_omni/interruption",
+            "scenario": "interruption",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+            "trace_sha256": "2ab0b19e17d1fee00c92b13c2e3d68ac9514c8636a83fa89c4938d6be1d5b592",
+            "matched_occurrences": 1,
+            "first_example": {
+              "phase": "listening",
+              "stat": "ss"
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit/freeze_omni/normal",
+            "scenario": "normal",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+            "trace_sha256": "eba1fcb88135b360082f5afa7aca4bcf24dec4e144eb0ea821e49e7a17882aa7",
+            "matched_occurrences": 1,
+            "first_example": {
+              "phase": "listening",
+              "stat": "ss"
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-native-v2/freeze_omni/backchannel",
+            "scenario": "backchannel",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+            "trace_sha256": "f5b5cdfc17d7ba9899f36314ec0bff70acd8d961e784bf78cef0ffbe3e4542d6",
+            "matched_occurrences": 1,
+            "first_example": {
+              "phase": "listening",
+              "stat": "ss"
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-native-v2/freeze_omni/interruption",
+            "scenario": "interruption",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+            "trace_sha256": "2ee5c8987870af741321aecc35ee2cfa27db20bc70b8d4907956efe4f36d4d35",
+            "matched_occurrences": 1,
+            "first_example": {
+              "phase": "listening",
+              "stat": "ss"
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-native-v2/freeze_omni/normal",
+            "scenario": "normal",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+            "trace_sha256": "7e04a493d0afd9226013a2cc1e96767cf1e0c0be929517d919b943f0776d20f6",
+            "matched_occurrences": 1,
+            "first_example": {
+              "phase": "listening",
+              "stat": "ss"
+            }
+          }
+        ]
+      },
+      "generation.stat=cs": {
+        "witnesses": [
+          {
+            "artifact": "data/simulations/control-signals/20261112-freeze-separated-turn/freeze_omni/backchannel",
+            "scenario": "backchannel",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+            "trace_sha256": "d02a5bfcd7635481cb7fa01e7322c383dbee1655c1ac9bbb2833b28224dcf62f",
+            "matched_occurrences": 801,
+            "first_example": {
+              "phase": "generation",
+              "stat": "cs"
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-freeze-separated-turn/freeze_omni/interruption",
+            "scenario": "interruption",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+            "trace_sha256": "5b4cff787457ac5caf4bc7687e2bb1bf289490eccf69e590d982cb7fe554dc33",
+            "matched_occurrences": 178,
+            "first_example": {
+              "phase": "generation",
+              "stat": "cs"
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit/freeze_omni/backchannel",
+            "scenario": "backchannel",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+            "trace_sha256": "ee5517670fc875cc4be52454352fc1132326897c52037af89b7a028065c5556b",
+            "matched_occurrences": 14,
+            "first_example": {
+              "phase": "generation",
+              "stat": "cs"
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit/freeze_omni/interruption",
+            "scenario": "interruption",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+            "trace_sha256": "2ab0b19e17d1fee00c92b13c2e3d68ac9514c8636a83fa89c4938d6be1d5b592",
+            "matched_occurrences": 14,
+            "first_example": {
+              "phase": "generation",
+              "stat": "cs"
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit/freeze_omni/normal",
+            "scenario": "normal",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+            "trace_sha256": "eba1fcb88135b360082f5afa7aca4bcf24dec4e144eb0ea821e49e7a17882aa7",
+            "matched_occurrences": 14,
+            "first_example": {
+              "phase": "generation",
+              "stat": "cs"
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-native-v2/freeze_omni/backchannel",
+            "scenario": "backchannel",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+            "trace_sha256": "f5b5cdfc17d7ba9899f36314ec0bff70acd8d961e784bf78cef0ffbe3e4542d6",
+            "matched_occurrences": 166,
+            "first_example": {
+              "phase": "generation",
+              "stat": "cs"
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-native-v2/freeze_omni/interruption",
+            "scenario": "interruption",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+            "trace_sha256": "2ee5c8987870af741321aecc35ee2cfa27db20bc70b8d4907956efe4f36d4d35",
+            "matched_occurrences": 676,
+            "first_example": {
+              "phase": "generation",
+              "stat": "cs"
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-native-v2/freeze_omni/normal",
+            "scenario": "normal",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+            "trace_sha256": "7e04a493d0afd9226013a2cc1e96767cf1e0c0be929517d919b943f0776d20f6",
+            "matched_occurrences": 543,
+            "first_example": {
+              "phase": "generation",
+              "stat": "cs"
+            }
+          }
+        ]
+      },
+      "generation.stat=sl": {
+        "witnesses": [
+          {
+            "artifact": "data/simulations/control-signals/20261112-freeze-separated-turn/freeze_omni/backchannel",
+            "scenario": "backchannel",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+            "trace_sha256": "d02a5bfcd7635481cb7fa01e7322c383dbee1655c1ac9bbb2833b28224dcf62f",
+            "matched_occurrences": 2,
+            "first_example": {
+              "phase": "generation",
+              "stat": "sl"
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-freeze-separated-turn/freeze_omni/interruption",
+            "scenario": "interruption",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+            "trace_sha256": "5b4cff787457ac5caf4bc7687e2bb1bf289490eccf69e590d982cb7fe554dc33",
+            "matched_occurrences": 2,
+            "first_example": {
+              "phase": "generation",
+              "stat": "sl"
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit/freeze_omni/backchannel",
+            "scenario": "backchannel",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+            "trace_sha256": "ee5517670fc875cc4be52454352fc1132326897c52037af89b7a028065c5556b",
+            "matched_occurrences": 1,
+            "first_example": {
+              "phase": "generation",
+              "stat": "sl"
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit/freeze_omni/interruption",
+            "scenario": "interruption",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+            "trace_sha256": "2ab0b19e17d1fee00c92b13c2e3d68ac9514c8636a83fa89c4938d6be1d5b592",
+            "matched_occurrences": 1,
+            "first_example": {
+              "phase": "generation",
+              "stat": "sl"
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit/freeze_omni/normal",
+            "scenario": "normal",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+            "trace_sha256": "eba1fcb88135b360082f5afa7aca4bcf24dec4e144eb0ea821e49e7a17882aa7",
+            "matched_occurrences": 1,
+            "first_example": {
+              "phase": "generation",
+              "stat": "sl"
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-native-v2/freeze_omni/backchannel",
+            "scenario": "backchannel",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+            "trace_sha256": "f5b5cdfc17d7ba9899f36314ec0bff70acd8d961e784bf78cef0ffbe3e4542d6",
+            "matched_occurrences": 1,
+            "first_example": {
+              "phase": "generation",
+              "stat": "sl"
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-native-v2/freeze_omni/interruption",
+            "scenario": "interruption",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+            "trace_sha256": "2ee5c8987870af741321aecc35ee2cfa27db20bc70b8d4907956efe4f36d4d35",
+            "matched_occurrences": 1,
+            "first_example": {
+              "phase": "generation",
+              "stat": "sl"
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-native-v2/freeze_omni/normal",
+            "scenario": "normal",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+            "trace_sha256": "7e04a493d0afd9226013a2cc1e96767cf1e0c0be929517d919b943f0776d20f6",
+            "matched_occurrences": 1,
+            "first_example": {
+              "phase": "generation",
+              "stat": "sl"
+            }
+          }
+        ]
+      }
+    },
+    "gemini": {
+      "interruption": {
+        "witnesses": [
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit/gemini_live/backchannel",
+            "scenario": "backchannel",
+            "model_id": "gemini-3.1-flash-live-preview",
+            "checkpoint": null,
+            "trace_sha256": "434c282c0ca3b521307ae124e53aecacb77681867fa229828c3742a3e7157cd3",
+            "matched_occurrences": 1,
+            "first_example": {
+              "native_field": "interrupted",
+              "true_count": 1
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit/gemini_live/interruption",
+            "scenario": "interruption",
+            "model_id": "gemini-3.1-flash-live-preview",
+            "checkpoint": null,
+            "trace_sha256": "b774c953915f9a20dc1d0a7b43d952720cba0eb47c81a73ccca635fd054cd2a7",
+            "matched_occurrences": 1,
+            "first_example": {
+              "native_field": "interrupted",
+              "true_count": 1
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit-long/gemini_live/backchannel",
+            "scenario": "backchannel",
+            "model_id": "gemini-3.1-flash-live-preview",
+            "checkpoint": null,
+            "trace_sha256": "e2ac08e30b48c63db3db2c15e27fa5c1bb6015bff126c2ec490b92b8d23be55b",
+            "matched_occurrences": 1,
+            "first_example": {
+              "native_field": "interrupted",
+              "true_count": 1
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit-long/gemini_live/interruption",
+            "scenario": "interruption",
+            "model_id": "gemini-3.1-flash-live-preview",
+            "checkpoint": null,
+            "trace_sha256": "f447800dfcc6638df7474ae286a32342b98edaecee247d2437a276d151619af0",
+            "matched_occurrences": 1,
+            "first_example": {
+              "native_field": "interrupted",
+              "true_count": 1
+            }
+          }
+        ]
+      },
+      "turn.complete": {
+        "witnesses": [
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit/gemini_live/backchannel",
+            "scenario": "backchannel",
+            "model_id": "gemini-3.1-flash-live-preview",
+            "checkpoint": null,
+            "trace_sha256": "434c282c0ca3b521307ae124e53aecacb77681867fa229828c3742a3e7157cd3",
+            "matched_occurrences": 1,
+            "first_example": {
+              "native_field": "turnComplete",
+              "true_count": 1
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit/gemini_live/interruption",
+            "scenario": "interruption",
+            "model_id": "gemini-3.1-flash-live-preview",
+            "checkpoint": null,
+            "trace_sha256": "b774c953915f9a20dc1d0a7b43d952720cba0eb47c81a73ccca635fd054cd2a7",
+            "matched_occurrences": 1,
+            "first_example": {
+              "native_field": "turnComplete",
+              "true_count": 1
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit/gemini_live/normal",
+            "scenario": "normal",
+            "model_id": "gemini-3.1-flash-live-preview",
+            "checkpoint": null,
+            "trace_sha256": "965563a306c008fec3e989d1dc374e09e35aaa1add81cf3f792d36777d03d08c",
+            "matched_occurrences": 1,
+            "first_example": {
+              "native_field": "turnComplete",
+              "true_count": 1
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit-long/gemini_live/backchannel",
+            "scenario": "backchannel",
+            "model_id": "gemini-3.1-flash-live-preview",
+            "checkpoint": null,
+            "trace_sha256": "e2ac08e30b48c63db3db2c15e27fa5c1bb6015bff126c2ec490b92b8d23be55b",
+            "matched_occurrences": 1,
+            "first_example": {
+              "native_field": "turnComplete",
+              "true_count": 1
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit-long/gemini_live/interruption",
+            "scenario": "interruption",
+            "model_id": "gemini-3.1-flash-live-preview",
+            "checkpoint": null,
+            "trace_sha256": "f447800dfcc6638df7474ae286a32342b98edaecee247d2437a276d151619af0",
+            "matched_occurrences": 1,
+            "first_example": {
+              "native_field": "turnComplete",
+              "true_count": 1
+            }
+          }
+        ]
+      }
+    },
+    "openai": {
+      "input_audio_buffer.speech_started": {
+        "witnesses": [
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit/gpt_realtime/backchannel",
+            "scenario": "backchannel",
+            "model_id": "gpt-realtime-2.1",
+            "checkpoint": null,
+            "trace_sha256": "d19d24cfc1903b9187a6a4d318fcc049a1fb2a2080baf55f0cae3173e9ede76f",
+            "matched_occurrences": 1,
+            "first_example": {
+              "kind": "interruption",
+              "wall_ms": 6415.953334420919,
+              "arrival_tick_id": 44,
+              "source_ms": 4420.0,
+              "stream_ms": 4420.0,
+              "event_type": "input_audio_buffer.speech_started",
+              "old_response_id": "resp_EjEs8AgCA3SoS4GGdw7qG",
+              "discarded_bytes": 182400
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit/gpt_realtime/interruption",
+            "scenario": "interruption",
+            "model_id": "gpt-realtime-2.1",
+            "checkpoint": null,
+            "trace_sha256": "188c21bfe44210053dbe3e5f3dc1f46435fb77eedf0b46533bbc9a8e59be3d4b",
+            "matched_occurrences": 1,
+            "first_example": {
+              "kind": "interruption",
+              "wall_ms": 5896.303299814463,
+              "arrival_tick_id": 32,
+              "source_ms": 3260.0,
+              "stream_ms": 3260.0,
+              "event_type": "input_audio_buffer.speech_started",
+              "old_response_id": "resp_EjErnJjrRd9nUI9mJ7gVL",
+              "discarded_bytes": 177600
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit-long/gpt_realtime/backchannel",
+            "scenario": "backchannel",
+            "model_id": "gpt-realtime-2.1",
+            "checkpoint": null,
+            "trace_sha256": "c3d836d34e344ef5b9d1a02a1cbdf25928b21f4752afbe58a3d6f4befc8547b5",
+            "matched_occurrences": 1,
+            "first_example": {
+              "kind": "interruption",
+              "wall_ms": 13834.676519036293,
+              "arrival_tick_id": 119,
+              "source_ms": 11960.0,
+              "stream_ms": 11960.0,
+              "event_type": "input_audio_buffer.speech_started",
+              "old_response_id": "resp_EjExdarv1SbxyTTO1XlNj",
+              "discarded_bytes": 110400
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit-long/gpt_realtime/interruption",
+            "scenario": "interruption",
+            "model_id": "gpt-realtime-2.1",
+            "checkpoint": null,
+            "trace_sha256": "86648b6b33584caf8ca2be49407afe67acf715e96be0f24bdc6c671de348961f",
+            "matched_occurrences": 1,
+            "first_example": {
+              "kind": "interruption",
+              "wall_ms": 15890.088941901922,
+              "arrival_tick_id": 134,
+              "source_ms": 13420.0,
+              "stream_ms": 13420.0,
+              "event_type": "input_audio_buffer.speech_started",
+              "old_response_id": "resp_EjEx1yWQOjcsAfHBxsrMS",
+              "discarded_bytes": 148800
+            }
+          }
+        ]
+      },
+      "response.done": {
+        "witnesses": [
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit/gpt_realtime/backchannel",
+            "scenario": "backchannel",
+            "model_id": "gpt-realtime-2.1",
+            "checkpoint": null,
+            "trace_sha256": "d19d24cfc1903b9187a6a4d318fcc049a1fb2a2080baf55f0cae3173e9ede76f",
+            "matched_occurrences": 1,
+            "first_example": [
+              {
+                "type": "response.done",
+                "response_id": "resp_EjEs8AgCA3SoS4GGdw7qG",
+                "status": "cancelled"
+              }
+            ]
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit/gpt_realtime/interruption",
+            "scenario": "interruption",
+            "model_id": "gpt-realtime-2.1",
+            "checkpoint": null,
+            "trace_sha256": "188c21bfe44210053dbe3e5f3dc1f46435fb77eedf0b46533bbc9a8e59be3d4b",
+            "matched_occurrences": 2,
+            "first_example": [
+              {
+                "type": "response.done",
+                "response_id": "resp_EjErnJjrRd9nUI9mJ7gVL",
+                "status": "cancelled"
+              },
+              {
+                "type": "response.done",
+                "response_id": "resp_EjErqaemyl53yo0KHBDtc",
+                "status": "completed"
+              }
+            ]
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit/gpt_realtime/normal",
+            "scenario": "normal",
+            "model_id": "gpt-realtime-2.1",
+            "checkpoint": null,
+            "trace_sha256": "34a07b710634ae8678abf5647c4192477138e74ebc797774c22d61e2cc8fa2e6",
+            "matched_occurrences": 1,
+            "first_example": [
+              {
+                "type": "response.done",
+                "response_id": "resp_EjErUyDs9zVQvtbtiNV8X",
+                "status": "completed"
+              }
+            ]
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit-long/gpt_realtime/backchannel",
+            "scenario": "backchannel",
+            "model_id": "gpt-realtime-2.1",
+            "checkpoint": null,
+            "trace_sha256": "c3d836d34e344ef5b9d1a02a1cbdf25928b21f4752afbe58a3d6f4befc8547b5",
+            "matched_occurrences": 1,
+            "first_example": [
+              {
+                "type": "response.done",
+                "response_id": "resp_EjExdarv1SbxyTTO1XlNj",
+                "status": "cancelled"
+              }
+            ]
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit-long/gpt_realtime/interruption",
+            "scenario": "interruption",
+            "model_id": "gpt-realtime-2.1",
+            "checkpoint": null,
+            "trace_sha256": "86648b6b33584caf8ca2be49407afe67acf715e96be0f24bdc6c671de348961f",
+            "matched_occurrences": 2,
+            "first_example": [
+              {
+                "type": "response.done",
+                "response_id": "resp_EjEx1yWQOjcsAfHBxsrMS",
+                "status": "cancelled"
+              },
+              {
+                "type": "response.done",
+                "response_id": "resp_EjExB1DczezsAgVpclneq",
+                "status": "completed"
+              }
+            ]
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit-long/gpt_realtime/normal",
+            "scenario": "normal",
+            "model_id": "gpt-realtime-2.1",
+            "checkpoint": null,
+            "trace_sha256": "ee03e42c672cff43eb921cef1ea7e532c0aae007f55cbb4713dc54e685870da2",
+            "matched_occurrences": 1,
+            "first_example": [
+              {
+                "type": "response.done",
+                "response_id": "resp_EjEwMkn9UamgYi07TN4FL",
+                "status": "completed"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "minicpm": {
+      "is_listen": {
+        "witnesses": [
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit/minicpm/backchannel",
+            "scenario": "backchannel",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data6/base_models/MiniCPM-o-4_5",
+            "trace_sha256": "3396e517cd20afe851cbaca96323c5561dd6e0c2fa0a7232a2a8232c8d00fb87",
+            "matched_occurrences": 15,
+            "first_example": {
+              "tick": 0,
+              "is_listen": true,
+              "end_of_turn": false,
+              "control": {
+                "source": "native_runtime",
+                "interrupt_requested": false,
+                "force_listen": false
+              },
+              "output_rms": 0
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit/minicpm/forced_interruption",
+            "scenario": "forced_interruption",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data6/base_models/MiniCPM-o-4_5",
+            "trace_sha256": "294d03845645ce59c03bfd9b9a5a32e0f362e490712162daf1040a076d0229bb",
+            "matched_occurrences": 1,
+            "first_example": {
+              "tick": 0,
+              "is_listen": true,
+              "end_of_turn": false,
+              "control": {
+                "source": "native_runtime",
+                "interrupt_requested": false,
+                "force_listen": false
+              },
+              "output_rms": 0
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit/minicpm/interruption",
+            "scenario": "interruption",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data6/base_models/MiniCPM-o-4_5",
+            "trace_sha256": "eb7c6e4956fa7f25773dd0d5289c8a95a246ecd0c1230cec9c75222910930d60",
+            "matched_occurrences": 11,
+            "first_example": {
+              "tick": 0,
+              "is_listen": true,
+              "end_of_turn": false,
+              "control": {
+                "source": "native_runtime",
+                "interrupt_requested": false,
+                "force_listen": false
+              },
+              "output_rms": 0
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit/minicpm/normal",
+            "scenario": "normal",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data6/base_models/MiniCPM-o-4_5",
+            "trace_sha256": "a27bdca5f71ef283c64ea5a3a0ea6fe473c941a539b2d12eb959a038e76a3836",
+            "matched_occurrences": 3,
+            "first_example": {
+              "tick": 0,
+              "is_listen": true,
+              "end_of_turn": false,
+              "control": {
+                "source": "native_runtime",
+                "interrupt_requested": false,
+                "force_listen": false
+              },
+              "output_rms": 0
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-minicpm-hold/minicpm/forced_interruption_hold",
+            "scenario": "forced_interruption_hold",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data6/base_models/MiniCPM-o-4_5",
+            "trace_sha256": "8d35942a442625f34d639bb6bc05b2aacb3e7ce51031859b585350f9ccae2c9a",
+            "matched_occurrences": 16,
+            "first_example": {
+              "tick": 0,
+              "is_listen": true,
+              "end_of_turn": false,
+              "control": {
+                "source": "native_runtime",
+                "interrupt_requested": false,
+                "force_listen": false
+              },
+              "output_rms": 0
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-native-v2/minicpm/backchannel",
+            "scenario": "backchannel",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data6/base_models/MiniCPM-o-4_5",
+            "trace_sha256": "9a1f147de41bbd93b2e5969d6af98156f700ec732b795b3b52b3a75a837a7571",
+            "matched_occurrences": 23,
+            "first_example": {
+              "tick": 0,
+              "is_listen": true,
+              "end_of_turn": false,
+              "control": {
+                "source": "native_runtime",
+                "interrupt_requested": false,
+                "force_listen": false
+              },
+              "output_rms": 0
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-native-v2/minicpm/forced_interruption",
+            "scenario": "forced_interruption",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data6/base_models/MiniCPM-o-4_5",
+            "trace_sha256": "7dd9fa39d335ff1d750322c4fecb83077ad3d773cc347ae3494b512cde0446a6",
+            "matched_occurrences": 16,
+            "first_example": {
+              "tick": 0,
+              "is_listen": true,
+              "end_of_turn": false,
+              "control": {
+                "source": "native_runtime",
+                "interrupt_requested": false,
+                "force_listen": false
+              },
+              "output_rms": 0
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-native-v2/minicpm/interruption",
+            "scenario": "interruption",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data6/base_models/MiniCPM-o-4_5",
+            "trace_sha256": "78f069b3f3f95dfaddc35ba11a4e1a05f36fce26e65227b32c1643f8af69fdb0",
+            "matched_occurrences": 15,
+            "first_example": {
+              "tick": 0,
+              "is_listen": true,
+              "end_of_turn": false,
+              "control": {
+                "source": "native_runtime",
+                "interrupt_requested": false,
+                "force_listen": false
+              },
+              "output_rms": 0
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-native-v2/minicpm/normal",
+            "scenario": "normal",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data6/base_models/MiniCPM-o-4_5",
+            "trace_sha256": "9f4958c9a958492f81fbb8ec8dabc4d9f5927ebc722abfa8668fa47bb595ff55",
+            "matched_occurrences": 10,
+            "first_example": {
+              "tick": 0,
+              "is_listen": true,
+              "end_of_turn": false,
+              "control": {
+                "source": "native_runtime",
+                "interrupt_requested": false,
+                "force_listen": false
+              },
+              "output_rms": 0
+            }
+          }
+        ]
+      },
+      "end_of_turn": {
+        "witnesses": [
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit/minicpm/backchannel",
+            "scenario": "backchannel",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data6/base_models/MiniCPM-o-4_5",
+            "trace_sha256": "3396e517cd20afe851cbaca96323c5561dd6e0c2fa0a7232a2a8232c8d00fb87",
+            "matched_occurrences": 1,
+            "first_example": {
+              "tick": 2,
+              "is_listen": false,
+              "end_of_turn": true,
+              "control": {
+                "source": "native_runtime",
+                "interrupt_requested": false,
+                "force_listen": false
+              },
+              "output_rms": 3330
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit/minicpm/interruption",
+            "scenario": "interruption",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data6/base_models/MiniCPM-o-4_5",
+            "trace_sha256": "eb7c6e4956fa7f25773dd0d5289c8a95a246ecd0c1230cec9c75222910930d60",
+            "matched_occurrences": 1,
+            "first_example": {
+              "tick": 7,
+              "is_listen": false,
+              "end_of_turn": true,
+              "control": {
+                "source": "native_runtime",
+                "interrupt_requested": false,
+                "force_listen": false
+              },
+              "output_rms": 2561
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit/minicpm/normal",
+            "scenario": "normal",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data6/base_models/MiniCPM-o-4_5",
+            "trace_sha256": "a27bdca5f71ef283c64ea5a3a0ea6fe473c941a539b2d12eb959a038e76a3836",
+            "matched_occurrences": 1,
+            "first_example": {
+              "tick": 3,
+              "is_listen": false,
+              "end_of_turn": true,
+              "control": {
+                "source": "native_runtime",
+                "interrupt_requested": false,
+                "force_listen": false
+              },
+              "output_rms": 2669
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-native-v2/minicpm/backchannel",
+            "scenario": "backchannel",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data6/base_models/MiniCPM-o-4_5",
+            "trace_sha256": "9a1f147de41bbd93b2e5969d6af98156f700ec732b795b3b52b3a75a837a7571",
+            "matched_occurrences": 1,
+            "first_example": {
+              "tick": 14,
+              "is_listen": false,
+              "end_of_turn": true,
+              "control": {
+                "source": "native_runtime",
+                "interrupt_requested": false,
+                "force_listen": false
+              },
+              "output_rms": 39
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-native-v2/minicpm/forced_interruption",
+            "scenario": "forced_interruption",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data6/base_models/MiniCPM-o-4_5",
+            "trace_sha256": "7dd9fa39d335ff1d750322c4fecb83077ad3d773cc347ae3494b512cde0446a6",
+            "matched_occurrences": 1,
+            "first_example": {
+              "tick": 28,
+              "is_listen": false,
+              "end_of_turn": true,
+              "control": {
+                "source": "native_runtime",
+                "interrupt_requested": false,
+                "force_listen": false
+              },
+              "output_rms": 2602
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-native-v2/minicpm/interruption",
+            "scenario": "interruption",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data6/base_models/MiniCPM-o-4_5",
+            "trace_sha256": "78f069b3f3f95dfaddc35ba11a4e1a05f36fce26e65227b32c1643f8af69fdb0",
+            "matched_occurrences": 2,
+            "first_example": {
+              "tick": 17,
+              "is_listen": false,
+              "end_of_turn": true,
+              "control": {
+                "source": "native_runtime",
+                "interrupt_requested": false,
+                "force_listen": false
+              },
+              "output_rms": 2089
+            }
+          }
+        ]
+      },
+      "external_interrupt": {
+        "witnesses": [
+          {
+            "artifact": "data/simulations/control-signals/20261112-live-audit/minicpm/forced_interruption",
+            "scenario": "forced_interruption",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data6/base_models/MiniCPM-o-4_5",
+            "trace_sha256": "294d03845645ce59c03bfd9b9a5a32e0f362e490712162daf1040a076d0229bb",
+            "matched_occurrences": 1,
+            "first_example": {
+              "tick": 2,
+              "is_listen": true,
+              "end_of_turn": false,
+              "control": {
+                "source": "external_policy",
+                "interrupt_requested": true,
+                "force_listen": true
+              },
+              "output_rms": 0
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-minicpm-hold/minicpm/forced_interruption_hold",
+            "scenario": "forced_interruption_hold",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data6/base_models/MiniCPM-o-4_5",
+            "trace_sha256": "8d35942a442625f34d639bb6bc05b2aacb3e7ce51031859b585350f9ccae2c9a",
+            "matched_occurrences": 1,
+            "first_example": {
+              "tick": 14,
+              "is_listen": true,
+              "end_of_turn": false,
+              "control": {
+                "source": "external_policy",
+                "interrupt_requested": true,
+                "force_listen": true
+              },
+              "output_rms": 0
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-native-v2/minicpm/forced_interruption",
+            "scenario": "forced_interruption",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data6/base_models/MiniCPM-o-4_5",
+            "trace_sha256": "7dd9fa39d335ff1d750322c4fecb83077ad3d773cc347ae3494b512cde0446a6",
+            "matched_occurrences": 1,
+            "first_example": {
+              "tick": 14,
+              "is_listen": true,
+              "end_of_turn": false,
+              "control": {
+                "source": "external_policy",
+                "interrupt_requested": true,
+                "force_listen": true
+              },
+              "output_rms": 0
+            }
+          }
+        ]
+      },
+      "forced_listen": {
+        "witnesses": [
+          {
+            "artifact": "data/simulations/control-signals/20261112-minicpm-hold/minicpm/forced_interruption_hold",
+            "scenario": "forced_interruption_hold",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data6/base_models/MiniCPM-o-4_5",
+            "trace_sha256": "8d35942a442625f34d639bb6bc05b2aacb3e7ce51031859b585350f9ccae2c9a",
+            "matched_occurrences": 8,
+            "first_example": {
+              "tick": 15,
+              "is_listen": true,
+              "end_of_turn": false,
+              "control": {
+                "source": "external_policy",
+                "interrupt_requested": false,
+                "force_listen": true
+              },
+              "output_rms": 0
+            }
+          }
+        ]
+      }
+    },
+    "salmonn": {
+      "native_assistant_start": {
+        "witnesses": [
+          {
+            "artifact": "data/simulations/control-signals/20261112-native-v2/salmonn/backchannel",
+            "scenario": "backchannel",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data2/yuwenyi/playground/exp_results/cu12_stage2-0519_fc-180_aes_er0_chunk30_llama31/checkpoint-44000",
+            "trace_sha256": "64ac497938cc2193a8a885c258b132ce66d08524bac0c6e206b787ba0b4c739b",
+            "matched_occurrences": 1,
+            "first_example": {
+              "tick": 100,
+              "event": "native_assistant_start",
+              "token_id": 10369
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-native-v2/salmonn/interruption",
+            "scenario": "interruption",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data2/yuwenyi/playground/exp_results/cu12_stage2-0519_fc-180_aes_er0_chunk30_llama31/checkpoint-44000",
+            "trace_sha256": "3e063aa216316a70b1fd0ea51765223c4f4859ce2ab124c12a24fcc7336c166e",
+            "matched_occurrences": 1,
+            "first_example": {
+              "tick": 100,
+              "event": "native_assistant_start",
+              "token_id": 10369
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-native-v2/salmonn/normal",
+            "scenario": "normal",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data2/yuwenyi/playground/exp_results/cu12_stage2-0519_fc-180_aes_er0_chunk30_llama31/checkpoint-44000",
+            "trace_sha256": "ad0eb52e4f3e7a74dd72b25f6d65c8ceb8030f980cbda7f5a69518effd093b3f",
+            "matched_occurrences": 1,
+            "first_example": {
+              "tick": 100,
+              "event": "native_assistant_start",
+              "token_id": 10369
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-salmonn-drain-fixed/salmonn/normal",
+            "scenario": "normal",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data2/yuwenyi/playground/exp_results/cu12_stage2-0519_fc-180_aes_er0_chunk30_llama31/checkpoint-44000",
+            "trace_sha256": "1478d48749d45e81288bb665454632687344222f4614bde5740df417d19e4f54",
+            "matched_occurrences": 1,
+            "first_example": {
+              "tick": 100,
+              "event": "native_assistant_start",
+              "token_id": 10369
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-salmonn-drain-fixed/salmonn/normal_then_interruption",
+            "scenario": "normal_then_interruption",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data2/yuwenyi/playground/exp_results/cu12_stage2-0519_fc-180_aes_er0_chunk30_llama31/checkpoint-44000",
+            "trace_sha256": "6b082c9919bdbe09f4bfe7a47a22d1050794e6c37f25aadf4fbd5fa3df12c7fa",
+            "matched_occurrences": 2,
+            "first_example": {
+              "tick": 100,
+              "event": "native_assistant_start",
+              "token_id": 10369
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-salmonn-zh/salmonn/interruption",
+            "scenario": "interruption",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data2/yuwenyi/playground/exp_results/cu12_stage2-0519_fc-180_aes_er0_chunk30_llama31/checkpoint-44000",
+            "trace_sha256": "ec9d419a368107e065717079c900f3b9c54914f10b7843d17b6eb533bda6b00e",
+            "matched_occurrences": 1,
+            "first_example": {
+              "tick": 79,
+              "event": "native_assistant_start",
+              "token_id": 57668
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-salmonn-zh/salmonn/normal",
+            "scenario": "normal",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data2/yuwenyi/playground/exp_results/cu12_stage2-0519_fc-180_aes_er0_chunk30_llama31/checkpoint-44000",
+            "trace_sha256": "29829cefd92d856a0d695ffbba1fb58d276404eb8b4b861e11b59b8ed04734ca",
+            "matched_occurrences": 1,
+            "first_example": {
+              "tick": 79,
+              "event": "native_assistant_start",
+              "token_id": 57668
+            }
+          }
+        ]
+      },
+      "playback_turn_ended": {
+        "witnesses": [
+          {
+            "artifact": "data/simulations/control-signals/20261112-salmonn-drain-fixed/salmonn/normal",
+            "scenario": "normal",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data2/yuwenyi/playground/exp_results/cu12_stage2-0519_fc-180_aes_er0_chunk30_llama31/checkpoint-44000",
+            "trace_sha256": "1478d48749d45e81288bb665454632687344222f4614bde5740df417d19e4f54",
+            "matched_occurrences": 1,
+            "first_example": {
+              "tick": 491,
+              "event": "playback_turn_ended",
+              "source": "playback_controller",
+              "reason": "text_eot_and_playback_drained",
+              "text_eot_tick": 203,
+              "appended_token_id": 128258,
+              "playback": {
+                "lead_seconds": 0.4,
+                "flush_events": [
+                  {
+                    "reason": "punctuation",
+                    "token_id": 13,
+                    "pending_tts_tokens": 23,
+                    "tick": 22
+                  },
+                  {
+                    "reason": "punctuation",
+                    "token_id": 13,
+                    "pending_tts_tokens": 18,
+                    "tick": 40
+                  },
+                  {
+                    "reason": "punctuation",
+                    "token_id": 13,
+                    "pending_tts_tokens": 31,
+                    "tick": 71
+                  },
+                  {
+                    "reason": "punctuation",
+                    "token_id": 13,
+                    "pending_tts_tokens": 31,
+                    "tick": 102
+                  },
+                  {
+                    "reason": "eot",
+                    "token_id": 128009,
+                    "pending_tts_tokens": 1,
+                    "tick": 103
+                  }
+                ],
+                "tts_errors": [],
+                "rendered_samples_16k": 495040,
+                "played_samples_16k": 495040,
+                "cancelled_samples_16k": 0,
+                "underflow_samples_16k": 0,
+                "interrupted": false,
+                "playback_ticks": 392,
+                "tts_drain_iterations": 5,
+                "text_closed": true
+              }
+            }
+          },
+          {
+            "artifact": "data/simulations/control-signals/20261112-salmonn-drain-fixed/salmonn/normal_then_interruption",
+            "scenario": "normal_then_interruption",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data2/yuwenyi/playground/exp_results/cu12_stage2-0519_fc-180_aes_er0_chunk30_llama31/checkpoint-44000",
+            "trace_sha256": "6b082c9919bdbe09f4bfe7a47a22d1050794e6c37f25aadf4fbd5fa3df12c7fa",
+            "matched_occurrences": 1,
+            "first_example": {
+              "tick": 491,
+              "event": "playback_turn_ended",
+              "source": "playback_controller",
+              "reason": "text_eot_and_playback_drained",
+              "text_eot_tick": 203,
+              "appended_token_id": 128258,
+              "playback": {
+                "lead_seconds": 0.4,
+                "flush_events": [
+                  {
+                    "reason": "punctuation",
+                    "token_id": 13,
+                    "pending_tts_tokens": 23,
+                    "tick": 22
+                  },
+                  {
+                    "reason": "punctuation",
+                    "token_id": 13,
+                    "pending_tts_tokens": 18,
+                    "tick": 40
+                  },
+                  {
+                    "reason": "punctuation",
+                    "token_id": 13,
+                    "pending_tts_tokens": 31,
+                    "tick": 71
+                  },
+                  {
+                    "reason": "punctuation",
+                    "token_id": 13,
+                    "pending_tts_tokens": 31,
+                    "tick": 102
+                  },
+                  {
+                    "reason": "eot",
+                    "token_id": 128009,
+                    "pending_tts_tokens": 1,
+                    "tick": 103
+                  }
+                ],
+                "tts_errors": [],
+                "rendered_samples_16k": 495040,
+                "played_samples_16k": 495040,
+                "cancelled_samples_16k": 0,
+                "underflow_samples_16k": 0,
+                "interrupted": false,
+                "playback_ticks": 392,
+                "tts_drain_iterations": 5,
+                "text_closed": true
+              }
+            }
+          }
+        ]
+      },
+      "listening_after_playback": {
+        "witnesses": [
+          {
+            "artifact": "data/simulations/control-signals/20261112-salmonn-drain-fixed/salmonn/normal_then_interruption",
+            "scenario": "normal_then_interruption",
+            "model_id": null,
+            "checkpoint": "/mnt/bn/audio-visual-llm-data2/yuwenyi/playground/exp_results/cu12_stage2-0519_fc-180_aes_er0_chunk30_llama31/checkpoint-44000",
+            "trace_sha256": "6b082c9919bdbe09f4bfe7a47a22d1050794e6c37f25aadf4fbd5fa3df12c7fa",
+            "matched_occurrences": 1,
+            "first_example": {
+              "tick": 492,
+              "event": "listening_after_playback",
+              "source": "playback_controller",
+              "ignored_native_prediction": 128006
+            }
+          }
+        ]
+      }
+    }
+  },
+  "continuous_media": {
+    "openai_live": [
+      {
+        "artifact": "data/simulations/control-signals/20261112-live-audit/gpt_live/backchannel",
+        "model_id": "gpt-live-1",
+        "input_seconds": 17.6,
+        "output_seconds": 17.08,
+        "quiet_seconds_rms_le_100": 3.4000000000000017,
+        "longest_quiet_seconds": 1.0999999999999999,
+        "trace_sha256": "938c1cd0452995f3888972a5a8674f8ee5f2a25b71e4568ea15907ded96a2f9e",
+        "audio_sha256": "db3806f0cdabdb01c3db39424222c4f6252845bec768f3df5c361a17ac664a8c"
+      },
+      {
+        "artifact": "data/simulations/control-signals/20261112-live-audit/gpt_live/interruption",
+        "model_id": "gpt-live-1",
+        "input_seconds": 18.1,
+        "output_seconds": 17.58,
+        "quiet_seconds_rms_le_100": 3.3000000000000016,
+        "longest_quiet_seconds": 1.3,
+        "trace_sha256": "3c67ee9a1f6cc9bf2d7824856a3da0a18428fee9c27bee2f4263ad76aeae5b59",
+        "audio_sha256": "81cf50996cc190e81c8a2401b65148b8de983f6c39522e94f36af40bfbd3b4c9"
+      },
+      {
+        "artifact": "data/simulations/control-signals/20261112-live-audit/gpt_live/normal",
+        "model_id": "gpt-live-1",
+        "input_seconds": 36.2,
+        "output_seconds": 35.74,
+        "quiet_seconds_rms_le_100": 7.599999999999989,
+        "longest_quiet_seconds": 1.0999999999999999,
+        "trace_sha256": "94166a856b287b2406578483b2bf72b83554ef23d324dd57631636e4fa154acc",
+        "audio_sha256": "22b30b69ca865da9483ff469b43c61b4297391ef0e103839789c16bbc30090e8"
+      },
+      {
+        "artifact": "data/simulations/control-signals/20261112-live-audit-long/gpt_live/backchannel",
+        "model_id": "gpt-live-1",
+        "input_seconds": 28.9,
+        "output_seconds": 28.5,
+        "quiet_seconds_rms_le_100": 14.799999999999963,
+        "longest_quiet_seconds": 10.599999999999978,
+        "trace_sha256": "6c984c9e0410f538c2cd8d3b2b95ffc02dc24c6c0d4302b839d917d8aa1239e8",
+        "audio_sha256": "1031fafb076eea1288758d77d8ec6619789c67b14a4aa98c50d02efb0c7acb6c"
+      },
+      {
+        "artifact": "data/simulations/control-signals/20261112-live-audit-long/gpt_live/interruption",
+        "model_id": "gpt-live-1",
+        "input_seconds": 33.9,
+        "output_seconds": 33.48,
+        "quiet_seconds_rms_le_100": 26.88000000000011,
+        "longest_quiet_seconds": 11.979999999999974,
+        "trace_sha256": "831fbb5acd829a86963244ccc25b4beb1cbb5af1ca969d07f9b29d43c51bc27d",
+        "audio_sha256": "408d6771c0b2c815994493896af19354e26c1ac150f03e700997dd4c3b519d2a"
+      },
+      {
+        "artifact": "data/simulations/control-signals/20261112-live-audit-long/gpt_live/normal",
+        "model_id": "gpt-live-1",
+        "input_seconds": 45.3,
+        "output_seconds": 45.18,
+        "quiet_seconds_rms_le_100": 40.2800000000003,
+        "longest_quiet_seconds": 29.08000000000014,
+        "trace_sha256": "4e6ad02b36dc886c0b1ab9368150113894ec1f30c39c3d5d27ecd22cb93a16e4",
+        "audio_sha256": "2a74df37fb9fd46d912fbdf54ff7b3c58c1fa4af0de91b893169816a1c997656"
+      }
+    ],
+    "moshi": [
+      {
+        "artifact": "data/simulations/control-signals/20261112-live-audit/moshi/backchannel",
+        "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/playground/moshi/pretrained_ckpts/moshika-pytorch-bf16/model.safetensors",
+        "input_ticks": 241,
+        "nonempty_output_ticks": 241,
+        "frame_size_samples": 1920,
+        "sample_rate": 24000,
+        "quiet_seconds_rms_le_100": 15.579999999999961,
+        "trace_sha256": "1fe491f61c7a0f56af15af47cabf91f7668f700c1a14a47173ac32e3d729f58a",
+        "audio_sha256": "c5f57e921f2dbefdfba1a2fa9cec8bd472cbd84c40d4dbd4329c1fe55fac89f2"
+      },
+      {
+        "artifact": "data/simulations/control-signals/20261112-live-audit/moshi/interruption",
+        "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/playground/moshi/pretrained_ckpts/moshika-pytorch-bf16/model.safetensors",
+        "input_ticks": 241,
+        "nonempty_output_ticks": 241,
+        "frame_size_samples": 1920,
+        "sample_rate": 24000,
+        "quiet_seconds_rms_le_100": 14.479999999999965,
+        "trace_sha256": "c57d368d81503aef18f0d32fe31d2b21fd7039da0a1b91305035f846ce5dd66a",
+        "audio_sha256": "d8468037605ffd1405b82c3b5c72c23378f87df0a8c93785ef191d24bb43950f"
+      },
+      {
+        "artifact": "data/simulations/control-signals/20261112-live-audit/moshi/normal",
+        "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/playground/moshi/pretrained_ckpts/moshika-pytorch-bf16/model.safetensors",
+        "input_ticks": 875,
+        "nonempty_output_ticks": 875,
+        "frame_size_samples": 1920,
+        "sample_rate": 24000,
+        "quiet_seconds_rms_le_100": 64.50000000000061,
+        "trace_sha256": "fc6e9ced87f0e89baa8738b87d354fcf532d1ea33632d078e45e977388d64630",
+        "audio_sha256": "9d4dc9db39833bf6bba953ec45bbfe06cd20311099632ce0d49726fbbe07da42"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "artifact": "data/simulations/control-signals/20261112-doubao-1260/doubao_s2s/backchannel",
+      "model": "doubao_s2s",
+      "model_id": "1.2.6.0",
+      "scenario": "backchannel",
+      "execution_status": "observed",
+      "execution_error": null,
+      "endpoint": "wss://openspeech.bytedance.com/api/v3/duplex/realtime/dialogue",
+      "input_seconds": 29.5,
+      "trigger": {
+        "kind": "probe_interjection",
+        "wall_ms": 12472.26496040821,
+        "arrival_tick_id": 120,
+        "source_ms": 12100.0,
+        "stream_ms": 12100.0,
+        "scenario": "backchannel",
+        "input_media_ms": 12100.0,
+        "raw_output_samples": 18432,
+        "latest_100ms_rms": 1887,
+        "queued_output_bytes": 32064
+      },
+      "opening_controls_not_counted_as_barge_in": 1,
+      "post_injection_controls": [
+        {
+          "kind": "interruption",
+          "wall_ms": 13543.256726115942,
+          "arrival_tick_id": 131,
+          "source_ms": 13180.0,
+          "stream_ms": 13180.0,
+          "event_type": "conversation.item.input_audio_transcription.started",
+          "old_response_id": "61490294794068994",
+          "discarded_bytes": 78272
+        }
+      ],
+      "cancelled_pending_bytes": 78272,
+      "old_audio_played_after_cancel": [],
+      "response_done_statuses": {
+        "missing": 1
+      },
+      "gemini_content_flags": {},
+      "raw_audio": {
+        "seconds": 78.03733333333334,
+        "rms_le_100_seconds": 0,
+        "longest_quiet_seconds": 0,
+        "leading_quiet_seconds": 0,
+        "first_voice_seconds": 0.0,
+        "sha256": "d455d8fe971fbd6e86fe19a95085e98bbbce0dc0899cc1b487f712b0a62ec168"
+      },
+      "trace_sha256": "caabb33abb6f3160d5a86ae6a0d073821e3926002c1310cce683e94bb1a611e8",
+      "run_root": "data/simulations/control-signals/20261112-doubao-1260"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-doubao-1260/doubao_s2s/interruption",
+      "model": "doubao_s2s",
+      "model_id": "1.2.6.0",
+      "scenario": "interruption",
+      "execution_status": "observed",
+      "execution_error": null,
+      "endpoint": "wss://openspeech.bytedance.com/api/v3/duplex/realtime/dialogue",
+      "input_seconds": 34.8,
+      "trigger": {
+        "kind": "probe_interjection",
+        "wall_ms": 12544.533640146255,
+        "arrival_tick_id": 121,
+        "source_ms": 12200.0,
+        "stream_ms": 12200.0,
+        "scenario": "interruption",
+        "input_media_ms": 12200.0,
+        "raw_output_samples": 17408,
+        "latest_100ms_rms": 3863,
+        "queued_output_bytes": 30016
+      },
+      "opening_controls_not_counted_as_barge_in": 1,
+      "post_injection_controls": [
+        {
+          "kind": "interruption",
+          "wall_ms": 17428.26609313488,
+          "arrival_tick_id": 170,
+          "source_ms": 17080.0,
+          "stream_ms": 17080.0,
+          "event_type": "conversation.item.input_audio_transcription.started",
+          "old_response_id": "61521632723885570",
+          "discarded_bytes": 846144
+        }
+      ],
+      "cancelled_pending_bytes": 846144,
+      "old_audio_played_after_cancel": [],
+      "response_done_statuses": {
+        "missing": 2
+      },
+      "gemini_content_flags": {},
+      "raw_audio": {
+        "seconds": 26.915208333333332,
+        "rms_le_100_seconds": 0.1,
+        "longest_quiet_seconds": 0.1,
+        "leading_quiet_seconds": 0,
+        "first_voice_seconds": 0.0,
+        "sha256": "2e23f2677498970571338eff1ccc96a3f681827844dd7234c18dbc3acbe359c1"
+      },
+      "trace_sha256": "b3e81d958bae7236717b31035c2858a3282d3be603c372ddecb0779e6f83c258",
+      "run_root": "data/simulations/control-signals/20261112-doubao-1260"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-doubao-1260/doubao_s2s/normal",
+      "model": "doubao_s2s",
+      "model_id": "1.2.6.0",
+      "scenario": "normal",
+      "execution_status": "observed",
+      "execution_error": null,
+      "endpoint": "wss://openspeech.bytedance.com/api/v3/duplex/realtime/dialogue",
+      "input_seconds": 27.0,
+      "trigger": null,
+      "opening_controls_not_counted_as_barge_in": 1,
+      "post_injection_controls": [],
+      "cancelled_pending_bytes": 0,
+      "old_audio_played_after_cancel": [],
+      "response_done_statuses": {},
+      "gemini_content_flags": {},
+      "raw_audio": {
+        "seconds": 97.59916666666666,
+        "rms_le_100_seconds": 0.19916666666666666,
+        "longest_quiet_seconds": 0.1,
+        "leading_quiet_seconds": 0,
+        "first_voice_seconds": 0.0,
+        "sha256": "30f39d1c1c005d350ed76f0071633715ed7a40785c7b3f4c98ef090584074b88"
+      },
+      "trace_sha256": "89a4ce88f81f345b19023e8c2b7542da13a72b211859a9285b6e3e1786e67323",
+      "run_root": "data/simulations/control-signals/20261112-doubao-1260"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-doubao-late/doubao_s2s/backchannel",
+      "model": "doubao_s2s",
+      "model_id": "1.2.6.1",
+      "scenario": "backchannel",
+      "execution_status": "observed",
+      "execution_error": null,
+      "endpoint": "wss://openspeech.bytedance.com/api/v3/duplex/realtime/dialogue",
+      "input_seconds": 32.3,
+      "trigger": {
+        "kind": "probe_interjection",
+        "wall_ms": 15250.46431645751,
+        "arrival_tick_id": 148,
+        "source_ms": 14900.0,
+        "stream_ms": 14900.0,
+        "scenario": "backchannel",
+        "input_media_ms": 14900.0,
+        "raw_output_samples": 353280,
+        "latest_100ms_rms": 2575,
+        "queued_output_bytes": 557760
+      },
+      "opening_controls_not_counted_as_barge_in": 1,
+      "post_injection_controls": [],
+      "cancelled_pending_bytes": 0,
+      "old_audio_played_after_cancel": [],
+      "response_done_statuses": {},
+      "gemini_content_flags": {},
+      "raw_audio": {
+        "seconds": 89.344,
+        "rms_le_100_seconds": 0.6,
+        "longest_quiet_seconds": 0.1,
+        "leading_quiet_seconds": 0,
+        "first_voice_seconds": 0.0,
+        "sha256": "6ea8c1ac1f4a8965289b1c37784538ac25dddf8c938a005eff538069059eac0a"
+      },
+      "trace_sha256": "156f464f13d00abc1f06194bfb185f9cf6e2c007823a1a85052cd80e74316459",
+      "run_root": "data/simulations/control-signals/20261112-doubao-late"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-doubao-late/doubao_s2s/interruption",
+      "model": "doubao_s2s",
+      "model_id": "1.2.6.1",
+      "scenario": "interruption",
+      "execution_status": "observed",
+      "execution_error": null,
+      "endpoint": "wss://openspeech.bytedance.com/api/v3/duplex/realtime/dialogue",
+      "input_seconds": 37.5,
+      "trigger": {
+        "kind": "probe_interjection",
+        "wall_ms": 15287.863582372665,
+        "arrival_tick_id": 148,
+        "source_ms": 14900.0,
+        "stream_ms": 14900.0,
+        "scenario": "interruption",
+        "input_media_ms": 14900.0,
+        "raw_output_samples": 382976,
+        "latest_100ms_rms": 3759,
+        "queued_output_bytes": 617152
+      },
+      "opening_controls_not_counted_as_barge_in": 1,
+      "post_injection_controls": [
+        {
+          "kind": "interruption",
+          "wall_ms": 20018.95721629262,
+          "arrival_tick_id": 196,
+          "source_ms": 19640.0,
+          "stream_ms": 19640.0,
+          "event_type": "conversation.item.input_audio_transcription.started",
+          "old_response_id": "61501086355804418",
+          "discarded_bytes": 1534336
+        }
+      ],
+      "cancelled_pending_bytes": 1534336,
+      "old_audio_played_after_cancel": [],
+      "response_done_statuses": {
+        "missing": 2
+      },
+      "gemini_content_flags": {},
+      "raw_audio": {
+        "seconds": 57.334125,
+        "rms_le_100_seconds": 0.8341249999999999,
+        "longest_quiet_seconds": 0.134125,
+        "leading_quiet_seconds": 0,
+        "first_voice_seconds": 0.0,
+        "sha256": "f8f564bdcb27aafd7debe91d9deb127ced1d9127e4bb3578a8ed5c6e27538c2a"
+      },
+      "trace_sha256": "58efb3b3ab56b0a41e92c46e95d902172c14b76b4fdf1f1222fd4d220a6d8fc5",
+      "run_root": "data/simulations/control-signals/20261112-doubao-late"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-freeze-separated-turn/freeze_omni/backchannel",
+      "model": "freeze_omni",
+      "scenario": "backchannel",
+      "execution_status": "observed",
+      "execution_error": null,
+      "trigger": {
+        "tick": 80,
+        "sim_ms": 12800.0,
+        "model_frame_rms": 3355,
+        "queued_bytes": 7624080,
+        "user_chunks": 15
+      },
+      "native_flags": {},
+      "native_states": {
+        "native_listen_stat=cl": 38,
+        "native_listen_stat=ss": 2,
+        "native_generate_stat=cs": 801,
+        "native_tts": 61,
+        "native_generate_stat=sl": 2,
+        "controller_stop_generate": 1,
+        "controller_stop_tts": 1
+      },
+      "externally_forced_steps": [],
+      "cancelled_pending_bytes": 7516560,
+      "input_ticks": 174,
+      "nonempty_output_ticks": 61,
+      "output_samples": 5868600,
+      "provenance": {
+        "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+        "import_origins": {
+          "pipeline": "/mnt/bn/audio-visual-llm-data6/yuwenyi/playground/duplex_baselines/Freeze-Omni/models/pipeline.py",
+          "tts": "/mnt/bn/audio-visual-llm-data6/yuwenyi/playground/duplex_baselines/Freeze-Omni/models/decoder/llm2tts.py",
+          "vad": "/mnt/bn/audio-visual-llm-data6/yuwenyi/playground/duplex_baselines/Freeze-Omni/web/vad.py"
+        },
+        "control_mode": "native_stat_plus_reference_external_controller",
+        "force_on_vad_end": false,
+        "force_final_on_eof": false
+      },
+      "trace_sha256": "d02a5bfcd7635481cb7fa01e7322c383dbee1655c1ac9bbb2833b28224dcf62f",
+      "raw_audio": {
+        "seconds": 244.525,
+        "rms_le_100_seconds": 50.32500000000044,
+        "longest_quiet_seconds": 1.0999999999999999,
+        "leading_quiet_seconds": 0.30000000000000004,
+        "first_voice_seconds": 0.3,
+        "sha256": "1d2dbda5ff3bc78753fd53d18e7c9ea68673af1e92780f20253832fde67dad22"
+      },
+      "run_root": "data/simulations/control-signals/20261112-freeze-separated-turn",
+      "native_probe_source_sha256": "0745ae11bb0652c319e16ea9a6c54154afacf4c4055741dbea6eaa22cfcf7daf",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-freeze-separated-turn/freeze_omni/interruption",
+      "model": "freeze_omni",
+      "scenario": "interruption",
+      "execution_status": "observed",
+      "execution_error": null,
+      "trigger": {
+        "tick": 83,
+        "sim_ms": 13280.0,
+        "model_frame_rms": 5212,
+        "queued_bytes": 1883760,
+        "user_chunks": 48
+      },
+      "native_flags": {},
+      "native_states": {
+        "native_listen_stat=cl": 42,
+        "native_listen_stat=ss": 2,
+        "native_generate_stat=cs": 178,
+        "native_tts": 19,
+        "native_generate_stat=sl": 2,
+        "controller_stop_generate": 1,
+        "controller_stop_tts": 1
+      },
+      "externally_forced_steps": [],
+      "cancelled_pending_bytes": 1745520,
+      "input_ticks": 177,
+      "nonempty_output_ticks": 20,
+      "output_samples": 1326000,
+      "provenance": {
+        "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+        "import_origins": {
+          "pipeline": "/mnt/bn/audio-visual-llm-data6/yuwenyi/playground/duplex_baselines/Freeze-Omni/models/pipeline.py",
+          "tts": "/mnt/bn/audio-visual-llm-data6/yuwenyi/playground/duplex_baselines/Freeze-Omni/models/decoder/llm2tts.py",
+          "vad": "/mnt/bn/audio-visual-llm-data6/yuwenyi/playground/duplex_baselines/Freeze-Omni/web/vad.py"
+        },
+        "control_mode": "native_stat_plus_reference_external_controller",
+        "force_on_vad_end": false,
+        "force_final_on_eof": false
+      },
+      "trace_sha256": "5b4cff787457ac5caf4bc7687e2bb1bf289490eccf69e590d982cb7fe554dc33",
+      "raw_audio": {
+        "seconds": 55.25,
+        "rms_le_100_seconds": 13.949999999999967,
+        "longest_quiet_seconds": 0.7999999999999999,
+        "leading_quiet_seconds": 0.30000000000000004,
+        "first_voice_seconds": 0.3,
+        "sha256": "416e03d378d4eb82db899c38503ce188f38baa2b45fccfd3664faac8891bacb9"
+      },
+      "run_root": "data/simulations/control-signals/20261112-freeze-separated-turn",
+      "native_probe_source_sha256": "0745ae11bb0652c319e16ea9a6c54154afacf4c4055741dbea6eaa22cfcf7daf",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit/doubao_s2s/backchannel",
+      "model": "doubao_s2s",
+      "model_id": "1.2.6.1",
+      "scenario": "backchannel",
+      "execution_status": "observed",
+      "execution_error": null,
+      "endpoint": "wss://openspeech.bytedance.com/api/v3/duplex/realtime/dialogue",
+      "input_seconds": 18.5,
+      "trigger": {
+        "kind": "probe_interjection",
+        "wall_ms": 3252.848483622074,
+        "arrival_tick_id": 28,
+        "source_ms": 2900.0,
+        "stream_ms": 2900.0,
+        "scenario": "backchannel",
+        "input_media_ms": 2900.0,
+        "raw_output_samples": 8192,
+        "latest_100ms_rms": 1466,
+        "queued_output_bytes": 11584
+      },
+      "opening_controls_not_counted_as_barge_in": 1,
+      "post_injection_controls": [],
+      "cancelled_pending_bytes": 0,
+      "old_audio_played_after_cancel": [],
+      "response_done_statuses": {},
+      "gemini_content_flags": {},
+      "raw_audio": {
+        "seconds": 38.55866666666667,
+        "rms_le_100_seconds": 0,
+        "longest_quiet_seconds": 0,
+        "leading_quiet_seconds": 0,
+        "first_voice_seconds": 0.0,
+        "sha256": "2fbaf3dc95490e982976ec21c66764e4026ae90222ac5b0f8a2952299854cea9"
+      },
+      "trace_sha256": "79a9639df100cbf10202462bf1a19da17893662c4cdd3b18331713d3f4179f87",
+      "run_root": "data/simulations/control-signals/20261112-live-audit",
+      "native_probe_source_sha256": "9425d974faf6e36278c7096c4f1028c9c0935b4009d8c3df3be21ce1731a39ec",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit/doubao_s2s/interruption",
+      "model": "doubao_s2s",
+      "model_id": "1.2.6.1",
+      "scenario": "interruption",
+      "execution_status": "observed",
+      "execution_error": null,
+      "endpoint": "wss://openspeech.bytedance.com/api/v3/duplex/realtime/dialogue",
+      "input_seconds": 18.4,
+      "trigger": {
+        "kind": "probe_interjection",
+        "wall_ms": 2842.487372457981,
+        "arrival_tick_id": 24,
+        "source_ms": 2500.0,
+        "stream_ms": 2500.0,
+        "scenario": "interruption",
+        "input_media_ms": 2500.0,
+        "raw_output_samples": 8192,
+        "latest_100ms_rms": 2072,
+        "queued_output_bytes": 11584
+      },
+      "opening_controls_not_counted_as_barge_in": 1,
+      "post_injection_controls": [],
+      "cancelled_pending_bytes": 0,
+      "old_audio_played_after_cancel": [],
+      "response_done_statuses": {},
+      "gemini_content_flags": {},
+      "raw_audio": {
+        "seconds": 19.435833333333335,
+        "rms_le_100_seconds": 0,
+        "longest_quiet_seconds": 0,
+        "leading_quiet_seconds": 0,
+        "first_voice_seconds": 0.0,
+        "sha256": "f5c0f59336cd1e97307b8fc24458114b3f49a777472f0c2880bb329d8f680102"
+      },
+      "trace_sha256": "d432ad235730616ec6477b733a2fabf0bd45f088b4729af3b82e82477b6397e5",
+      "run_root": "data/simulations/control-signals/20261112-live-audit",
+      "native_probe_source_sha256": "9425d974faf6e36278c7096c4f1028c9c0935b4009d8c3df3be21ce1731a39ec",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit/doubao_s2s/normal",
+      "model": "doubao_s2s",
+      "model_id": "1.2.6.1",
+      "scenario": "normal",
+      "execution_status": "observed",
+      "execution_error": null,
+      "endpoint": "wss://openspeech.bytedance.com/api/v3/duplex/realtime/dialogue",
+      "input_seconds": 13.1,
+      "trigger": null,
+      "opening_controls_not_counted_as_barge_in": 1,
+      "post_injection_controls": [],
+      "cancelled_pending_bytes": 0,
+      "old_audio_played_after_cancel": [],
+      "response_done_statuses": {},
+      "gemini_content_flags": {},
+      "raw_audio": {
+        "seconds": 50.828833333333336,
+        "rms_le_100_seconds": 0.2,
+        "longest_quiet_seconds": 0.1,
+        "leading_quiet_seconds": 0,
+        "first_voice_seconds": 0.0,
+        "sha256": "bca26dc66e8cd3c57dc2c582126cf99cbf38df160d6502bd20ab4d1158dca02a"
+      },
+      "trace_sha256": "67639cac6070d6491187a87af4470103926f719540c6ef831a1181a8a8233048",
+      "run_root": "data/simulations/control-signals/20261112-live-audit",
+      "native_probe_source_sha256": "9425d974faf6e36278c7096c4f1028c9c0935b4009d8c3df3be21ce1731a39ec",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit/freeze_omni/backchannel",
+      "model": "freeze_omni",
+      "scenario": "backchannel",
+      "execution_status": "observed",
+      "execution_error": null,
+      "trigger": {
+        "tick": 7,
+        "sim_ms": 1120.0,
+        "model_frame_rms": 4685,
+        "queued_bytes": 49812
+      },
+      "native_flags": {},
+      "native_states": {
+        "native_listen_stat=ss": 1,
+        "native_generate_stat=cs": 14,
+        "native_tts": 2,
+        "native_generate_stat=sl": 1
+      },
+      "externally_forced_steps": [],
+      "cancelled_pending_bytes": 0,
+      "input_ticks": 101,
+      "nonempty_output_ticks": 2,
+      "output_samples": 99546,
+      "provenance": {
+        "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+        "import_origins": {
+          "pipeline": "/mnt/bn/audio-visual-llm-data6/yuwenyi/playground/duplex_baselines/Freeze-Omni/models/pipeline.py",
+          "tts": "/mnt/bn/audio-visual-llm-data6/yuwenyi/playground/duplex_baselines/Freeze-Omni/models/decoder/llm2tts.py",
+          "vad": "/mnt/bn/audio-visual-llm-data6/yuwenyi/playground/duplex_baselines/Freeze-Omni/web/vad.py"
+        },
+        "control_mode": "native_stat_plus_reference_external_controller",
+        "force_on_vad_end": false,
+        "force_final_on_eof": false
+      },
+      "trace_sha256": "ee5517670fc875cc4be52454352fc1132326897c52037af89b7a028065c5556b",
+      "raw_audio": {
+        "seconds": 4.14775,
+        "rms_le_100_seconds": 1.34775,
+        "longest_quiet_seconds": 0.6,
+        "leading_quiet_seconds": 0,
+        "first_voice_seconds": 0.0,
+        "sha256": "c7807cb3859f494d32ca65b36895c32138d315488b8f29e78067e28ca4400180"
+      },
+      "run_root": "data/simulations/control-signals/20261112-live-audit",
+      "native_probe_source_sha256": "9425d974faf6e36278c7096c4f1028c9c0935b4009d8c3df3be21ce1731a39ec",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit/freeze_omni/interruption",
+      "model": "freeze_omni",
+      "scenario": "interruption",
+      "execution_status": "observed",
+      "execution_error": null,
+      "trigger": {
+        "tick": 10,
+        "sim_ms": 1600.0,
+        "model_frame_rms": 3904,
+        "queued_bytes": 187680
+      },
+      "native_flags": {},
+      "native_states": {
+        "native_listen_stat=ss": 1,
+        "native_generate_stat=cs": 14,
+        "native_tts": 2,
+        "native_generate_stat=sl": 1
+      },
+      "externally_forced_steps": [],
+      "cancelled_pending_bytes": 0,
+      "input_ticks": 104,
+      "nonempty_output_ticks": 2,
+      "output_samples": 109200,
+      "provenance": {
+        "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+        "import_origins": {
+          "pipeline": "/mnt/bn/audio-visual-llm-data6/yuwenyi/playground/duplex_baselines/Freeze-Omni/models/pipeline.py",
+          "tts": "/mnt/bn/audio-visual-llm-data6/yuwenyi/playground/duplex_baselines/Freeze-Omni/models/decoder/llm2tts.py",
+          "vad": "/mnt/bn/audio-visual-llm-data6/yuwenyi/playground/duplex_baselines/Freeze-Omni/web/vad.py"
+        },
+        "control_mode": "native_stat_plus_reference_external_controller",
+        "force_on_vad_end": false,
+        "force_final_on_eof": false
+      },
+      "trace_sha256": "2ab0b19e17d1fee00c92b13c2e3d68ac9514c8636a83fa89c4938d6be1d5b592",
+      "raw_audio": {
+        "seconds": 4.55,
+        "rms_le_100_seconds": 1.7500000000000004,
+        "longest_quiet_seconds": 0.6,
+        "leading_quiet_seconds": 0.5,
+        "first_voice_seconds": 0.5,
+        "sha256": "d0ec459b4c26ea315bded996a89cebea1a4bb08a3f1f7fd687a6caa3c10cc5ea"
+      },
+      "run_root": "data/simulations/control-signals/20261112-live-audit",
+      "native_probe_source_sha256": "9425d974faf6e36278c7096c4f1028c9c0935b4009d8c3df3be21ce1731a39ec",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit/freeze_omni/normal",
+      "model": "freeze_omni",
+      "scenario": "normal",
+      "execution_status": "observed",
+      "execution_error": null,
+      "trigger": null,
+      "native_flags": {},
+      "native_states": {
+        "native_listen_stat=ss": 1,
+        "native_generate_stat=cs": 14,
+        "native_tts": 2,
+        "native_generate_stat=sl": 1
+      },
+      "externally_forced_steps": [],
+      "cancelled_pending_bytes": 0,
+      "input_ticks": 438,
+      "nonempty_output_ticks": 2,
+      "output_samples": 109800,
+      "provenance": {
+        "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+        "import_origins": {
+          "pipeline": "/mnt/bn/audio-visual-llm-data6/yuwenyi/playground/duplex_baselines/Freeze-Omni/models/pipeline.py",
+          "tts": "/mnt/bn/audio-visual-llm-data6/yuwenyi/playground/duplex_baselines/Freeze-Omni/models/decoder/llm2tts.py",
+          "vad": "/mnt/bn/audio-visual-llm-data6/yuwenyi/playground/duplex_baselines/Freeze-Omni/web/vad.py"
+        },
+        "control_mode": "native_stat_plus_reference_external_controller",
+        "force_on_vad_end": false,
+        "force_final_on_eof": false
+      },
+      "trace_sha256": "eba1fcb88135b360082f5afa7aca4bcf24dec4e144eb0ea821e49e7a17882aa7",
+      "raw_audio": {
+        "seconds": 4.575,
+        "rms_le_100_seconds": 1.7750000000000004,
+        "longest_quiet_seconds": 0.7,
+        "leading_quiet_seconds": 0.30000000000000004,
+        "first_voice_seconds": 0.3,
+        "sha256": "871dcfa115d4c22e6eb477a07ba23ffdef6dbb3128350dc959622134d70d17df"
+      },
+      "run_root": "data/simulations/control-signals/20261112-live-audit",
+      "native_probe_source_sha256": "9425d974faf6e36278c7096c4f1028c9c0935b4009d8c3df3be21ce1731a39ec",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit/gemini_live/backchannel",
+      "model": "gemini_live",
+      "model_id": "gemini-3.1-flash-live-preview",
+      "scenario": "backchannel",
+      "execution_status": "observed",
+      "execution_error": null,
+      "endpoint": "wss://aidp.bytedance.net/openai/realtime",
+      "input_seconds": 18.3,
+      "trigger": {
+        "kind": "probe_interjection",
+        "wall_ms": 3739.044364541769,
+        "arrival_tick_id": 26,
+        "source_ms": 2700.0,
+        "stream_ms": 2700.0,
+        "scenario": "backchannel",
+        "input_media_ms": 2700.0,
+        "raw_output_samples": 11041,
+        "latest_100ms_rms": 3313,
+        "queued_output_bytes": 17280
+      },
+      "opening_controls_not_counted_as_barge_in": 0,
+      "post_injection_controls": [
+        {
+          "kind": "interruption",
+          "wall_ms": 4212.285481393337,
+          "arrival_tick_id": 31,
+          "source_ms": 3180.0,
+          "stream_ms": 3180.0,
+          "event_type": "serverContent.interrupted",
+          "old_response_id": "response-0",
+          "discarded_bytes": 130560
+        }
+      ],
+      "cancelled_pending_bytes": 130560,
+      "old_audio_played_after_cancel": [],
+      "response_done_statuses": {},
+      "gemini_content_flags": {
+        "interrupted": 1,
+        "turnComplete": 1,
+        "generationComplete": 1
+      },
+      "raw_audio": {
+        "seconds": 27.460083333333333,
+        "rms_le_100_seconds": 2.4600833333333343,
+        "longest_quiet_seconds": 0.4,
+        "leading_quiet_seconds": 0,
+        "first_voice_seconds": 0.0,
+        "sha256": "e5d57b62dbd63e28f7c51adafc74af3bc06cb7275837a14b6c6e3f61dcce3e35"
+      },
+      "trace_sha256": "434c282c0ca3b521307ae124e53aecacb77681867fa229828c3742a3e7157cd3",
+      "run_root": "data/simulations/control-signals/20261112-live-audit",
+      "native_probe_source_sha256": "9425d974faf6e36278c7096c4f1028c9c0935b4009d8c3df3be21ce1731a39ec",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit/gemini_live/interruption",
+      "model": "gemini_live",
+      "model_id": "gemini-3.1-flash-live-preview",
+      "scenario": "interruption",
+      "execution_status": "observed",
+      "execution_error": null,
+      "endpoint": "wss://aidp.bytedance.net/openai/realtime",
+      "input_seconds": 18.6,
+      "trigger": {
+        "kind": "probe_interjection",
+        "wall_ms": 4123.554181307554,
+        "arrival_tick_id": 26,
+        "source_ms": 2700.0,
+        "stream_ms": 2700.0,
+        "scenario": "interruption",
+        "input_media_ms": 2700.0,
+        "raw_output_samples": 9615,
+        "latest_100ms_rms": 6395,
+        "queued_output_bytes": 14430
+      },
+      "opening_controls_not_counted_as_barge_in": 0,
+      "post_injection_controls": [
+        {
+          "kind": "interruption",
+          "wall_ms": 4436.749391257763,
+          "arrival_tick_id": 30,
+          "source_ms": 3020.0,
+          "stream_ms": 3020.0,
+          "event_type": "serverContent.interrupted",
+          "old_response_id": "response-0",
+          "discarded_bytes": 103710
+        }
+      ],
+      "cancelled_pending_bytes": 103710,
+      "old_audio_played_after_cancel": [],
+      "response_done_statuses": {},
+      "gemini_content_flags": {
+        "interrupted": 1,
+        "turnComplete": 1,
+        "generationComplete": 1
+      },
+      "raw_audio": {
+        "seconds": 24.98125,
+        "rms_le_100_seconds": 1.6812500000000004,
+        "longest_quiet_seconds": 0.30000000000000004,
+        "leading_quiet_seconds": 0,
+        "first_voice_seconds": 0.0,
+        "sha256": "ccb0fc69e66e991737021062c22bdcbffcbfdce9a2f69e876b5bf0fdefa41060"
+      },
+      "trace_sha256": "b774c953915f9a20dc1d0a7b43d952720cba0eb47c81a73ccca635fd054cd2a7",
+      "run_root": "data/simulations/control-signals/20261112-live-audit",
+      "native_probe_source_sha256": "9425d974faf6e36278c7096c4f1028c9c0935b4009d8c3df3be21ce1731a39ec",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit/gemini_live/normal",
+      "model": "gemini_live",
+      "model_id": "gemini-3.1-flash-live-preview",
+      "scenario": "normal",
+      "execution_status": "observed",
+      "execution_error": null,
+      "endpoint": "wss://aidp.bytedance.net/openai/realtime",
+      "input_seconds": 31.2,
+      "trigger": null,
+      "opening_controls_not_counted_as_barge_in": 0,
+      "post_injection_controls": [],
+      "cancelled_pending_bytes": 0,
+      "old_audio_played_after_cancel": [],
+      "response_done_statuses": {},
+      "gemini_content_flags": {
+        "generationComplete": 1,
+        "turnComplete": 1
+      },
+      "raw_audio": {
+        "seconds": 28.650041666666667,
+        "rms_le_100_seconds": 1.650041666666667,
+        "longest_quiet_seconds": 0.3500416666666667,
+        "leading_quiet_seconds": 0,
+        "first_voice_seconds": 0.0,
+        "sha256": "814ee9918bb4aa9f1fc787cb0fd8c268698df4be61c47500d86b8c7bc53b46ee"
+      },
+      "trace_sha256": "965563a306c008fec3e989d1dc374e09e35aaa1add81cf3f792d36777d03d08c",
+      "run_root": "data/simulations/control-signals/20261112-live-audit",
+      "native_probe_source_sha256": "9425d974faf6e36278c7096c4f1028c9c0935b4009d8c3df3be21ce1731a39ec",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit/gpt_live/backchannel",
+      "model": "gpt_live",
+      "model_id": "gpt-live-1",
+      "scenario": "backchannel",
+      "execution_status": "observed",
+      "execution_error": null,
+      "endpoint": "wss://aidp.bytedance.net/openai/realtime",
+      "input_seconds": 17.6,
+      "trigger": {
+        "kind": "probe_interjection",
+        "wall_ms": 4343.142028898001,
+        "arrival_tick_id": 19,
+        "source_ms": 2000.0,
+        "stream_ms": 2000.0,
+        "scenario": "backchannel",
+        "input_media_ms": 2000.0,
+        "raw_output_samples": 28800,
+        "latest_100ms_rms": 886,
+        "queued_output_bytes": 0
+      },
+      "opening_controls_not_counted_as_barge_in": 0,
+      "post_injection_controls": [],
+      "cancelled_pending_bytes": 0,
+      "old_audio_played_after_cancel": [],
+      "response_done_statuses": {},
+      "gemini_content_flags": {},
+      "raw_audio": {
+        "seconds": 17.08,
+        "rms_le_100_seconds": 3.4000000000000017,
+        "longest_quiet_seconds": 1.0999999999999999,
+        "leading_quiet_seconds": 1.0999999999999999,
+        "first_voice_seconds": 1.1,
+        "sha256": "db3806f0cdabdb01c3db39424222c4f6252845bec768f3df5c361a17ac664a8c"
+      },
+      "trace_sha256": "938c1cd0452995f3888972a5a8674f8ee5f2a25b71e4568ea15907ded96a2f9e",
+      "run_root": "data/simulations/control-signals/20261112-live-audit",
+      "native_probe_source_sha256": "9425d974faf6e36278c7096c4f1028c9c0935b4009d8c3df3be21ce1731a39ec",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit/gpt_live/interruption",
+      "model": "gpt_live",
+      "model_id": "gpt-live-1",
+      "scenario": "interruption",
+      "execution_status": "observed",
+      "execution_error": null,
+      "endpoint": "wss://aidp.bytedance.net/openai/realtime",
+      "input_seconds": 18.1,
+      "trigger": {
+        "kind": "probe_interjection",
+        "wall_ms": 4486.079845577478,
+        "arrival_tick_id": 21,
+        "source_ms": 2200.0,
+        "stream_ms": 2200.0,
+        "scenario": "interruption",
+        "input_media_ms": 2200.0,
+        "raw_output_samples": 33600,
+        "latest_100ms_rms": 2132,
+        "queued_output_bytes": 0
+      },
+      "opening_controls_not_counted_as_barge_in": 0,
+      "post_injection_controls": [],
+      "cancelled_pending_bytes": 0,
+      "old_audio_played_after_cancel": [],
+      "response_done_statuses": {},
+      "gemini_content_flags": {},
+      "raw_audio": {
+        "seconds": 17.58,
+        "rms_le_100_seconds": 3.3000000000000016,
+        "longest_quiet_seconds": 1.3,
+        "leading_quiet_seconds": 1.3,
+        "first_voice_seconds": 1.3,
+        "sha256": "81cf50996cc190e81c8a2401b65148b8de983f6c39522e94f36af40bfbd3b4c9"
+      },
+      "trace_sha256": "3c67ee9a1f6cc9bf2d7824856a3da0a18428fee9c27bee2f4263ad76aeae5b59",
+      "run_root": "data/simulations/control-signals/20261112-live-audit",
+      "native_probe_source_sha256": "9425d974faf6e36278c7096c4f1028c9c0935b4009d8c3df3be21ce1731a39ec",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit/gpt_live/normal",
+      "model": "gpt_live",
+      "model_id": "gpt-live-1",
+      "scenario": "normal",
+      "execution_status": "observed",
+      "execution_error": null,
+      "endpoint": "wss://aidp.bytedance.net/openai/realtime",
+      "input_seconds": 36.2,
+      "trigger": null,
+      "opening_controls_not_counted_as_barge_in": 0,
+      "post_injection_controls": [],
+      "cancelled_pending_bytes": 0,
+      "old_audio_played_after_cancel": [],
+      "response_done_statuses": {},
+      "gemini_content_flags": {},
+      "raw_audio": {
+        "seconds": 35.74,
+        "rms_le_100_seconds": 7.599999999999989,
+        "longest_quiet_seconds": 1.0999999999999999,
+        "leading_quiet_seconds": 1.0999999999999999,
+        "first_voice_seconds": 1.1,
+        "sha256": "22b30b69ca865da9483ff469b43c61b4297391ef0e103839789c16bbc30090e8"
+      },
+      "trace_sha256": "94166a856b287b2406578483b2bf72b83554ef23d324dd57631636e4fa154acc",
+      "run_root": "data/simulations/control-signals/20261112-live-audit",
+      "native_probe_source_sha256": "9425d974faf6e36278c7096c4f1028c9c0935b4009d8c3df3be21ce1731a39ec",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit/gpt_realtime/backchannel",
+      "model": "gpt_realtime",
+      "model_id": "gpt-realtime-2.1",
+      "scenario": "backchannel",
+      "execution_status": "observed",
+      "execution_error": null,
+      "endpoint": "wss://aidp.bytedance.net/openai/realtime",
+      "input_seconds": 19.6,
+      "trigger": {
+        "kind": "probe_interjection",
+        "wall_ms": 6000.281985849142,
+        "arrival_tick_id": 39,
+        "source_ms": 4000.0,
+        "stream_ms": 4000.0,
+        "scenario": "backchannel",
+        "input_media_ms": 4000.0,
+        "raw_output_samples": 28800,
+        "latest_100ms_rms": 4785,
+        "queued_output_bytes": 48000
+      },
+      "opening_controls_not_counted_as_barge_in": 1,
+      "post_injection_controls": [
+        {
+          "kind": "interruption",
+          "wall_ms": 6415.953334420919,
+          "arrival_tick_id": 44,
+          "source_ms": 4420.0,
+          "stream_ms": 4420.0,
+          "event_type": "input_audio_buffer.speech_started",
+          "old_response_id": "resp_EjEs8AgCA3SoS4GGdw7qG",
+          "discarded_bytes": 182400
+        }
+      ],
+      "cancelled_pending_bytes": 182400,
+      "old_audio_played_after_cancel": [],
+      "response_done_statuses": {
+        "cancelled": 1
+      },
+      "gemini_content_flags": {},
+      "raw_audio": {
+        "seconds": 67.3,
+        "rms_le_100_seconds": 11.799999999999974,
+        "longest_quiet_seconds": 0.7,
+        "leading_quiet_seconds": 0,
+        "first_voice_seconds": 0.0,
+        "sha256": "31f24bd0f653219cb67dc7f58d09c16112ae22485e769fd23521d2ef2cbb7e16"
+      },
+      "trace_sha256": "d19d24cfc1903b9187a6a4d318fcc049a1fb2a2080baf55f0cae3173e9ede76f",
+      "run_root": "data/simulations/control-signals/20261112-live-audit",
+      "native_probe_source_sha256": "9425d974faf6e36278c7096c4f1028c9c0935b4009d8c3df3be21ce1731a39ec",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit/gpt_realtime/interruption",
+      "model": "gpt_realtime",
+      "model_id": "gpt-realtime-2.1",
+      "scenario": "interruption",
+      "execution_status": "observed",
+      "execution_error": null,
+      "endpoint": "wss://aidp.bytedance.net/openai/realtime",
+      "input_seconds": 18.7,
+      "trigger": {
+        "kind": "probe_interjection",
+        "wall_ms": 5448.063787072897,
+        "arrival_tick_id": 27,
+        "source_ms": 2800.0,
+        "stream_ms": 2800.0,
+        "scenario": "interruption",
+        "input_media_ms": 2800.0,
+        "raw_output_samples": 48000,
+        "latest_100ms_rms": 1205,
+        "queued_output_bytes": 81600
+      },
+      "opening_controls_not_counted_as_barge_in": 1,
+      "post_injection_controls": [
+        {
+          "kind": "interruption",
+          "wall_ms": 5896.303299814463,
+          "arrival_tick_id": 32,
+          "source_ms": 3260.0,
+          "stream_ms": 3260.0,
+          "event_type": "input_audio_buffer.speech_started",
+          "old_response_id": "resp_EjErnJjrRd9nUI9mJ7gVL",
+          "discarded_bytes": 177600
+        }
+      ],
+      "cancelled_pending_bytes": 177600,
+      "old_audio_played_after_cancel": [],
+      "response_done_statuses": {
+        "cancelled": 1,
+        "completed": 1
+      },
+      "gemini_content_flags": {},
+      "raw_audio": {
+        "seconds": 16.05,
+        "rms_le_100_seconds": 3.2500000000000013,
+        "longest_quiet_seconds": 0.6,
+        "leading_quiet_seconds": 0,
+        "first_voice_seconds": 0.0,
+        "sha256": "fcb9ac40694a73a55ee97bd9044a95ffb3591feb87165fde6544488a9842b138"
+      },
+      "trace_sha256": "188c21bfe44210053dbe3e5f3dc1f46435fb77eedf0b46533bbc9a8e59be3d4b",
+      "run_root": "data/simulations/control-signals/20261112-live-audit",
+      "native_probe_source_sha256": "9425d974faf6e36278c7096c4f1028c9c0935b4009d8c3df3be21ce1731a39ec",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit/gpt_realtime/normal",
+      "model": "gpt_realtime",
+      "model_id": "gpt-realtime-2.1",
+      "scenario": "normal",
+      "execution_status": "observed",
+      "execution_error": null,
+      "endpoint": "wss://aidp.bytedance.net/openai/realtime",
+      "input_seconds": 16.9,
+      "trigger": null,
+      "opening_controls_not_counted_as_barge_in": 1,
+      "post_injection_controls": [],
+      "cancelled_pending_bytes": 0,
+      "old_audio_played_after_cancel": [],
+      "response_done_statuses": {
+        "completed": 1
+      },
+      "gemini_content_flags": {},
+      "raw_audio": {
+        "seconds": 70.95,
+        "rms_le_100_seconds": 13.649999999999968,
+        "longest_quiet_seconds": 0.8999999999999999,
+        "leading_quiet_seconds": 0,
+        "first_voice_seconds": 0.0,
+        "sha256": "b9fec3eacefa2b1cf0734641acb7b323287b5905e2063938eb985ce517001683"
+      },
+      "trace_sha256": "34a07b710634ae8678abf5647c4192477138e74ebc797774c22d61e2cc8fa2e6",
+      "run_root": "data/simulations/control-signals/20261112-live-audit",
+      "native_probe_source_sha256": "9425d974faf6e36278c7096c4f1028c9c0935b4009d8c3df3be21ce1731a39ec",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit/minicpm/backchannel",
+      "model": "minicpm",
+      "scenario": "backchannel",
+      "execution_status": "observed",
+      "execution_error": null,
+      "trigger": {
+        "tick": 2,
+        "sim_ms": 2000,
+        "model_frame_rms": 2508,
+        "queued_bytes": 0
+      },
+      "native_flags": {
+        "is_listen=True,end_of_turn=False": 15,
+        "is_listen=False,end_of_turn=False": 1,
+        "is_listen=False,end_of_turn=True": 1
+      },
+      "native_states": {},
+      "externally_forced_steps": [],
+      "cancelled_pending_bytes": 0,
+      "input_ticks": 17,
+      "nonempty_output_ticks": 17,
+      "output_samples": 408000,
+      "provenance": {
+        "model": "MiniCPM-o-4.5",
+        "checkpoint": "/mnt/bn/audio-visual-llm-data6/base_models/MiniCPM-o-4_5",
+        "sample_rate": 24000,
+        "python": "/mnt/bn/audio-visual-llm-data6/terumi/playground/MiniCPM-o/.venv/bin/python",
+        "processors": "/mnt/bn/audio-visual-llm-data6/terumi/playground/MiniCPM-o/MiniCPM-o-Demo/core/processors/__init__.py",
+        "settings": {
+          "batch_size": 8,
+          "chunk_ms": 1000,
+          "decode_mode": "sampling",
+          "temperature": 0.7,
+          "tts_temperature": 0.8,
+          "numba_cache_dir": "/tmp/pi-bench-minicpm-o-numba-cache",
+          "force_listen_count": 0,
+          "tail_seconds": 5.0,
+          "tail_extend_seconds": 5.0,
+          "max_tail_seconds": 240.0,
+          "max_assistant_output_seconds": 60.0,
+          "repetition_guard_window_chunks": 3,
+          "repetition_guard_min_tokens": 6,
+          "repetition_guard_max_unique_ratio": 0.34,
+          "system_prompt": "You are a helpful voice assistant. Your answer should be coherent, natural, simple, complete.",
+          "backchannel_system_prompt": "You are a helpful assistant. To demonstrate that you are listening closely to the user, please only backchannel to the user when they are speaking."
+        },
+        "interruption_policy": "native_with_explicit_control"
+      },
+      "trace_sha256": "3396e517cd20afe851cbaca96323c5561dd6e0c2fa0a7232a2a8232c8d00fb87",
+      "raw_audio": {
+        "seconds": 17.0,
+        "rms_le_100_seconds": 15.59999999999996,
+        "longest_quiet_seconds": 14.099999999999966,
+        "leading_quiet_seconds": 1.5000000000000002,
+        "first_voice_seconds": 1.5,
+        "sha256": "a46c6cc3fe2e3e2028a56ff25cdf6e7706ebe29fb02dceb715911a2c7ea4ac63"
+      },
+      "run_root": "data/simulations/control-signals/20261112-live-audit",
+      "native_probe_source_sha256": "9425d974faf6e36278c7096c4f1028c9c0935b4009d8c3df3be21ce1731a39ec",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit/minicpm/forced_interruption",
+      "model": "minicpm",
+      "scenario": "forced_interruption",
+      "execution_status": "observed",
+      "execution_error": null,
+      "trigger": {
+        "tick": 2,
+        "sim_ms": 2000,
+        "model_frame_rms": 2266,
+        "queued_bytes": 0
+      },
+      "native_flags": {
+        "is_listen=True,end_of_turn=False": 2,
+        "is_listen=False,end_of_turn=False": 15
+      },
+      "native_states": {},
+      "externally_forced_steps": [
+        {
+          "tick": 2,
+          "control": {
+            "source": "external_policy",
+            "interrupt_requested": true,
+            "force_listen": true
+          }
+        }
+      ],
+      "cancelled_pending_bytes": 0,
+      "input_ticks": 17,
+      "nonempty_output_ticks": 17,
+      "output_samples": 408000,
+      "provenance": {
+        "model": "MiniCPM-o-4.5",
+        "checkpoint": "/mnt/bn/audio-visual-llm-data6/base_models/MiniCPM-o-4_5",
+        "sample_rate": 24000,
+        "python": "/mnt/bn/audio-visual-llm-data6/terumi/playground/MiniCPM-o/.venv/bin/python",
+        "processors": "/mnt/bn/audio-visual-llm-data6/terumi/playground/MiniCPM-o/MiniCPM-o-Demo/core/processors/__init__.py",
+        "settings": {
+          "batch_size": 8,
+          "chunk_ms": 1000,
+          "decode_mode": "sampling",
+          "temperature": 0.7,
+          "tts_temperature": 0.8,
+          "numba_cache_dir": "/tmp/pi-bench-minicpm-o-numba-cache",
+          "force_listen_count": 0,
+          "tail_seconds": 5.0,
+          "tail_extend_seconds": 5.0,
+          "max_tail_seconds": 240.0,
+          "max_assistant_output_seconds": 60.0,
+          "repetition_guard_window_chunks": 3,
+          "repetition_guard_min_tokens": 6,
+          "repetition_guard_max_unique_ratio": 0.34,
+          "system_prompt": "You are a helpful voice assistant. Your answer should be coherent, natural, simple, complete.",
+          "backchannel_system_prompt": "You are a helpful assistant. To demonstrate that you are listening closely to the user, please only backchannel to the user when they are speaking."
+        },
+        "interruption_policy": "native_with_explicit_control"
+      },
+      "trace_sha256": "294d03845645ce59c03bfd9b9a5a32e0f362e490712162daf1040a076d0229bb",
+      "raw_audio": {
+        "seconds": 17.0,
+        "rms_le_100_seconds": 4.6,
+        "longest_quiet_seconds": 1.4000000000000001,
+        "leading_quiet_seconds": 1.3,
+        "first_voice_seconds": 1.3,
+        "sha256": "2322d168892f0bfc7c0bdf5f0a128c7ca51ec90cb92d0ba50eb500dea1b816fa"
+      },
+      "run_root": "data/simulations/control-signals/20261112-live-audit",
+      "native_probe_source_sha256": "9425d974faf6e36278c7096c4f1028c9c0935b4009d8c3df3be21ce1731a39ec",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit/minicpm/interruption",
+      "model": "minicpm",
+      "scenario": "interruption",
+      "execution_status": "observed",
+      "execution_error": null,
+      "trigger": {
+        "tick": 3,
+        "sim_ms": 3000,
+        "model_frame_rms": 3532,
+        "queued_bytes": 0
+      },
+      "native_flags": {
+        "is_listen=True,end_of_turn=False": 11,
+        "is_listen=False,end_of_turn=False": 6,
+        "is_listen=False,end_of_turn=True": 1
+      },
+      "native_states": {},
+      "externally_forced_steps": [],
+      "cancelled_pending_bytes": 0,
+      "input_ticks": 18,
+      "nonempty_output_ticks": 18,
+      "output_samples": 432000,
+      "provenance": {
+        "model": "MiniCPM-o-4.5",
+        "checkpoint": "/mnt/bn/audio-visual-llm-data6/base_models/MiniCPM-o-4_5",
+        "sample_rate": 24000,
+        "python": "/mnt/bn/audio-visual-llm-data6/terumi/playground/MiniCPM-o/.venv/bin/python",
+        "processors": "/mnt/bn/audio-visual-llm-data6/terumi/playground/MiniCPM-o/MiniCPM-o-Demo/core/processors/__init__.py",
+        "settings": {
+          "batch_size": 8,
+          "chunk_ms": 1000,
+          "decode_mode": "sampling",
+          "temperature": 0.7,
+          "tts_temperature": 0.8,
+          "numba_cache_dir": "/tmp/pi-bench-minicpm-o-numba-cache",
+          "force_listen_count": 0,
+          "tail_seconds": 5.0,
+          "tail_extend_seconds": 5.0,
+          "max_tail_seconds": 240.0,
+          "max_assistant_output_seconds": 60.0,
+          "repetition_guard_window_chunks": 3,
+          "repetition_guard_min_tokens": 6,
+          "repetition_guard_max_unique_ratio": 0.34,
+          "system_prompt": "You are a helpful voice assistant. Your answer should be coherent, natural, simple, complete.",
+          "backchannel_system_prompt": "You are a helpful assistant. To demonstrate that you are listening closely to the user, please only backchannel to the user when they are speaking."
+        },
+        "interruption_policy": "native_with_explicit_control"
+      },
+      "trace_sha256": "eb7c6e4956fa7f25773dd0d5289c8a95a246ecd0c1230cec9c75222910930d60",
+      "raw_audio": {
+        "seconds": 18.0,
+        "rms_le_100_seconds": 13.199999999999969,
+        "longest_quiet_seconds": 10.19999999999998,
+        "leading_quiet_seconds": 1.9000000000000006,
+        "first_voice_seconds": 1.9,
+        "sha256": "133f3e550ed19354c4eb736db62ef4b4a51fbb67e4ff8dd433f9057e82fbc9e1"
+      },
+      "run_root": "data/simulations/control-signals/20261112-live-audit",
+      "native_probe_source_sha256": "9425d974faf6e36278c7096c4f1028c9c0935b4009d8c3df3be21ce1731a39ec",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit/minicpm/normal",
+      "model": "minicpm",
+      "scenario": "normal",
+      "execution_status": "observed",
+      "execution_error": null,
+      "trigger": null,
+      "native_flags": {
+        "is_listen=True,end_of_turn=False": 3,
+        "is_listen=False,end_of_turn=False": 2,
+        "is_listen=False,end_of_turn=True": 1
+      },
+      "native_states": {},
+      "externally_forced_steps": [],
+      "cancelled_pending_bytes": 0,
+      "input_ticks": 6,
+      "nonempty_output_ticks": 6,
+      "output_samples": 134400,
+      "provenance": {
+        "model": "MiniCPM-o-4.5",
+        "checkpoint": "/mnt/bn/audio-visual-llm-data6/base_models/MiniCPM-o-4_5",
+        "sample_rate": 24000,
+        "python": "/mnt/bn/audio-visual-llm-data6/terumi/playground/MiniCPM-o/.venv/bin/python",
+        "processors": "/mnt/bn/audio-visual-llm-data6/terumi/playground/MiniCPM-o/MiniCPM-o-Demo/core/processors/__init__.py",
+        "settings": {
+          "batch_size": 8,
+          "chunk_ms": 1000,
+          "decode_mode": "sampling",
+          "temperature": 0.7,
+          "tts_temperature": 0.8,
+          "numba_cache_dir": "/tmp/pi-bench-minicpm-o-numba-cache",
+          "force_listen_count": 0,
+          "tail_seconds": 5.0,
+          "tail_extend_seconds": 5.0,
+          "max_tail_seconds": 240.0,
+          "max_assistant_output_seconds": 60.0,
+          "repetition_guard_window_chunks": 3,
+          "repetition_guard_min_tokens": 6,
+          "repetition_guard_max_unique_ratio": 0.34,
+          "system_prompt": "You are a helpful voice assistant. Your answer should be coherent, natural, simple, complete.",
+          "backchannel_system_prompt": "You are a helpful assistant. To demonstrate that you are listening closely to the user, please only backchannel to the user when they are speaking."
+        },
+        "interruption_policy": "native_with_explicit_control"
+      },
+      "trace_sha256": "a27bdca5f71ef283c64ea5a3a0ea6fe473c941a539b2d12eb959a038e76a3836",
+      "raw_audio": {
+        "seconds": 5.6,
+        "rms_le_100_seconds": 4.000000000000002,
+        "longest_quiet_seconds": 2.2000000000000006,
+        "leading_quiet_seconds": 1.3,
+        "first_voice_seconds": 1.3,
+        "sha256": "aada2bf25d17451a0f2cfd877d220b8d418ff08d7b00415ec631d2aeb28e94a8"
+      },
+      "run_root": "data/simulations/control-signals/20261112-live-audit",
+      "native_probe_source_sha256": "9425d974faf6e36278c7096c4f1028c9c0935b4009d8c3df3be21ce1731a39ec",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit/moshi/backchannel",
+      "model": "moshi",
+      "scenario": "backchannel",
+      "execution_status": "observed",
+      "execution_error": null,
+      "trigger": {
+        "tick": 53,
+        "sim_ms": 4240.0,
+        "model_frame_rms": 1496,
+        "queued_bytes": 0
+      },
+      "native_flags": {},
+      "native_states": {},
+      "externally_forced_steps": [],
+      "cancelled_pending_bytes": 0,
+      "input_ticks": 241,
+      "nonempty_output_ticks": 241,
+      "output_samples": 462720,
+      "provenance": {
+        "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/playground/moshi/pretrained_ckpts/moshika-pytorch-bf16/model.safetensors",
+        "sample_rate": 24000,
+        "frame_size": 1920,
+        "import_origins": {
+          "moshi": "/mnt/bn/audio-visual-llm-data6/yuwenyi/miniconda3/envs/moshi/lib/python3.12/site-packages/moshi/__init__.py",
+          "moshi.run_inference": "/mnt/bn/audio-visual-llm-data6/yuwenyi/miniconda3/envs/moshi/lib/python3.12/site-packages/moshi/run_inference.py"
+        },
+        "control_mode": "continuous_audio_frames"
+      },
+      "trace_sha256": "1fe491f61c7a0f56af15af47cabf91f7668f700c1a14a47173ac32e3d729f58a",
+      "raw_audio": {
+        "seconds": 19.28,
+        "rms_le_100_seconds": 15.579999999999961,
+        "longest_quiet_seconds": 8.479999999999986,
+        "leading_quiet_seconds": 0.5,
+        "first_voice_seconds": 0.5,
+        "sha256": "c5f57e921f2dbefdfba1a2fa9cec8bd472cbd84c40d4dbd4329c1fe55fac89f2"
+      },
+      "run_root": "data/simulations/control-signals/20261112-live-audit",
+      "native_probe_source_sha256": "9425d974faf6e36278c7096c4f1028c9c0935b4009d8c3df3be21ce1731a39ec",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit/moshi/interruption",
+      "model": "moshi",
+      "scenario": "interruption",
+      "execution_status": "observed",
+      "execution_error": null,
+      "trigger": {
+        "tick": 53,
+        "sim_ms": 4240.0,
+        "model_frame_rms": 1496,
+        "queued_bytes": 0
+      },
+      "native_flags": {},
+      "native_states": {},
+      "externally_forced_steps": [],
+      "cancelled_pending_bytes": 0,
+      "input_ticks": 241,
+      "nonempty_output_ticks": 241,
+      "output_samples": 462720,
+      "provenance": {
+        "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/playground/moshi/pretrained_ckpts/moshika-pytorch-bf16/model.safetensors",
+        "sample_rate": 24000,
+        "frame_size": 1920,
+        "import_origins": {
+          "moshi": "/mnt/bn/audio-visual-llm-data6/yuwenyi/miniconda3/envs/moshi/lib/python3.12/site-packages/moshi/__init__.py",
+          "moshi.run_inference": "/mnt/bn/audio-visual-llm-data6/yuwenyi/miniconda3/envs/moshi/lib/python3.12/site-packages/moshi/run_inference.py"
+        },
+        "control_mode": "continuous_audio_frames"
+      },
+      "trace_sha256": "c57d368d81503aef18f0d32fe31d2b21fd7039da0a1b91305035f846ce5dd66a",
+      "raw_audio": {
+        "seconds": 19.28,
+        "rms_le_100_seconds": 14.479999999999965,
+        "longest_quiet_seconds": 8.479999999999986,
+        "leading_quiet_seconds": 0.5,
+        "first_voice_seconds": 0.5,
+        "sha256": "d8468037605ffd1405b82c3b5c72c23378f87df0a8c93785ef191d24bb43950f"
+      },
+      "run_root": "data/simulations/control-signals/20261112-live-audit",
+      "native_probe_source_sha256": "9425d974faf6e36278c7096c4f1028c9c0935b4009d8c3df3be21ce1731a39ec",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit/moshi/normal",
+      "model": "moshi",
+      "scenario": "normal",
+      "execution_status": "observed",
+      "execution_error": null,
+      "trigger": null,
+      "native_flags": {},
+      "native_states": {},
+      "externally_forced_steps": [],
+      "cancelled_pending_bytes": 0,
+      "input_ticks": 875,
+      "nonempty_output_ticks": 875,
+      "output_samples": 1680000,
+      "provenance": {
+        "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/playground/moshi/pretrained_ckpts/moshika-pytorch-bf16/model.safetensors",
+        "sample_rate": 24000,
+        "frame_size": 1920,
+        "import_origins": {
+          "moshi": "/mnt/bn/audio-visual-llm-data6/yuwenyi/miniconda3/envs/moshi/lib/python3.12/site-packages/moshi/__init__.py",
+          "moshi.run_inference": "/mnt/bn/audio-visual-llm-data6/yuwenyi/miniconda3/envs/moshi/lib/python3.12/site-packages/moshi/run_inference.py"
+        },
+        "control_mode": "continuous_audio_frames"
+      },
+      "trace_sha256": "fc6e9ced87f0e89baa8738b87d354fcf532d1ea33632d078e45e977388d64630",
+      "raw_audio": {
+        "seconds": 70.0,
+        "rms_le_100_seconds": 64.50000000000061,
+        "longest_quiet_seconds": 59.500000000000576,
+        "leading_quiet_seconds": 0.5,
+        "first_voice_seconds": 0.5,
+        "sha256": "9d4dc9db39833bf6bba953ec45bbfe06cd20311099632ce0d49726fbbe07da42"
+      },
+      "run_root": "data/simulations/control-signals/20261112-live-audit",
+      "native_probe_source_sha256": "9425d974faf6e36278c7096c4f1028c9c0935b4009d8c3df3be21ce1731a39ec",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit/salmonn/backchannel",
+      "model": "salmonn",
+      "scenario": "backchannel",
+      "execution_status": "failed",
+      "execution_error": "KeyError: 'sample_rate'",
+      "trigger": null,
+      "native_flags": {},
+      "native_states": {},
+      "externally_forced_steps": [],
+      "cancelled_pending_bytes": 0,
+      "input_ticks": 0,
+      "nonempty_output_ticks": 0,
+      "output_samples": 0,
+      "provenance": null,
+      "trace_sha256": null,
+      "run_root": "data/simulations/control-signals/20261112-live-audit",
+      "native_probe_source_sha256": "9425d974faf6e36278c7096c4f1028c9c0935b4009d8c3df3be21ce1731a39ec",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit/salmonn/interruption",
+      "model": "salmonn",
+      "scenario": "interruption",
+      "execution_status": "failed",
+      "execution_error": "KeyError: 'sample_rate'",
+      "trigger": null,
+      "native_flags": {},
+      "native_states": {},
+      "externally_forced_steps": [],
+      "cancelled_pending_bytes": 0,
+      "input_ticks": 0,
+      "nonempty_output_ticks": 0,
+      "output_samples": 0,
+      "provenance": null,
+      "trace_sha256": null,
+      "run_root": "data/simulations/control-signals/20261112-live-audit",
+      "native_probe_source_sha256": "9425d974faf6e36278c7096c4f1028c9c0935b4009d8c3df3be21ce1731a39ec",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit/salmonn/normal",
+      "model": "salmonn",
+      "scenario": "normal",
+      "execution_status": "failed",
+      "execution_error": "KeyError: 'sample_rate'",
+      "trigger": null,
+      "native_flags": {},
+      "native_states": {},
+      "externally_forced_steps": [],
+      "cancelled_pending_bytes": 0,
+      "input_ticks": 0,
+      "nonempty_output_ticks": 0,
+      "output_samples": 0,
+      "provenance": null,
+      "trace_sha256": null,
+      "run_root": "data/simulations/control-signals/20261112-live-audit",
+      "native_probe_source_sha256": "9425d974faf6e36278c7096c4f1028c9c0935b4009d8c3df3be21ce1731a39ec",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit-long/doubao_s2s/backchannel",
+      "model": "doubao_s2s",
+      "model_id": "1.2.6.1",
+      "scenario": "backchannel",
+      "execution_status": "observed",
+      "execution_error": null,
+      "endpoint": "wss://openspeech.bytedance.com/api/v3/duplex/realtime/dialogue",
+      "input_seconds": 29.2,
+      "trigger": {
+        "kind": "probe_interjection",
+        "wall_ms": 12234.965194016695,
+        "arrival_tick_id": 117,
+        "source_ms": 11800.0,
+        "stream_ms": 11800.0,
+        "scenario": "backchannel",
+        "input_media_ms": 11800.0,
+        "raw_output_samples": 8192,
+        "latest_100ms_rms": 554,
+        "queued_output_bytes": 11584
+      },
+      "opening_controls_not_counted_as_barge_in": 1,
+      "post_injection_controls": [],
+      "cancelled_pending_bytes": 0,
+      "old_audio_played_after_cancel": [],
+      "response_done_statuses": {},
+      "gemini_content_flags": {},
+      "raw_audio": {
+        "seconds": 62.80533333333333,
+        "rms_le_100_seconds": 0.4,
+        "longest_quiet_seconds": 0.2,
+        "leading_quiet_seconds": 0,
+        "first_voice_seconds": 0.0,
+        "sha256": "fcae20b25ef152e6ba481d716c7336d07de681f484f83711dd610e2521af71d1"
+      },
+      "trace_sha256": "a86d22c52023bc02021cc8214a346ae1b18646bf6bf9e8e8ba8144752dd7d3d0",
+      "run_root": "data/simulations/control-signals/20261112-live-audit-long"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit-long/doubao_s2s/interruption",
+      "model": "doubao_s2s",
+      "model_id": "1.2.6.1",
+      "scenario": "interruption",
+      "execution_status": "observed",
+      "execution_error": null,
+      "endpoint": "wss://openspeech.bytedance.com/api/v3/duplex/realtime/dialogue",
+      "input_seconds": 34.7,
+      "trigger": {
+        "kind": "probe_interjection",
+        "wall_ms": 12502.703052014112,
+        "arrival_tick_id": 120,
+        "source_ms": 12100.0,
+        "stream_ms": 12100.0,
+        "scenario": "interruption",
+        "input_media_ms": 12100.0,
+        "raw_output_samples": 27648,
+        "latest_100ms_rms": 2328,
+        "queued_output_bytes": 50496
+      },
+      "opening_controls_not_counted_as_barge_in": 1,
+      "post_injection_controls": [],
+      "cancelled_pending_bytes": 0,
+      "old_audio_played_after_cancel": [],
+      "response_done_statuses": {},
+      "gemini_content_flags": {},
+      "raw_audio": {
+        "seconds": 102.99733333333333,
+        "rms_le_100_seconds": 0.7,
+        "longest_quiet_seconds": 0.4,
+        "leading_quiet_seconds": 0,
+        "first_voice_seconds": 0.0,
+        "sha256": "f8b5553149a1d3db96ae755ebe7f8f36db0c3776035a6d6915629e3d05230e31"
+      },
+      "trace_sha256": "0714e599ac712f56d61fd9cf7d4e47f23fbc0d97c1db5216b382b23b9783c218",
+      "run_root": "data/simulations/control-signals/20261112-live-audit-long"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit-long/doubao_s2s/normal",
+      "model": "doubao_s2s",
+      "model_id": "1.2.6.1",
+      "scenario": "normal",
+      "execution_status": "observed",
+      "execution_error": null,
+      "endpoint": "wss://openspeech.bytedance.com/api/v3/duplex/realtime/dialogue",
+      "input_seconds": 35.7,
+      "trigger": null,
+      "opening_controls_not_counted_as_barge_in": 1,
+      "post_injection_controls": [],
+      "cancelled_pending_bytes": 0,
+      "old_audio_played_after_cancel": [],
+      "response_done_statuses": {},
+      "gemini_content_flags": {},
+      "raw_audio": {
+        "seconds": 155.66808333333333,
+        "rms_le_100_seconds": 0.6680833333333334,
+        "longest_quiet_seconds": 0.1,
+        "leading_quiet_seconds": 0,
+        "first_voice_seconds": 0.0,
+        "sha256": "09cab3d1413981d8d3babca3c59a4ecdb8374f4a7dc50e3d6b7fdea5f7f3ddd5"
+      },
+      "trace_sha256": "d5f7f56ea7f921795d83d06fa1f442a1804766988a68e82ae5579a6e2101daf5",
+      "run_root": "data/simulations/control-signals/20261112-live-audit-long"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit-long/gemini_live/backchannel",
+      "model": "gemini_live",
+      "model_id": "gemini-3.1-flash-live-preview",
+      "scenario": "backchannel",
+      "execution_status": "observed",
+      "execution_error": null,
+      "endpoint": "wss://aidp.bytedance.net/openai/realtime",
+      "input_seconds": 29.3,
+      "trigger": {
+        "kind": "probe_interjection",
+        "wall_ms": 13091.369967907667,
+        "arrival_tick_id": 118,
+        "source_ms": 11900.0,
+        "stream_ms": 11900.0,
+        "scenario": "backchannel",
+        "input_media_ms": 11900.0,
+        "raw_output_samples": 12961,
+        "latest_100ms_rms": 5250,
+        "queued_output_bytes": 21120
+      },
+      "opening_controls_not_counted_as_barge_in": 0,
+      "post_injection_controls": [
+        {
+          "kind": "interruption",
+          "wall_ms": 13489.759933203459,
+          "arrival_tick_id": 122,
+          "source_ms": 12300.0,
+          "stream_ms": 12300.0,
+          "event_type": "serverContent.interrupted",
+          "old_response_id": "response-0",
+          "discarded_bytes": 72000
+        }
+      ],
+      "cancelled_pending_bytes": 72000,
+      "old_audio_played_after_cancel": [],
+      "response_done_statuses": {},
+      "gemini_content_flags": {
+        "interrupted": 1,
+        "turnComplete": 1,
+        "generationComplete": 1
+      },
+      "raw_audio": {
+        "seconds": 32.78066666666667,
+        "rms_le_100_seconds": 1.1806666666666665,
+        "longest_quiet_seconds": 0.2,
+        "leading_quiet_seconds": 0,
+        "first_voice_seconds": 0.0,
+        "sha256": "32ec09ac3653dd4251ce22e311407895a1adb4fc46135d9995a73e623a51996c"
+      },
+      "trace_sha256": "e2ac08e30b48c63db3db2c15e27fa5c1bb6015bff126c2ec490b92b8d23be55b",
+      "run_root": "data/simulations/control-signals/20261112-live-audit-long"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit-long/gemini_live/interruption",
+      "model": "gemini_live",
+      "model_id": "gemini-3.1-flash-live-preview",
+      "scenario": "interruption",
+      "execution_status": "observed",
+      "execution_error": null,
+      "endpoint": "wss://aidp.bytedance.net/openai/realtime",
+      "input_seconds": 34.3,
+      "trigger": {
+        "kind": "probe_interjection",
+        "wall_ms": 12714.418906718493,
+        "arrival_tick_id": 116,
+        "source_ms": 11700.0,
+        "stream_ms": 11700.0,
+        "scenario": "interruption",
+        "input_media_ms": 11700.0,
+        "raw_output_samples": 6001,
+        "latest_100ms_rms": 8683,
+        "queued_output_bytes": 7200
+      },
+      "opening_controls_not_counted_as_barge_in": 0,
+      "post_injection_controls": [
+        {
+          "kind": "interruption",
+          "wall_ms": 12986.247979104519,
+          "arrival_tick_id": 119,
+          "source_ms": 11980.0,
+          "stream_ms": 11980.0,
+          "event_type": "serverContent.interrupted",
+          "old_response_id": "response-0",
+          "discarded_bytes": 45600
+        }
+      ],
+      "cancelled_pending_bytes": 45600,
+      "old_audio_played_after_cancel": [],
+      "response_done_statuses": {},
+      "gemini_content_flags": {
+        "interrupted": 1,
+        "turnComplete": 1,
+        "generationComplete": 1
+      },
+      "raw_audio": {
+        "seconds": 27.810083333333335,
+        "rms_le_100_seconds": 1.7100833333333338,
+        "longest_quiet_seconds": 0.4,
+        "leading_quiet_seconds": 0,
+        "first_voice_seconds": 0.0,
+        "sha256": "00fef48f5f20bea740f73353cd765e163ccb8dfb9271f99a39b3b949eb7fb539"
+      },
+      "trace_sha256": "f447800dfcc6638df7474ae286a32342b98edaecee247d2437a276d151619af0",
+      "run_root": "data/simulations/control-signals/20261112-live-audit-long"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit-long/gemini_live/normal",
+      "model": "gemini_live",
+      "model_id": "gemini-3.1-flash-live-preview",
+      "scenario": "normal",
+      "execution_status": "observed",
+      "execution_error": null,
+      "endpoint": "wss://aidp.bytedance.net/openai/realtime",
+      "input_seconds": 45.3,
+      "trigger": null,
+      "opening_controls_not_counted_as_barge_in": 0,
+      "post_injection_controls": [],
+      "cancelled_pending_bytes": 0,
+      "old_audio_played_after_cancel": [],
+      "response_done_statuses": {},
+      "gemini_content_flags": {
+        "generationComplete": 1
+      },
+      "raw_audio": {
+        "seconds": 38.35004166666667,
+        "rms_le_100_seconds": 2.6500416666666675,
+        "longest_quiet_seconds": 0.5500416666666667,
+        "leading_quiet_seconds": 0,
+        "first_voice_seconds": 0.0,
+        "sha256": "1bcb964bb68f517a7718e34d823c2ab1629b9cd46ff4dc317897534dc0bb088a"
+      },
+      "trace_sha256": "8d63b13cbff93221f1ad5d5bb8951cce22465a76c281a38b45b14d360a819eff",
+      "run_root": "data/simulations/control-signals/20261112-live-audit-long"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit-long/gpt_live/backchannel",
+      "model": "gpt_live",
+      "model_id": "gpt-live-1",
+      "scenario": "backchannel",
+      "execution_status": "observed",
+      "execution_error": null,
+      "endpoint": "wss://aidp.bytedance.net/openai/realtime",
+      "input_seconds": 28.9,
+      "trigger": {
+        "kind": "probe_interjection",
+        "wall_ms": 14360.581196844578,
+        "arrival_tick_id": 114,
+        "source_ms": 11500.0,
+        "stream_ms": 11500.0,
+        "scenario": "backchannel",
+        "input_media_ms": 11500.0,
+        "raw_output_samples": 256800,
+        "latest_100ms_rms": 1486,
+        "queued_output_bytes": 0
+      },
+      "opening_controls_not_counted_as_barge_in": 0,
+      "post_injection_controls": [],
+      "cancelled_pending_bytes": 0,
+      "old_audio_played_after_cancel": [],
+      "response_done_statuses": {},
+      "gemini_content_flags": {},
+      "raw_audio": {
+        "seconds": 28.5,
+        "rms_le_100_seconds": 14.799999999999963,
+        "longest_quiet_seconds": 10.599999999999978,
+        "leading_quiet_seconds": 10.599999999999978,
+        "first_voice_seconds": 10.6,
+        "sha256": "1031fafb076eea1288758d77d8ec6619789c67b14a4aa98c50d02efb0c7acb6c"
+      },
+      "trace_sha256": "6c984c9e0410f538c2cd8d3b2b95ffc02dc24c6c0d4302b839d917d8aa1239e8",
+      "run_root": "data/simulations/control-signals/20261112-live-audit-long"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit-long/gpt_live/interruption",
+      "model": "gpt_live",
+      "model_id": "gpt-live-1",
+      "scenario": "interruption",
+      "execution_status": "observed",
+      "execution_error": null,
+      "endpoint": "wss://aidp.bytedance.net/openai/realtime",
+      "input_seconds": 33.9,
+      "trigger": {
+        "kind": "probe_interjection",
+        "wall_ms": 14104.708198457956,
+        "arrival_tick_id": 112,
+        "source_ms": 11300.0,
+        "stream_ms": 11300.0,
+        "scenario": "interruption",
+        "input_media_ms": 11300.0,
+        "raw_output_samples": 249600,
+        "latest_100ms_rms": 1151,
+        "queued_output_bytes": 0
+      },
+      "opening_controls_not_counted_as_barge_in": 0,
+      "post_injection_controls": [],
+      "cancelled_pending_bytes": 0,
+      "old_audio_played_after_cancel": [],
+      "response_done_statuses": {},
+      "gemini_content_flags": {},
+      "raw_audio": {
+        "seconds": 33.48,
+        "rms_le_100_seconds": 26.88000000000011,
+        "longest_quiet_seconds": 11.979999999999974,
+        "leading_quiet_seconds": 10.29999999999998,
+        "first_voice_seconds": 10.3,
+        "sha256": "408d6771c0b2c815994493896af19354e26c1ac150f03e700997dd4c3b519d2a"
+      },
+      "trace_sha256": "831fbb5acd829a86963244ccc25b4beb1cbb5af1ca969d07f9b29d43c51bc27d",
+      "run_root": "data/simulations/control-signals/20261112-live-audit-long"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit-long/gpt_live/normal",
+      "model": "gpt_live",
+      "model_id": "gpt-live-1",
+      "scenario": "normal",
+      "execution_status": "observed",
+      "execution_error": null,
+      "endpoint": "wss://aidp.bytedance.net/openai/realtime",
+      "input_seconds": 45.3,
+      "trigger": null,
+      "opening_controls_not_counted_as_barge_in": 0,
+      "post_injection_controls": [],
+      "cancelled_pending_bytes": 0,
+      "old_audio_played_after_cancel": [],
+      "response_done_statuses": {},
+      "gemini_content_flags": {},
+      "raw_audio": {
+        "seconds": 45.18,
+        "rms_le_100_seconds": 40.2800000000003,
+        "longest_quiet_seconds": 29.08000000000014,
+        "leading_quiet_seconds": 10.899999999999977,
+        "first_voice_seconds": 10.9,
+        "sha256": "2a74df37fb9fd46d912fbdf54ff7b3c58c1fa4af0de91b893169816a1c997656"
+      },
+      "trace_sha256": "4e6ad02b36dc886c0b1ab9368150113894ec1f30c39c3d5d27ecd22cb93a16e4",
+      "run_root": "data/simulations/control-signals/20261112-live-audit-long"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit-long/gpt_realtime/backchannel",
+      "model": "gpt_realtime",
+      "model_id": "gpt-realtime-2.1",
+      "scenario": "backchannel",
+      "execution_status": "observed",
+      "execution_error": null,
+      "endpoint": "wss://aidp.bytedance.net/openai/realtime",
+      "input_seconds": 28.9,
+      "trigger": {
+        "kind": "probe_interjection",
+        "wall_ms": 13381.686571985483,
+        "arrival_tick_id": 114,
+        "source_ms": 11500.0,
+        "stream_ms": 11500.0,
+        "scenario": "backchannel",
+        "input_media_ms": 11500.0,
+        "raw_output_samples": 19200,
+        "latest_100ms_rms": 4001,
+        "queued_output_bytes": 33600
+      },
+      "opening_controls_not_counted_as_barge_in": 1,
+      "post_injection_controls": [
+        {
+          "kind": "interruption",
+          "wall_ms": 13834.676519036293,
+          "arrival_tick_id": 119,
+          "source_ms": 11960.0,
+          "stream_ms": 11960.0,
+          "event_type": "input_audio_buffer.speech_started",
+          "old_response_id": "resp_EjExdarv1SbxyTTO1XlNj",
+          "discarded_bytes": 110400
+        }
+      ],
+      "cancelled_pending_bytes": 110400,
+      "old_audio_played_after_cancel": [],
+      "response_done_statuses": {
+        "cancelled": 1
+      },
+      "gemini_content_flags": {},
+      "raw_audio": {
+        "seconds": 71.2,
+        "rms_le_100_seconds": 14.899999999999963,
+        "longest_quiet_seconds": 0.8999999999999999,
+        "leading_quiet_seconds": 0,
+        "first_voice_seconds": 0.0,
+        "sha256": "fa3826e0fbbeeb0dc5c27d3b0a7688db4e77720177e5f6d6cce8f7e69a455354"
+      },
+      "trace_sha256": "c3d836d34e344ef5b9d1a02a1cbdf25928b21f4752afbe58a3d6f4befc8547b5",
+      "run_root": "data/simulations/control-signals/20261112-live-audit-long"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit-long/gpt_realtime/interruption",
+      "model": "gpt_realtime",
+      "model_id": "gpt-realtime-2.1",
+      "scenario": "interruption",
+      "execution_status": "observed",
+      "execution_error": null,
+      "endpoint": "wss://aidp.bytedance.net/openai/realtime",
+      "input_seconds": 35.6,
+      "trigger": {
+        "kind": "probe_interjection",
+        "wall_ms": 15476.084724068642,
+        "arrival_tick_id": 129,
+        "source_ms": 13000.0,
+        "stream_ms": 13000.0,
+        "scenario": "interruption",
+        "input_media_ms": 13000.0,
+        "raw_output_samples": 19200,
+        "latest_100ms_rms": 4819,
+        "queued_output_bytes": 33600
+      },
+      "opening_controls_not_counted_as_barge_in": 1,
+      "post_injection_controls": [
+        {
+          "kind": "interruption",
+          "wall_ms": 15890.088941901922,
+          "arrival_tick_id": 134,
+          "source_ms": 13420.0,
+          "stream_ms": 13420.0,
+          "event_type": "input_audio_buffer.speech_started",
+          "old_response_id": "resp_EjEx1yWQOjcsAfHBxsrMS",
+          "discarded_bytes": 148800
+        }
+      ],
+      "cancelled_pending_bytes": 148800,
+      "old_audio_played_after_cancel": [],
+      "response_done_statuses": {
+        "cancelled": 1,
+        "completed": 1
+      },
+      "gemini_content_flags": {},
+      "raw_audio": {
+        "seconds": 16.55,
+        "rms_le_100_seconds": 3.1500000000000012,
+        "longest_quiet_seconds": 0.5,
+        "leading_quiet_seconds": 0,
+        "first_voice_seconds": 0.0,
+        "sha256": "fbfa857f61707bfdcab1e6bfd4ce8ee58359287fff49d1d42dd33a70b51d534b"
+      },
+      "trace_sha256": "86648b6b33584caf8ca2be49407afe67acf715e96be0f24bdc6c671de348961f",
+      "run_root": "data/simulations/control-signals/20261112-live-audit-long"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit-long/gpt_realtime/normal",
+      "model": "gpt_realtime",
+      "model_id": "gpt-realtime-2.1",
+      "scenario": "normal",
+      "execution_status": "observed",
+      "execution_error": null,
+      "endpoint": "wss://aidp.bytedance.net/openai/realtime",
+      "input_seconds": 37.6,
+      "trigger": null,
+      "opening_controls_not_counted_as_barge_in": 1,
+      "post_injection_controls": [],
+      "cancelled_pending_bytes": 0,
+      "old_audio_played_after_cancel": [],
+      "response_done_statuses": {
+        "completed": 1
+      },
+      "gemini_content_flags": {},
+      "raw_audio": {
+        "seconds": 129.25,
+        "rms_le_100_seconds": 21.950000000000042,
+        "longest_quiet_seconds": 0.7999999999999999,
+        "leading_quiet_seconds": 0,
+        "first_voice_seconds": 0.0,
+        "sha256": "2775cce8b44ed3b2de0323f97942ccc3651d31a07aeda5f0579fb45b930d9add"
+      },
+      "trace_sha256": "ee03e42c672cff43eb921cef1ea7e532c0aae007f55cbb4713dc54e685870da2",
+      "run_root": "data/simulations/control-signals/20261112-live-audit-long"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-minicpm-hold/minicpm/forced_interruption_hold",
+      "model": "minicpm",
+      "scenario": "forced_interruption_hold",
+      "execution_status": "observed",
+      "execution_error": null,
+      "trigger": {
+        "tick": 14,
+        "sim_ms": 14000,
+        "model_frame_rms": 2573,
+        "queued_bytes": 0,
+        "user_chunks": 8
+      },
+      "native_flags": {
+        "is_listen=True,end_of_turn=False": 25,
+        "is_listen=False,end_of_turn=False": 4
+      },
+      "native_states": {},
+      "externally_forced_steps": [
+        {
+          "tick": 14,
+          "control": {
+            "source": "external_policy",
+            "interrupt_requested": true,
+            "force_listen": true
+          }
+        },
+        {
+          "tick": 15,
+          "control": {
+            "source": "external_policy",
+            "interrupt_requested": false,
+            "force_listen": true
+          }
+        },
+        {
+          "tick": 16,
+          "control": {
+            "source": "external_policy",
+            "interrupt_requested": false,
+            "force_listen": true
+          }
+        },
+        {
+          "tick": 17,
+          "control": {
+            "source": "external_policy",
+            "interrupt_requested": false,
+            "force_listen": true
+          }
+        },
+        {
+          "tick": 18,
+          "control": {
+            "source": "external_policy",
+            "interrupt_requested": false,
+            "force_listen": true
+          }
+        },
+        {
+          "tick": 19,
+          "control": {
+            "source": "external_policy",
+            "interrupt_requested": false,
+            "force_listen": true
+          }
+        },
+        {
+          "tick": 20,
+          "control": {
+            "source": "external_policy",
+            "interrupt_requested": false,
+            "force_listen": true
+          }
+        },
+        {
+          "tick": 21,
+          "control": {
+            "source": "external_policy",
+            "interrupt_requested": false,
+            "force_listen": true
+          }
+        },
+        {
+          "tick": 22,
+          "control": {
+            "source": "external_policy",
+            "interrupt_requested": false,
+            "force_listen": true
+          }
+        }
+      ],
+      "cancelled_pending_bytes": 0,
+      "input_ticks": 29,
+      "nonempty_output_ticks": 29,
+      "output_samples": 696000,
+      "provenance": {
+        "model": "MiniCPM-o-4.5",
+        "checkpoint": "/mnt/bn/audio-visual-llm-data6/base_models/MiniCPM-o-4_5",
+        "sample_rate": 24000,
+        "python": "/mnt/bn/audio-visual-llm-data6/terumi/playground/MiniCPM-o/.venv/bin/python",
+        "processors": "/mnt/bn/audio-visual-llm-data6/terumi/playground/MiniCPM-o/MiniCPM-o-Demo/core/processors/__init__.py",
+        "settings": {
+          "batch_size": 8,
+          "chunk_ms": 1000,
+          "decode_mode": "sampling",
+          "temperature": 0.7,
+          "tts_temperature": 0.8,
+          "numba_cache_dir": "/tmp/pi-bench-minicpm-o-numba-cache",
+          "force_listen_count": 0,
+          "tail_seconds": 5.0,
+          "tail_extend_seconds": 5.0,
+          "max_tail_seconds": 240.0,
+          "max_assistant_output_seconds": 60.0,
+          "repetition_guard_window_chunks": 3,
+          "repetition_guard_min_tokens": 6,
+          "repetition_guard_max_unique_ratio": 0.34,
+          "system_prompt": "You are a helpful voice assistant. Your answer should be coherent, natural, simple, complete.",
+          "backchannel_system_prompt": "You are a helpful assistant. To demonstrate that you are listening closely to the user, please only backchannel to the user when they are speaking."
+        },
+        "interruption_policy": "native_with_explicit_control"
+      },
+      "trace_sha256": "8d35942a442625f34d639bb6bc05b2aacb3e7ce51031859b585350f9ccae2c9a",
+      "raw_audio": {
+        "seconds": 29.0,
+        "rms_le_100_seconds": 26.500000000000107,
+        "longest_quiet_seconds": 14.999999999999963,
+        "leading_quiet_seconds": 11.199999999999976,
+        "first_voice_seconds": 11.2,
+        "sha256": "1c3666a9e6f14fa269857404e47ddba5218c5c653e29271e3d3c9d9c5e1021a3"
+      },
+      "run_root": "data/simulations/control-signals/20261112-minicpm-hold",
+      "native_probe_source_sha256": "73b217fbda03323aabf948dc35de45952392b724e7b7bb71662fa83d1aa30fb8",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-native-v2/freeze_omni/backchannel",
+      "model": "freeze_omni",
+      "scenario": "backchannel",
+      "execution_status": "observed",
+      "execution_error": null,
+      "trigger": {
+        "tick": 67,
+        "sim_ms": 10720.0,
+        "model_frame_rms": 3922,
+        "queued_bytes": 2196240
+      },
+      "native_flags": {},
+      "native_states": {
+        "native_listen_stat=cl": 25,
+        "native_listen_stat=ss": 1,
+        "native_generate_stat=cs": 166,
+        "native_tts": 16,
+        "native_generate_stat=sl": 1
+      },
+      "externally_forced_steps": [],
+      "cancelled_pending_bytes": 0,
+      "input_ticks": 161,
+      "nonempty_output_ticks": 17,
+      "output_samples": 1259400,
+      "provenance": {
+        "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+        "import_origins": {
+          "pipeline": "/mnt/bn/audio-visual-llm-data6/yuwenyi/playground/duplex_baselines/Freeze-Omni/models/pipeline.py",
+          "tts": "/mnt/bn/audio-visual-llm-data6/yuwenyi/playground/duplex_baselines/Freeze-Omni/models/decoder/llm2tts.py",
+          "vad": "/mnt/bn/audio-visual-llm-data6/yuwenyi/playground/duplex_baselines/Freeze-Omni/web/vad.py"
+        },
+        "control_mode": "native_stat_plus_reference_external_controller",
+        "force_on_vad_end": false,
+        "force_final_on_eof": false
+      },
+      "trace_sha256": "f5b5cdfc17d7ba9899f36314ec0bff70acd8d961e784bf78cef0ffbe3e4542d6",
+      "raw_audio": {
+        "seconds": 52.475,
+        "rms_le_100_seconds": 12.97499999999997,
+        "longest_quiet_seconds": 1.0999999999999999,
+        "leading_quiet_seconds": 0.30000000000000004,
+        "first_voice_seconds": 0.3,
+        "sha256": "1fc418288c053fad55f4b723f221e627bafa6ec93db11479b2724db8e588dc36"
+      },
+      "run_root": "data/simulations/control-signals/20261112-native-v2",
+      "native_probe_source_sha256": "67927ff7778cc355dff63022328c593fa72b5c31f2007f78ea746433371d5d1f",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-native-v2/freeze_omni/interruption",
+      "model": "freeze_omni",
+      "scenario": "interruption",
+      "execution_status": "observed",
+      "execution_error": null,
+      "trigger": {
+        "tick": 64,
+        "sim_ms": 10240.0,
+        "model_frame_rms": 2813,
+        "queued_bytes": 5400960
+      },
+      "native_flags": {},
+      "native_states": {
+        "native_listen_stat=cl": 25,
+        "native_listen_stat=ss": 1,
+        "native_generate_stat=cs": 676,
+        "native_tts": 58,
+        "native_generate_stat=sl": 1
+      },
+      "externally_forced_steps": [],
+      "cancelled_pending_bytes": 0,
+      "input_ticks": 158,
+      "nonempty_output_ticks": 58,
+      "output_samples": 5135400,
+      "provenance": {
+        "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+        "import_origins": {
+          "pipeline": "/mnt/bn/audio-visual-llm-data6/yuwenyi/playground/duplex_baselines/Freeze-Omni/models/pipeline.py",
+          "tts": "/mnt/bn/audio-visual-llm-data6/yuwenyi/playground/duplex_baselines/Freeze-Omni/models/decoder/llm2tts.py",
+          "vad": "/mnt/bn/audio-visual-llm-data6/yuwenyi/playground/duplex_baselines/Freeze-Omni/web/vad.py"
+        },
+        "control_mode": "native_stat_plus_reference_external_controller",
+        "force_on_vad_end": false,
+        "force_final_on_eof": false
+      },
+      "trace_sha256": "2ee5c8987870af741321aecc35ee2cfa27db20bc70b8d4907956efe4f36d4d35",
+      "raw_audio": {
+        "seconds": 213.975,
+        "rms_le_100_seconds": 45.07500000000037,
+        "longest_quiet_seconds": 0.9999999999999999,
+        "leading_quiet_seconds": 0.30000000000000004,
+        "first_voice_seconds": 0.3,
+        "sha256": "a22deb566b5f8d78d61c0c14d84bd19077fe05f6d75671f50a5e36fd35513358"
+      },
+      "run_root": "data/simulations/control-signals/20261112-native-v2",
+      "native_probe_source_sha256": "67927ff7778cc355dff63022328c593fa72b5c31f2007f78ea746433371d5d1f",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-native-v2/freeze_omni/normal",
+      "model": "freeze_omni",
+      "scenario": "normal",
+      "execution_status": "observed",
+      "execution_error": null,
+      "trigger": null,
+      "native_flags": {},
+      "native_states": {
+        "native_listen_stat=cl": 25,
+        "native_listen_stat=ss": 1,
+        "native_generate_stat=cs": 543,
+        "native_tts": 44,
+        "native_generate_stat=sl": 1
+      },
+      "externally_forced_steps": [],
+      "cancelled_pending_bytes": 0,
+      "input_ticks": 438,
+      "nonempty_output_ticks": 44,
+      "output_samples": 3949200,
+      "provenance": {
+        "checkpoint": "/mnt/bn/audio-visual-llm-data5/yuwenyi/ckpts/Freeze-Omni/checkpoints",
+        "import_origins": {
+          "pipeline": "/mnt/bn/audio-visual-llm-data6/yuwenyi/playground/duplex_baselines/Freeze-Omni/models/pipeline.py",
+          "tts": "/mnt/bn/audio-visual-llm-data6/yuwenyi/playground/duplex_baselines/Freeze-Omni/models/decoder/llm2tts.py",
+          "vad": "/mnt/bn/audio-visual-llm-data6/yuwenyi/playground/duplex_baselines/Freeze-Omni/web/vad.py"
+        },
+        "control_mode": "native_stat_plus_reference_external_controller",
+        "force_on_vad_end": false,
+        "force_final_on_eof": false
+      },
+      "trace_sha256": "7e04a493d0afd9226013a2cc1e96767cf1e0c0be929517d919b943f0776d20f6",
+      "raw_audio": {
+        "seconds": 164.55,
+        "rms_le_100_seconds": 32.65000000000019,
+        "longest_quiet_seconds": 0.9999999999999999,
+        "leading_quiet_seconds": 0.30000000000000004,
+        "first_voice_seconds": 0.3,
+        "sha256": "1a1c7fa1bf2b78b0e48ae8fe1bb1f01fbb7b5281c397b161c6982d85503cc788"
+      },
+      "run_root": "data/simulations/control-signals/20261112-native-v2",
+      "native_probe_source_sha256": "67927ff7778cc355dff63022328c593fa72b5c31f2007f78ea746433371d5d1f",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-native-v2/minicpm/backchannel",
+      "model": "minicpm",
+      "scenario": "backchannel",
+      "execution_status": "observed",
+      "execution_error": null,
+      "trigger": {
+        "tick": 13,
+        "sim_ms": 13000,
+        "model_frame_rms": 3007,
+        "queued_bytes": 0
+      },
+      "native_flags": {
+        "is_listen=True,end_of_turn=False": 23,
+        "is_listen=False,end_of_turn=False": 4,
+        "is_listen=False,end_of_turn=True": 1
+      },
+      "native_states": {},
+      "externally_forced_steps": [],
+      "cancelled_pending_bytes": 0,
+      "input_ticks": 28,
+      "nonempty_output_ticks": 28,
+      "output_samples": 656640,
+      "provenance": {
+        "model": "MiniCPM-o-4.5",
+        "checkpoint": "/mnt/bn/audio-visual-llm-data6/base_models/MiniCPM-o-4_5",
+        "sample_rate": 24000,
+        "python": "/mnt/bn/audio-visual-llm-data6/terumi/playground/MiniCPM-o/.venv/bin/python",
+        "processors": "/mnt/bn/audio-visual-llm-data6/terumi/playground/MiniCPM-o/MiniCPM-o-Demo/core/processors/__init__.py",
+        "settings": {
+          "batch_size": 8,
+          "chunk_ms": 1000,
+          "decode_mode": "sampling",
+          "temperature": 0.7,
+          "tts_temperature": 0.8,
+          "numba_cache_dir": "/tmp/pi-bench-minicpm-o-numba-cache",
+          "force_listen_count": 0,
+          "tail_seconds": 5.0,
+          "tail_extend_seconds": 5.0,
+          "max_tail_seconds": 240.0,
+          "max_assistant_output_seconds": 60.0,
+          "repetition_guard_window_chunks": 3,
+          "repetition_guard_min_tokens": 6,
+          "repetition_guard_max_unique_ratio": 0.34,
+          "system_prompt": "You are a helpful voice assistant. Your answer should be coherent, natural, simple, complete.",
+          "backchannel_system_prompt": "You are a helpful assistant. To demonstrate that you are listening closely to the user, please only backchannel to the user when they are speaking."
+        },
+        "interruption_policy": "native_with_explicit_control"
+      },
+      "trace_sha256": "9a1f147de41bbd93b2e5969d6af98156f700ec732b795b3b52b3a75a837a7571",
+      "raw_audio": {
+        "seconds": 27.36,
+        "rms_le_100_seconds": 24.06000000000007,
+        "longest_quiet_seconds": 13.35999999999997,
+        "leading_quiet_seconds": 10.599999999999978,
+        "first_voice_seconds": 10.6,
+        "sha256": "67996d1672d9a519373183ef0e21c82d167c0d3e928880b17aa3dfb5c4366746"
+      },
+      "run_root": "data/simulations/control-signals/20261112-native-v2",
+      "native_probe_source_sha256": "67927ff7778cc355dff63022328c593fa72b5c31f2007f78ea746433371d5d1f",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-native-v2/minicpm/forced_interruption",
+      "model": "minicpm",
+      "scenario": "forced_interruption",
+      "execution_status": "observed",
+      "execution_error": null,
+      "trigger": {
+        "tick": 14,
+        "sim_ms": 14000,
+        "model_frame_rms": 3768,
+        "queued_bytes": 0
+      },
+      "native_flags": {
+        "is_listen=True,end_of_turn=False": 17,
+        "is_listen=False,end_of_turn=False": 11,
+        "is_listen=False,end_of_turn=True": 1
+      },
+      "native_states": {},
+      "externally_forced_steps": [
+        {
+          "tick": 14,
+          "control": {
+            "source": "external_policy",
+            "interrupt_requested": true,
+            "force_listen": true
+          }
+        }
+      ],
+      "cancelled_pending_bytes": 0,
+      "input_ticks": 29,
+      "nonempty_output_ticks": 29,
+      "output_samples": 696960,
+      "provenance": {
+        "model": "MiniCPM-o-4.5",
+        "checkpoint": "/mnt/bn/audio-visual-llm-data6/base_models/MiniCPM-o-4_5",
+        "sample_rate": 24000,
+        "python": "/mnt/bn/audio-visual-llm-data6/terumi/playground/MiniCPM-o/.venv/bin/python",
+        "processors": "/mnt/bn/audio-visual-llm-data6/terumi/playground/MiniCPM-o/MiniCPM-o-Demo/core/processors/__init__.py",
+        "settings": {
+          "batch_size": 8,
+          "chunk_ms": 1000,
+          "decode_mode": "sampling",
+          "temperature": 0.7,
+          "tts_temperature": 0.8,
+          "numba_cache_dir": "/tmp/pi-bench-minicpm-o-numba-cache",
+          "force_listen_count": 0,
+          "tail_seconds": 5.0,
+          "tail_extend_seconds": 5.0,
+          "max_tail_seconds": 240.0,
+          "max_assistant_output_seconds": 60.0,
+          "repetition_guard_window_chunks": 3,
+          "repetition_guard_min_tokens": 6,
+          "repetition_guard_max_unique_ratio": 0.34,
+          "system_prompt": "You are a helpful voice assistant. Your answer should be coherent, natural, simple, complete.",
+          "backchannel_system_prompt": "You are a helpful assistant. To demonstrate that you are listening closely to the user, please only backchannel to the user when they are speaking."
+        },
+        "interruption_policy": "native_with_explicit_control"
+      },
+      "trace_sha256": "7dd9fa39d335ff1d750322c4fecb83077ad3d773cc347ae3494b512cde0446a6",
+      "raw_audio": {
+        "seconds": 29.04,
+        "rms_le_100_seconds": 19.84000000000001,
+        "longest_quiet_seconds": 10.999999999999977,
+        "leading_quiet_seconds": 10.999999999999977,
+        "first_voice_seconds": 11.0,
+        "sha256": "96f71ba0c488d5e8547f8b695bd7afd9ac0487e48e71d4a163ce621c6e511338"
+      },
+      "run_root": "data/simulations/control-signals/20261112-native-v2",
+      "native_probe_source_sha256": "67927ff7778cc355dff63022328c593fa72b5c31f2007f78ea746433371d5d1f",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-native-v2/minicpm/interruption",
+      "model": "minicpm",
+      "scenario": "interruption",
+      "execution_status": "observed",
+      "execution_error": null,
+      "trigger": {
+        "tick": 13,
+        "sim_ms": 13000,
+        "model_frame_rms": 1866,
+        "queued_bytes": 0
+      },
+      "native_flags": {
+        "is_listen=True,end_of_turn=False": 15,
+        "is_listen=False,end_of_turn=False": 11,
+        "is_listen=False,end_of_turn=True": 2
+      },
+      "native_states": {},
+      "externally_forced_steps": [],
+      "cancelled_pending_bytes": 0,
+      "input_ticks": 28,
+      "nonempty_output_ticks": 28,
+      "output_samples": 676800,
+      "provenance": {
+        "model": "MiniCPM-o-4.5",
+        "checkpoint": "/mnt/bn/audio-visual-llm-data6/base_models/MiniCPM-o-4_5",
+        "sample_rate": 24000,
+        "python": "/mnt/bn/audio-visual-llm-data6/terumi/playground/MiniCPM-o/.venv/bin/python",
+        "processors": "/mnt/bn/audio-visual-llm-data6/terumi/playground/MiniCPM-o/MiniCPM-o-Demo/core/processors/__init__.py",
+        "settings": {
+          "batch_size": 8,
+          "chunk_ms": 1000,
+          "decode_mode": "sampling",
+          "temperature": 0.7,
+          "tts_temperature": 0.8,
+          "numba_cache_dir": "/tmp/pi-bench-minicpm-o-numba-cache",
+          "force_listen_count": 0,
+          "tail_seconds": 5.0,
+          "tail_extend_seconds": 5.0,
+          "max_tail_seconds": 240.0,
+          "max_assistant_output_seconds": 60.0,
+          "repetition_guard_window_chunks": 3,
+          "repetition_guard_min_tokens": 6,
+          "repetition_guard_max_unique_ratio": 0.34,
+          "system_prompt": "You are a helpful voice assistant. Your answer should be coherent, natural, simple, complete.",
+          "backchannel_system_prompt": "You are a helpful assistant. To demonstrate that you are listening closely to the user, please only backchannel to the user when they are speaking."
+        },
+        "interruption_policy": "native_with_explicit_control"
+      },
+      "trace_sha256": "78f069b3f3f95dfaddc35ba11a4e1a05f36fce26e65227b32c1643f8af69fdb0",
+      "raw_audio": {
+        "seconds": 28.2,
+        "rms_le_100_seconds": 18.599999999999994,
+        "longest_quiet_seconds": 10.899999999999977,
+        "leading_quiet_seconds": 10.899999999999977,
+        "first_voice_seconds": 10.9,
+        "sha256": "0afb8ae4ff265fb59fea4b42bcb9a2e89e8509a7d195565550a92621482117e4"
+      },
+      "run_root": "data/simulations/control-signals/20261112-native-v2",
+      "native_probe_source_sha256": "67927ff7778cc355dff63022328c593fa72b5c31f2007f78ea746433371d5d1f",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-native-v2/minicpm/normal",
+      "model": "minicpm",
+      "scenario": "normal",
+      "execution_status": "observed",
+      "execution_error": null,
+      "trigger": null,
+      "native_flags": {
+        "is_listen=True,end_of_turn=False": 10,
+        "is_listen=False,end_of_turn=False": 60
+      },
+      "native_states": {},
+      "externally_forced_steps": [],
+      "cancelled_pending_bytes": 0,
+      "input_ticks": 70,
+      "nonempty_output_ticks": 70,
+      "output_samples": 1680000,
+      "provenance": {
+        "model": "MiniCPM-o-4.5",
+        "checkpoint": "/mnt/bn/audio-visual-llm-data6/base_models/MiniCPM-o-4_5",
+        "sample_rate": 24000,
+        "python": "/mnt/bn/audio-visual-llm-data6/terumi/playground/MiniCPM-o/.venv/bin/python",
+        "processors": "/mnt/bn/audio-visual-llm-data6/terumi/playground/MiniCPM-o/MiniCPM-o-Demo/core/processors/__init__.py",
+        "settings": {
+          "batch_size": 8,
+          "chunk_ms": 1000,
+          "decode_mode": "sampling",
+          "temperature": 0.7,
+          "tts_temperature": 0.8,
+          "numba_cache_dir": "/tmp/pi-bench-minicpm-o-numba-cache",
+          "force_listen_count": 0,
+          "tail_seconds": 5.0,
+          "tail_extend_seconds": 5.0,
+          "max_tail_seconds": 240.0,
+          "max_assistant_output_seconds": 60.0,
+          "repetition_guard_window_chunks": 3,
+          "repetition_guard_min_tokens": 6,
+          "repetition_guard_max_unique_ratio": 0.34,
+          "system_prompt": "You are a helpful voice assistant. Your answer should be coherent, natural, simple, complete.",
+          "backchannel_system_prompt": "You are a helpful assistant. To demonstrate that you are listening closely to the user, please only backchannel to the user when they are speaking."
+        },
+        "interruption_policy": "native_with_explicit_control"
+      },
+      "trace_sha256": "9f4958c9a958492f81fbb8ec8dabc4d9f5927ebc722abfa8668fa47bb595ff55",
+      "raw_audio": {
+        "seconds": 70.0,
+        "rms_le_100_seconds": 16.79999999999997,
+        "longest_quiet_seconds": 11.099999999999977,
+        "leading_quiet_seconds": 11.099999999999977,
+        "first_voice_seconds": 11.1,
+        "sha256": "483db33a89a6864fdfed23df831e2dc736fcf95a1a8121a0700a4b2dadeb041a"
+      },
+      "run_root": "data/simulations/control-signals/20261112-native-v2",
+      "native_probe_source_sha256": "67927ff7778cc355dff63022328c593fa72b5c31f2007f78ea746433371d5d1f",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-native-v2/salmonn/backchannel",
+      "model": "salmonn",
+      "scenario": "backchannel",
+      "execution_status": "observed",
+      "execution_error": null,
+      "trigger": {
+        "tick": 150,
+        "sim_ms": 12000,
+        "model_frame_rms": 419,
+        "queued_bytes": 0
+      },
+      "native_flags": {},
+      "native_states": {
+        "audio_ingest": 338,
+        "frontend_startup": 1,
+        "native_token": 337,
+        "playback": 337,
+        "native_assistant_start": 1
+      },
+      "externally_forced_steps": [],
+      "cancelled_pending_bytes": 0,
+      "input_ticks": 338,
+      "nonempty_output_ticks": 233,
+      "output_samples": 298240,
+      "provenance": {
+        "checkpoint": "/mnt/bn/audio-visual-llm-data2/yuwenyi/playground/exp_results/cu12_stage2-0519_fc-180_aes_er0_chunk30_llama31/checkpoint-44000",
+        "checkpoint_variant": "cu12_stage2-0519_fc-180_aes_er0_chunk30_llama31",
+        "training_config_sha256": "9ec76a7d1c387426d654628fb94aeaaaf218b32da1c8f55ad5c0cef187844d9b",
+        "runtime_source_sha256": {
+          "utils.py": "d2b39beb522042eb7ead7805154a3af4a617b77b9727faa2cc89154cb3390692",
+          "models/modeling_llama_salmonn_omni.py": "f701e95f548a2c775e3d7535dbd4ca1fcc287d269519b6982a53af020fee6a7d",
+          "models/streaming_transformer_encoder_v2/audio_encoder.py": "68935647e3418af5bf64d24edaac22ca880a3028ce568f1e1818e30403d79957",
+          "models/streaming_transformer_encoder_v2/subsampling.py": "321c2f004610eb45e593b0c5a961f48991cb7e482621bbc250093cb7a0d611d1",
+          "models/streaming_transformer_encoder_v2/transformer_encoder.py": "b1f963de65df52b798a4dad3a5e96703003312900eec9b7a3e4ae029dc6fe362"
+        },
+        "input_sample_rate": 16000,
+        "output_sample_rate": 16000,
+        "tick_ms": 80,
+        "frontend_startup_ticks": 1,
+        "playback_lead_seconds": 0.4,
+        "echo_ratio": 0.0,
+        "self_audio_source": "previous actually played 80ms block",
+        "greedy": true,
+        "seed": 42,
+        "speech_end_token_id": 128258,
+        "encode_chunk_seconds": 30
+      },
+      "trace_sha256": "64ac497938cc2193a8a885c258b132ce66d08524bac0c6e206b787ba0b4c739b",
+      "raw_audio": {
+        "seconds": 18.64,
+        "rms_le_100_seconds": 4.040000000000002,
+        "longest_quiet_seconds": 0.5,
+        "leading_quiet_seconds": 0.1,
+        "first_voice_seconds": 0.1,
+        "sha256": "87eaa635413dcdb0f3518e6ec91d783887e62c9c0b7ea2b2740263b4d56f3586"
+      },
+      "run_root": "data/simulations/control-signals/20261112-native-v2",
+      "native_probe_source_sha256": "67927ff7778cc355dff63022328c593fa72b5c31f2007f78ea746433371d5d1f",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-native-v2/salmonn/interruption",
+      "model": "salmonn",
+      "scenario": "interruption",
+      "execution_status": "observed",
+      "execution_error": null,
+      "trigger": {
+        "tick": 150,
+        "sim_ms": 12000,
+        "model_frame_rms": 419,
+        "queued_bytes": 0
+      },
+      "native_flags": {},
+      "native_states": {
+        "audio_ingest": 338,
+        "frontend_startup": 1,
+        "native_token": 337,
+        "playback": 337,
+        "native_assistant_start": 1
+      },
+      "externally_forced_steps": [],
+      "cancelled_pending_bytes": 0,
+      "input_ticks": 338,
+      "nonempty_output_ticks": 233,
+      "output_samples": 298240,
+      "provenance": {
+        "checkpoint": "/mnt/bn/audio-visual-llm-data2/yuwenyi/playground/exp_results/cu12_stage2-0519_fc-180_aes_er0_chunk30_llama31/checkpoint-44000",
+        "checkpoint_variant": "cu12_stage2-0519_fc-180_aes_er0_chunk30_llama31",
+        "training_config_sha256": "9ec76a7d1c387426d654628fb94aeaaaf218b32da1c8f55ad5c0cef187844d9b",
+        "runtime_source_sha256": {
+          "utils.py": "d2b39beb522042eb7ead7805154a3af4a617b77b9727faa2cc89154cb3390692",
+          "models/modeling_llama_salmonn_omni.py": "f701e95f548a2c775e3d7535dbd4ca1fcc287d269519b6982a53af020fee6a7d",
+          "models/streaming_transformer_encoder_v2/audio_encoder.py": "68935647e3418af5bf64d24edaac22ca880a3028ce568f1e1818e30403d79957",
+          "models/streaming_transformer_encoder_v2/subsampling.py": "321c2f004610eb45e593b0c5a961f48991cb7e482621bbc250093cb7a0d611d1",
+          "models/streaming_transformer_encoder_v2/transformer_encoder.py": "b1f963de65df52b798a4dad3a5e96703003312900eec9b7a3e4ae029dc6fe362"
+        },
+        "input_sample_rate": 16000,
+        "output_sample_rate": 16000,
+        "tick_ms": 80,
+        "frontend_startup_ticks": 1,
+        "playback_lead_seconds": 0.4,
+        "echo_ratio": 0.0,
+        "self_audio_source": "previous actually played 80ms block",
+        "greedy": true,
+        "seed": 42,
+        "speech_end_token_id": 128258,
+        "encode_chunk_seconds": 30
+      },
+      "trace_sha256": "3e063aa216316a70b1fd0ea51765223c4f4859ce2ab124c12a24fcc7336c166e",
+      "raw_audio": {
+        "seconds": 18.64,
+        "rms_le_100_seconds": 3.800000000000002,
+        "longest_quiet_seconds": 0.5,
+        "leading_quiet_seconds": 0.1,
+        "first_voice_seconds": 0.1,
+        "sha256": "ceb3053c8288687b63b51abf0418d369c5db406536972f8571bbcae25abbb333"
+      },
+      "run_root": "data/simulations/control-signals/20261112-native-v2",
+      "native_probe_source_sha256": "67927ff7778cc355dff63022328c593fa72b5c31f2007f78ea746433371d5d1f",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-native-v2/salmonn/normal",
+      "model": "salmonn",
+      "scenario": "normal",
+      "execution_status": "observed",
+      "execution_error": null,
+      "trigger": null,
+      "native_flags": {},
+      "native_states": {
+        "audio_ingest": 875,
+        "frontend_startup": 1,
+        "native_token": 874,
+        "playback": 874,
+        "native_assistant_start": 1
+      },
+      "externally_forced_steps": [],
+      "cancelled_pending_bytes": 0,
+      "input_ticks": 875,
+      "nonempty_output_ticks": 387,
+      "output_samples": 495360,
+      "provenance": {
+        "checkpoint": "/mnt/bn/audio-visual-llm-data2/yuwenyi/playground/exp_results/cu12_stage2-0519_fc-180_aes_er0_chunk30_llama31/checkpoint-44000",
+        "checkpoint_variant": "cu12_stage2-0519_fc-180_aes_er0_chunk30_llama31",
+        "training_config_sha256": "9ec76a7d1c387426d654628fb94aeaaaf218b32da1c8f55ad5c0cef187844d9b",
+        "runtime_source_sha256": {
+          "utils.py": "d2b39beb522042eb7ead7805154a3af4a617b77b9727faa2cc89154cb3390692",
+          "models/modeling_llama_salmonn_omni.py": "f701e95f548a2c775e3d7535dbd4ca1fcc287d269519b6982a53af020fee6a7d",
+          "models/streaming_transformer_encoder_v2/audio_encoder.py": "68935647e3418af5bf64d24edaac22ca880a3028ce568f1e1818e30403d79957",
+          "models/streaming_transformer_encoder_v2/subsampling.py": "321c2f004610eb45e593b0c5a961f48991cb7e482621bbc250093cb7a0d611d1",
+          "models/streaming_transformer_encoder_v2/transformer_encoder.py": "b1f963de65df52b798a4dad3a5e96703003312900eec9b7a3e4ae029dc6fe362"
+        },
+        "input_sample_rate": 16000,
+        "output_sample_rate": 16000,
+        "tick_ms": 80,
+        "frontend_startup_ticks": 1,
+        "playback_lead_seconds": 0.4,
+        "echo_ratio": 0.0,
+        "self_audio_source": "previous actually played 80ms block",
+        "greedy": true,
+        "seed": 42,
+        "speech_end_token_id": 128258,
+        "encode_chunk_seconds": 30
+      },
+      "trace_sha256": "ad0eb52e4f3e7a74dd72b25f6d65c8ceb8030f980cbda7f5a69518effd093b3f",
+      "raw_audio": {
+        "seconds": 30.96,
+        "rms_le_100_seconds": 5.599999999999996,
+        "longest_quiet_seconds": 0.6,
+        "leading_quiet_seconds": 0.1,
+        "first_voice_seconds": 0.1,
+        "sha256": "ab09b0c9ef29c6cb013d034a83c89048211acfe22aaf6e6391603524a1d00726"
+      },
+      "run_root": "data/simulations/control-signals/20261112-native-v2",
+      "native_probe_source_sha256": "67927ff7778cc355dff63022328c593fa72b5c31f2007f78ea746433371d5d1f",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-realtime15/gpt_realtime/normal",
+      "model": "gpt_realtime",
+      "model_id": "gpt-realtime-1.5",
+      "scenario": "normal",
+      "execution_status": "failed",
+      "execution_error": "client_transport_error_EOFError",
+      "endpoint": "wss://aidp.bytedance.net/openai/realtime",
+      "input_seconds": 0.0,
+      "trigger": null,
+      "opening_controls_not_counted_as_barge_in": 0,
+      "post_injection_controls": [],
+      "cancelled_pending_bytes": 0,
+      "old_audio_played_after_cancel": [],
+      "response_done_statuses": {},
+      "gemini_content_flags": {},
+      "raw_audio": {
+        "seconds": 0.0,
+        "rms_le_100_seconds": 0,
+        "longest_quiet_seconds": 0,
+        "leading_quiet_seconds": 0,
+        "first_voice_seconds": null,
+        "sha256": "712618020da1c97986d60975b6a279bb8b4f90b4ab392fa5d278df7fb89c5cc0"
+      },
+      "trace_sha256": "e8142be99bd2784136d3dddf9c7b663f708f01750a45d57991b311f96452db85",
+      "run_root": "data/simulations/control-signals/20261112-realtime15"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-salmonn-drain-fixed/salmonn/normal",
+      "model": "salmonn",
+      "scenario": "normal",
+      "execution_status": "observed",
+      "execution_error": null,
+      "trigger": null,
+      "native_flags": {},
+      "native_states": {
+        "audio_ingest": 492,
+        "frontend_startup": 1,
+        "native_token": 491,
+        "playback": 491,
+        "native_assistant_start": 1,
+        "playback_turn_ended": 1
+      },
+      "externally_forced_steps": [],
+      "cancelled_pending_bytes": 0,
+      "input_ticks": 492,
+      "nonempty_output_ticks": 387,
+      "output_samples": 495360,
+      "provenance": {
+        "checkpoint": "/mnt/bn/audio-visual-llm-data2/yuwenyi/playground/exp_results/cu12_stage2-0519_fc-180_aes_er0_chunk30_llama31/checkpoint-44000",
+        "checkpoint_variant": "cu12_stage2-0519_fc-180_aes_er0_chunk30_llama31",
+        "training_config_sha256": "9ec76a7d1c387426d654628fb94aeaaaf218b32da1c8f55ad5c0cef187844d9b",
+        "runtime_source_sha256": {
+          "utils.py": "d2b39beb522042eb7ead7805154a3af4a617b77b9727faa2cc89154cb3390692",
+          "models/modeling_llama_salmonn_omni.py": "f701e95f548a2c775e3d7535dbd4ca1fcc287d269519b6982a53af020fee6a7d",
+          "models/streaming_transformer_encoder_v2/audio_encoder.py": "68935647e3418af5bf64d24edaac22ca880a3028ce568f1e1818e30403d79957",
+          "models/streaming_transformer_encoder_v2/subsampling.py": "321c2f004610eb45e593b0c5a961f48991cb7e482621bbc250093cb7a0d611d1",
+          "models/streaming_transformer_encoder_v2/transformer_encoder.py": "b1f963de65df52b798a4dad3a5e96703003312900eec9b7a3e4ae029dc6fe362"
+        },
+        "input_sample_rate": 16000,
+        "output_sample_rate": 16000,
+        "tick_ms": 80,
+        "frontend_startup_ticks": 1,
+        "playback_lead_seconds": 0.4,
+        "echo_ratio": 0.0,
+        "self_audio_source": "previous actually played 80ms block",
+        "greedy": true,
+        "seed": 42,
+        "speech_end_token_id": 128258,
+        "speech_end_control": "text_eot_then_playback_drain_then_input_marker",
+        "encode_chunk_seconds": 30
+      },
+      "trace_sha256": "1478d48749d45e81288bb665454632687344222f4614bde5740df417d19e4f54",
+      "raw_audio": {
+        "seconds": 30.96,
+        "rms_le_100_seconds": 5.599999999999996,
+        "longest_quiet_seconds": 0.6,
+        "leading_quiet_seconds": 0.1,
+        "first_voice_seconds": 0.1,
+        "sha256": "ab09b0c9ef29c6cb013d034a83c89048211acfe22aaf6e6391603524a1d00726"
+      },
+      "run_root": "data/simulations/control-signals/20261112-salmonn-drain-fixed",
+      "native_probe_source_sha256": "2f3283eb126b1606048edef476b7a6ca4340860704538124b5137a4f38cb63c0",
+      "salmonn_worker_source_sha256": "12080d264185bb8b797f3f549afa252c706f163de6257bf72533f3b6abc4ef7d"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-salmonn-drain-fixed/salmonn/normal_then_interruption",
+      "model": "salmonn",
+      "scenario": "normal_then_interruption",
+      "execution_status": "observed",
+      "execution_error": null,
+      "trigger": {
+        "tick": 677,
+        "sim_ms": 54160,
+        "model_frame_rms": 1198,
+        "queued_bytes": 0,
+        "user_chunks": 95
+      },
+      "native_flags": {},
+      "native_states": {
+        "audio_ingest": 865,
+        "frontend_startup": 1,
+        "native_token": 864,
+        "playback": 864,
+        "native_assistant_start": 2,
+        "playback_turn_ended": 1,
+        "listening_after_playback": 1
+      },
+      "externally_forced_steps": [],
+      "cancelled_pending_bytes": 0,
+      "input_ticks": 865,
+      "nonempty_output_ticks": 616,
+      "output_samples": 788480,
+      "provenance": {
+        "checkpoint": "/mnt/bn/audio-visual-llm-data2/yuwenyi/playground/exp_results/cu12_stage2-0519_fc-180_aes_er0_chunk30_llama31/checkpoint-44000",
+        "checkpoint_variant": "cu12_stage2-0519_fc-180_aes_er0_chunk30_llama31",
+        "training_config_sha256": "9ec76a7d1c387426d654628fb94aeaaaf218b32da1c8f55ad5c0cef187844d9b",
+        "runtime_source_sha256": {
+          "utils.py": "d2b39beb522042eb7ead7805154a3af4a617b77b9727faa2cc89154cb3390692",
+          "models/modeling_llama_salmonn_omni.py": "f701e95f548a2c775e3d7535dbd4ca1fcc287d269519b6982a53af020fee6a7d",
+          "models/streaming_transformer_encoder_v2/audio_encoder.py": "68935647e3418af5bf64d24edaac22ca880a3028ce568f1e1818e30403d79957",
+          "models/streaming_transformer_encoder_v2/subsampling.py": "321c2f004610eb45e593b0c5a961f48991cb7e482621bbc250093cb7a0d611d1",
+          "models/streaming_transformer_encoder_v2/transformer_encoder.py": "b1f963de65df52b798a4dad3a5e96703003312900eec9b7a3e4ae029dc6fe362"
+        },
+        "input_sample_rate": 16000,
+        "output_sample_rate": 16000,
+        "tick_ms": 80,
+        "frontend_startup_ticks": 1,
+        "playback_lead_seconds": 0.4,
+        "echo_ratio": 0.0,
+        "self_audio_source": "previous actually played 80ms block",
+        "greedy": true,
+        "seed": 42,
+        "speech_end_token_id": 128258,
+        "speech_end_control": "text_eot_then_playback_drain_then_input_marker",
+        "encode_chunk_seconds": 30
+      },
+      "trace_sha256": "6b082c9919bdbe09f4bfe7a47a22d1050794e6c37f25aadf4fbd5fa3df12c7fa",
+      "raw_audio": {
+        "seconds": 49.28,
+        "rms_le_100_seconds": 8.199999999999987,
+        "longest_quiet_seconds": 0.6,
+        "leading_quiet_seconds": 0.1,
+        "first_voice_seconds": 0.1,
+        "sha256": "613211e8dff6537886a0792f9f6071b496455905696376cf81321c25076f0da1"
+      },
+      "run_root": "data/simulations/control-signals/20261112-salmonn-drain-fixed",
+      "native_probe_source_sha256": "2f3283eb126b1606048edef476b7a6ca4340860704538124b5137a4f38cb63c0",
+      "salmonn_worker_source_sha256": "12080d264185bb8b797f3f549afa252c706f163de6257bf72533f3b6abc4ef7d"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-salmonn-zh/salmonn/interruption",
+      "model": "salmonn",
+      "scenario": "interruption",
+      "execution_status": "observed",
+      "execution_error": null,
+      "trigger": {
+        "tick": 125,
+        "sim_ms": 10000,
+        "model_frame_rms": 260,
+        "queued_bytes": 0,
+        "user_chunks": 80
+      },
+      "native_flags": {},
+      "native_states": {
+        "audio_ingest": 313,
+        "frontend_startup": 1,
+        "native_token": 312,
+        "playback": 312,
+        "native_assistant_start": 1
+      },
+      "externally_forced_steps": [],
+      "cancelled_pending_bytes": 0,
+      "input_ticks": 313,
+      "nonempty_output_ticks": 229,
+      "output_samples": 293120,
+      "provenance": {
+        "checkpoint": "/mnt/bn/audio-visual-llm-data2/yuwenyi/playground/exp_results/cu12_stage2-0519_fc-180_aes_er0_chunk30_llama31/checkpoint-44000",
+        "checkpoint_variant": "cu12_stage2-0519_fc-180_aes_er0_chunk30_llama31",
+        "training_config_sha256": "9ec76a7d1c387426d654628fb94aeaaaf218b32da1c8f55ad5c0cef187844d9b",
+        "runtime_source_sha256": {
+          "utils.py": "d2b39beb522042eb7ead7805154a3af4a617b77b9727faa2cc89154cb3390692",
+          "models/modeling_llama_salmonn_omni.py": "f701e95f548a2c775e3d7535dbd4ca1fcc287d269519b6982a53af020fee6a7d",
+          "models/streaming_transformer_encoder_v2/audio_encoder.py": "68935647e3418af5bf64d24edaac22ca880a3028ce568f1e1818e30403d79957",
+          "models/streaming_transformer_encoder_v2/subsampling.py": "321c2f004610eb45e593b0c5a961f48991cb7e482621bbc250093cb7a0d611d1",
+          "models/streaming_transformer_encoder_v2/transformer_encoder.py": "b1f963de65df52b798a4dad3a5e96703003312900eec9b7a3e4ae029dc6fe362"
+        },
+        "input_sample_rate": 16000,
+        "output_sample_rate": 16000,
+        "tick_ms": 80,
+        "frontend_startup_ticks": 1,
+        "playback_lead_seconds": 0.4,
+        "echo_ratio": 0.0,
+        "self_audio_source": "previous actually played 80ms block",
+        "greedy": true,
+        "seed": 42,
+        "speech_end_token_id": 128258,
+        "encode_chunk_seconds": 30
+      },
+      "trace_sha256": "ec9d419a368107e065717079c900f3b9c54914f10b7843d17b6eb533bda6b00e",
+      "raw_audio": {
+        "seconds": 18.32,
+        "rms_le_100_seconds": 5.399999999999997,
+        "longest_quiet_seconds": 0.7,
+        "leading_quiet_seconds": 0.2,
+        "first_voice_seconds": 0.2,
+        "sha256": "4cf330f8c7e1fa3d78eb4261f21ffdc9988135abb55e45c9ce696454fec164e2"
+      },
+      "run_root": "data/simulations/control-signals/20261112-salmonn-zh",
+      "native_probe_source_sha256": "41ece250ca3cf1e86e8f4c61e2a2072ab97132ce250531bdb5a9d38ec3b58b07",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-salmonn-zh/salmonn/normal",
+      "model": "salmonn",
+      "scenario": "normal",
+      "execution_status": "observed",
+      "execution_error": null,
+      "trigger": null,
+      "native_flags": {},
+      "native_states": {
+        "audio_ingest": 875,
+        "frontend_startup": 1,
+        "native_token": 874,
+        "playback": 874,
+        "native_assistant_start": 1
+      },
+      "externally_forced_steps": [],
+      "cancelled_pending_bytes": 0,
+      "input_ticks": 875,
+      "nonempty_output_ticks": 791,
+      "output_samples": 1012480,
+      "provenance": {
+        "checkpoint": "/mnt/bn/audio-visual-llm-data2/yuwenyi/playground/exp_results/cu12_stage2-0519_fc-180_aes_er0_chunk30_llama31/checkpoint-44000",
+        "checkpoint_variant": "cu12_stage2-0519_fc-180_aes_er0_chunk30_llama31",
+        "training_config_sha256": "9ec76a7d1c387426d654628fb94aeaaaf218b32da1c8f55ad5c0cef187844d9b",
+        "runtime_source_sha256": {
+          "utils.py": "d2b39beb522042eb7ead7805154a3af4a617b77b9727faa2cc89154cb3390692",
+          "models/modeling_llama_salmonn_omni.py": "f701e95f548a2c775e3d7535dbd4ca1fcc287d269519b6982a53af020fee6a7d",
+          "models/streaming_transformer_encoder_v2/audio_encoder.py": "68935647e3418af5bf64d24edaac22ca880a3028ce568f1e1818e30403d79957",
+          "models/streaming_transformer_encoder_v2/subsampling.py": "321c2f004610eb45e593b0c5a961f48991cb7e482621bbc250093cb7a0d611d1",
+          "models/streaming_transformer_encoder_v2/transformer_encoder.py": "b1f963de65df52b798a4dad3a5e96703003312900eec9b7a3e4ae029dc6fe362"
+        },
+        "input_sample_rate": 16000,
+        "output_sample_rate": 16000,
+        "tick_ms": 80,
+        "frontend_startup_ticks": 1,
+        "playback_lead_seconds": 0.4,
+        "echo_ratio": 0.0,
+        "self_audio_source": "previous actually played 80ms block",
+        "greedy": true,
+        "seed": 42,
+        "speech_end_token_id": 128258,
+        "encode_chunk_seconds": 30
+      },
+      "trace_sha256": "29829cefd92d856a0d695ffbba1fb58d276404eb8b4b861e11b59b8ed04734ca",
+      "raw_audio": {
+        "seconds": 63.28,
+        "rms_le_100_seconds": 15.099999999999962,
+        "longest_quiet_seconds": 0.7,
+        "leading_quiet_seconds": 0.2,
+        "first_voice_seconds": 0.2,
+        "sha256": "e5b7aec4eb07c697febe6a6f98dfd6e191ea57f81429e52edf66ec11aa53b422"
+      },
+      "run_root": "data/simulations/control-signals/20261112-salmonn-zh",
+      "native_probe_source_sha256": "41ece250ca3cf1e86e8f4c61e2a2072ab97132ce250531bdb5a9d38ec3b58b07",
+      "salmonn_worker_source_sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    }
+  ],
+  "jobs": [
+    {
+      "artifact": "data/simulations/control-signals/20261112-freeze-separated-turn/jobs/freeze_omni-created.json",
+      "sid": "d9b9603909cf32b8"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit/jobs/freeze_omni-created.json",
+      "sid": "93cf27503dbc1f26"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit/jobs/minicpm-created.json",
+      "sid": "c355b968cb6f4a7b"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit/jobs/moshi-created.json",
+      "sid": "9285cb66291e0122"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-live-audit/jobs/salmonn-created.json",
+      "sid": "f539e6ab5db95f22"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-minicpm-hold/jobs/minicpm-created.json",
+      "sid": "5c9f123917d84b29"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-native-v2/jobs/freeze_omni-created.json",
+      "sid": "b85730f14aeee8cc"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-native-v2/jobs/minicpm-created.json",
+      "sid": "93b8bce28519b7e0"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-native-v2/jobs/salmonn-created.json",
+      "sid": "df21de384c89582e"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-salmonn-drain-fixed/jobs/salmonn-created.json",
+      "sid": "78ec303219043164"
+    },
+    {
+      "artifact": "data/simulations/control-signals/20261112-salmonn-zh/jobs/salmonn-created.json",
+      "sid": "1182642b6bb1a17e"
+    }
+  ],
+  "rejected_contracts": {
+    "salmonn/native_speech_end": "Upstream injects EOS into model INPUT after text EOT and real playback drain; do not wait for a model-predicted EOS output"
+  },
+  "failure_notes": {
+    "gpt-realtime-1.5": "Current tested gateway closed before a usable audio session; do not transfer gpt-realtime-2.1 evidence",
+    "initial_salmonn_sample_rate": "Initial probe read the wrong provenance key; excluded from signal admission; rerun with output_sample_rate fallback"
+  }
+}

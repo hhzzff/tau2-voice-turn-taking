@@ -37,6 +37,7 @@ class NativeSession:
         from salmonn_causal import (
             AppendableCausalSpeechBridge,
             CanonicalStreamingFbank,
+            ChunkedCausalSpeechBridge,
             QueuedEncodeSpeechOverride,
             SpeechEmbeddingQueue,
         )
@@ -69,7 +70,7 @@ class NativeSession:
         from cosyvoice.cli.cosyvoice import CosyVoice2
         from lhotse import Fbank, FbankConfig
 
-        training_path = Path(assets["before_sft_training_config"])
+        training_path = Path(config["checkpoint"]).resolve().parent / "config.json"
         training = json.loads(training_path.read_text())
         model_values, data_values = training["model_args"], training["data_args"]
         expected_config = {
@@ -126,7 +127,11 @@ class NativeSession:
         self.model.reset_speech_cache()
         fbank = Fbank(FbankConfig(num_mel_bins=128))
         self.fbank = CanonicalStreamingFbank(fbank, torch)
-        self.speech = AppendableCausalSpeechBridge(model, torch)
+        self.speech = (
+            ChunkedCausalSpeechBridge(model, torch)
+            if float(getattr(model, "encode_chunk_size", -1)) > 0
+            else AppendableCausalSpeechBridge(model, torch)
+        )
         self.queue = SpeechEmbeddingQueue(torch)
         self.override = QueuedEncodeSpeechOverride(model, self.queue)
         self.override.__enter__()
@@ -159,32 +164,40 @@ class NativeSession:
             clause_v2=False,
         )
         self.input_ids = self._tokens(
-            "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n"
+            "<|begin_of_text|>"
             + system_prompt
-            + "<|eot_id|>"
-            + "<|start_header_id|>user<|end_header_id|>\n\n"
             + self.tokenizer.audio_pad_token
-            + "<|eot_id|>"
+            + "<|start_header_id|>user<|end_header_id|>\n\n<|eot_id|>"
         )
         self.think = self._tokens(self.tokenizer.think_token)
         self.start_id = int(self.tokenizer.convert_tokens_to_ids("<|start_header_id|>"))
         self.eot_id = int(self.tokenizer.convert_tokens_to_ids("<|eot_id|>"))
+        self.speech_end_id = (
+            int(self.tokenizer.convert_tokens_to_ids("<|end_of_speech|>"))
+            if model_values.get("add_end_of_speech", False)
+            else None
+        )
         self.cached_length = 0
         self.past = None
         self.tick = 0
-        self.echo_ratio = float(settings.get("echo_ratio", 1.0))
+        self.echo_ratio = float(
+            settings.get("echo_ratio", data_values.get("simple_mode_echo_ratio", 1.0))
+        )
         if not 0 <= self.echo_ratio <= 1:
             raise ValueError("SALMONN echo_ratio must be between zero and one")
         self.played_audio = np.zeros(1280, dtype=np.float32)
         self.speaking = False
         self.end_text = False
+        self._text_eot_tick = None
+        self._playback_end_pending = False
+        self._decoded_this_tick = False
         self.output_ids = []
         self.previous_text = ""
         self.dummy_feature = torch.zeros((1, 1, 128), device=self.device)
         self.dummy_len = torch.ones((1,), device=self.device, dtype=torch.long)
         self.provenance = {
             "checkpoint": str(Path(config["checkpoint"]).resolve()),
-            "checkpoint_variant": "before_sft",
+            "checkpoint_variant": Path(config["checkpoint"]).resolve().parent.name,
             "training_config_sha256": _hash(training_path),
             "runtime_source_sha256": observed,
             "input_sample_rate": 16000,
@@ -196,6 +209,9 @@ class NativeSession:
             "self_audio_source": "previous actually played 80ms block",
             "greedy": True,
             "seed": seed,
+            "speech_end_token_id": self.speech_end_id,
+            "speech_end_control": "text_eot_then_playback_drain_then_input_marker",
+            "encode_chunk_seconds": model_values.get("encode_chunk_size", -1),
         }
 
     def _tokens(self, text):
@@ -252,12 +268,14 @@ class NativeSession:
         self.playback.append_token(token_id, hidden)
         if token_id == self.eot_id:
             self.end_text = True
+            self._text_eot_tick = self.tick
 
     def step(self, pcm16):
         """Append one received frame and advance native generation once."""
         if len(pcm16) != 2560:
             raise ValueError("SALMONN step requires 1280 PCM16 samples (80 ms)")
         torch, np = self.torch, self.np
+        self._decoded_this_tick = False
         audio = np.frombuffer(pcm16, dtype="<i2").astype(np.float32) / 32768.0
         # The incoming user block and previous playback share the same clock.
         # Never feed synthesized-but-unplayed future audio back to the model.
@@ -297,7 +315,19 @@ class NativeSession:
                     "text": "",
                     "events": events,
                 }
+            suffix = self.input_ids[self.cached_length :]
+            required = int((suffix == self.tokenizer.audio_pad_token_id).sum().item())
+            if required > self.queue.available:
+                events.append(
+                    {
+                        "event": "frontend_wait",
+                        "pending_audio_tokens": required,
+                        "available_audio_tokens": self.queue.available,
+                    }
+                )
+                return self._finish_tick("", events)
             token_id, token, hidden = self._decode()
+            self._decoded_this_tick = True
             events.append(
                 {
                     "event": "native_token",
@@ -308,12 +338,38 @@ class NativeSession:
                 }
             )
             text = ""
-            if token_id == self.start_id:
+            if self._playback_end_pending:
+                # Match upstream's end_of_speech state: this prediction only
+                # consumes the controller marker. It is not a new response.
+                self._playback_end_pending = False
+                self._text_eot_tick = None
+                self._next_audio(
+                    self._tokens(
+                        "<|start_header_id|>user<|end_header_id|>\n\n<|eot_id|>"
+                    )
+                )
+                events.append(
+                    {
+                        "event": "listening_after_playback",
+                        "source": "playback_controller",
+                        "ignored_native_prediction": token_id,
+                    }
+                )
+            elif token_id == self.start_id:
                 if not self.speaking:
                     self.speaking = True
                     self.end_text = False
+                    self._text_eot_tick = None
                     self.output_ids = []
                     self.previous_text = ""
+                    if self.playback.active and not self.playback.drained:
+                        self.playback.interrupt()
+                        events.append(
+                            {
+                                "event": "native_new_turn_replaced_playback",
+                                "playback": self.playback.metadata,
+                            }
+                        )
                     self.playback.begin_turn()
                     self._append(
                         self._tokens(
@@ -338,6 +394,7 @@ class NativeSession:
                     )
                     self.speaking = False
                     self.end_text = False
+                    self._text_eot_tick = None
                     self._next_audio(
                         self._tokens(
                             "<|start_header_id|>user<|end_header_id|>\n\n<|eot_id|>"
@@ -363,30 +420,70 @@ class NativeSession:
                     else current
                 )
                 self.previous_text = current
-            output = self.playback.step()
-            encoded = (
-                output.squeeze(0)
-                .clamp(-1, 1)
-                .mul(32767)
-                .round()
-                .to(torch.int16)
-                .numpy()
-                .astype("<i2")
-                .tobytes()
+            return self._finish_tick(text, events)
+
+    def _finish_tick(self, text, events):
+        """Advance playback even when the causal frontend needs more audio."""
+        torch, np = self.torch, self.np
+        output = self.playback.step()
+        encoded = (
+            output.squeeze(0)
+            .clamp(-1, 1)
+            .mul(32767)
+            .round()
+            .to(torch.int16)
+            .numpy()
+            .astype("<i2")
+            .tobytes()
+        )
+        self.played_audio = (
+            np.frombuffer(encoded, dtype="<i2").astype(np.float32) / 32768.0
+        )
+        if (
+            self.speech_end_id is not None
+            and self._decoded_this_tick
+            and self.speaking
+            and self.end_text
+            and self._text_eot_tick is not None
+            and self.tick > self._text_eot_tick
+            and self.playback.drained
+        ):
+            # Upstream fdb_streaming.py inserts EOS only after text EOT has been
+            # consumed and the last real playback samples have been delivered.
+            # Keep the single pending audio pad; replace its THINK tail with
+            # EOS + THINK. Waiting for the model to predict EOS can loop forever.
+            if not torch.equal(self.input_ids[-self.think.numel() :], self.think):
+                raise RuntimeError("SALMONN playback end has no pending THINK tail")
+            self.input_ids = torch.cat(
+                (
+                    self.input_ids[: -self.think.numel()],
+                    self._tokens("<|end_of_speech|>"),
+                    self.think,
+                )
             )
-            self.played_audio = (
-                np.frombuffer(encoded, dtype="<i2").astype(np.float32) / 32768.0
+            self._playback_end_pending = True
+            self.speaking = False
+            self.end_text = False
+            events.append(
+                {
+                    "event": "playback_turn_ended",
+                    "source": "playback_controller",
+                    "reason": "text_eot_and_playback_drained",
+                    "text_eot_tick": self._text_eot_tick,
+                    "appended_token_id": self.speech_end_id,
+                    "playback": self.playback.metadata,
+                }
             )
-            events.append({"event": "playback", **self.playback.metadata})
-            self.tick += 1
-            return {
-                "audio_pcm16_b64": base64.b64encode(encoded).decode("ascii")
-                if any(encoded)
-                else "",
-                "sample_rate": 16000,
-                "text": text,
-                "events": events,
-            }
+        events.append({"event": "playback", **self.playback.metadata})
+        self.tick += 1
+        return {
+            "audio_pcm16_b64": base64.b64encode(encoded).decode("ascii")
+            if any(encoded)
+            else "",
+            "sample_rate": 16000,
+            "text": text,
+            "events": events,
+        }
 
     def close(self):
         """Restore instance overrides and release all session caches."""
