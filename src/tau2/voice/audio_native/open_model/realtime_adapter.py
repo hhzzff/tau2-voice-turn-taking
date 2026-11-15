@@ -13,20 +13,23 @@ import time
 
 from tau2.voice.audio_native.open_model.adapter import OpenModelAdapter
 
+_SHUTDOWN_WAIT_SECONDS = 5
+
 
 class RealtimeOpenModelAdapter(OpenModelAdapter):
     """Keep inference off the tick thread while reusing playback/control logic."""
 
     def __init__(self, config, runtime_config=None, transport=None, *, native_width_ms):
         super().__init__(config, runtime_config, transport)
-        # Own absolute realtime deadlines; suppress the base template's
-        # additional relative minimum-duration sleep. The clock below still
-        # follows wall time and never waits for inference completion.
-        self.pacing = "frozen"
         self.native_width_ms = native_width_ms
         self.draining = False
+        self._thread = None
 
     def connect(self, system_prompt, tools, vad_config, modality="audio"):
+        if self.is_connected:
+            self.disconnect()
+        if self._thread is not None and self._thread.is_alive():
+            raise RuntimeError("Inference from the previous session is still stopping")
         super().connect(system_prompt, tools, vad_config, modality)
         self._inbound = queue.Queue()
         self._outbound = queue.Queue()
@@ -34,6 +37,7 @@ class RealtimeOpenModelAdapter(OpenModelAdapter):
         self._windows = 0
         self._input = bytearray()
         self._submitted = self._completed = 0
+        self.draining = False
         self._stop = threading.Event()
         self._thread = threading.Thread(target=self._infer, daemon=True)
         self._thread.start()
@@ -61,9 +65,11 @@ class RealtimeOpenModelAdapter(OpenModelAdapter):
                 event = self.transport.request(
                     "step", audio_pcm16_b64=base64.b64encode(pcm).decode()
                 )
-                self._outbound.put((index, event))
+                if not self._stop.is_set():
+                    self._outbound.put((index, event))
             except Exception as exc:
-                self._outbound.put((index, exc))
+                if not self._stop.is_set():
+                    self._outbound.put((index, exc))
                 return
 
     async def _execute_tick(self, user_audio, tick_number, result, tick_start):
@@ -99,6 +105,9 @@ class RealtimeOpenModelAdapter(OpenModelAdapter):
                 raise event
             self._process_event(event, result, f"native-{index}")
 
+    async def _wait_for_tick_end(self, remaining: float) -> None:
+        """The absolute deadline was already handled in _execute_tick()."""
+
     def _process_event(self, event, result, tick_number):
         if self.config.model == "freeze_omni" and any(
             item.get("type") == "controller_stop_tts"
@@ -116,13 +125,20 @@ class RealtimeOpenModelAdapter(OpenModelAdapter):
         super()._process_event(event, result, tick_number)
 
     def disconnect(self):
-        if hasattr(self, "_thread"):
+        if not self.is_connected:
+            return
+        if self._thread is not None:
             self._stop.set()
             self._inbound.put(None)
-            self._thread.join(timeout=10)
+            self._thread.join(timeout=_SHUTDOWN_WAIT_SECONDS)
             if self._thread.is_alive():
-                # Never issue disconnect concurrently on the same transport.
-                self.transport.close()
-                self._thread.join(timeout=5)
+                # Close aborts the transport without sending a second request.
+                # Keep the thread handle so connect cannot reset its state early.
                 self._connected = False
+                try:
+                    self.transport.close()
+                    self._thread.join(timeout=_SHUTDOWN_WAIT_SECONDS)
+                finally:
+                    self.clear_buffers()
+                return
         super().disconnect()

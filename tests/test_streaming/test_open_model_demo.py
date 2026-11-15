@@ -120,7 +120,7 @@ def test_demo_exports_previous_handoff_stereo_and_honest_overlap(
         def is_stop(message):
             return False
 
-    config = OpenModelConfig(pacing="frozen", model="minicpm")
+    config = OpenModelConfig.model_construct(model="minicpm", tick_duration_seconds=1.0)
     orchestrator = FullDuplexOrchestrator(
         domain="mock",
         agent=Participant("assistant"),
@@ -154,7 +154,11 @@ def test_demo_exports_previous_handoff_stereo_and_honest_overlap(
         assert wav.getnchannels() == 2
         assert wav.getnframes() == 24000
         assert wav.getframerate() == 8000
-    assert "conversation.wav" in (tmp_path / "index.html").read_text()
+    page = (tmp_path / "index.html").read_text()
+    assert "conversation.wav" in page
+    assert f"{config.tick_duration_ms} ms windows" in page
+    assert "overdue windows may advance without another wait" in page
+    assert "Simulation time freezes" not in page
     assert result["observed_overlap_seconds"] == 2
     assert result["semantic_outcome"] == "not_assessed"
     assert result["scenario_triggered"] is False
@@ -264,7 +268,7 @@ def test_real_user_scenario_uses_only_delivered_asr_and_triggers_backchannel(
         def is_stop(message):
             return False
 
-    config = OpenModelConfig(pacing="frozen", model=model)
+    config = OpenModelConfig(model=model)
     user = build_demo_user(config, scenario)
     orchestrator = FullDuplexOrchestrator(
         domain="mock",
@@ -374,7 +378,7 @@ def test_observed_trigger_follows_utterance_through_silent_chunks(
         def is_stop(message):
             return False
 
-    config = OpenModelConfig(pacing="frozen", model="minicpm")
+    config = OpenModelConfig.model_construct(model="minicpm", tick_duration_seconds=1.0)
     orchestrator = FullDuplexOrchestrator(
         domain="mock",
         agent=Participant("assistant"),
@@ -501,7 +505,7 @@ def test_qa_waits_through_asr_no_speech_then_responds_to_real_transcript(
         def is_stop(message):
             return False
 
-    config = OpenModelConfig(pacing="frozen", model="minicpm")
+    config = OpenModelConfig.model_construct(model="minicpm", tick_duration_seconds=1.0)
     user = build_demo_user(config, "qa")
     orchestrator = FullDuplexOrchestrator(
         domain="mock",

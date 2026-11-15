@@ -1,12 +1,6 @@
 # Shared English dialogue protocol
 
-> 2026-11-14 决策：默认采用 **100ms 异步调度窗口**，不等待原生推理完成才推进。
-> 原生输入块仍为 SALMONN 80ms、MiniCPM 1000ms，由接入层缓冲拼接。
-> 注册的 SALMONN/MiniCPM agent 和 demo 默认采用此模式；`pacing="frozen"`
-> （demo 的 `--pacing frozen`）仅用于显式复现旧实验。Moshi/Freeze-Omni
-> 仍通过实验入口接入。本决策不表示已通过全事件误差 ≤100ms 的公平性认证。
-> 下文原生 tick / 冻结时间的描述保留作历史方案记录。
-
+See [ADR 0002](adr/0002-realtime-open-model-scheduling.md) for the active 100 ms scheduler.
 
 `ordered_conversation` compares the [currently selected SALMONN checkpoint](open-model-contract-20261102.md) and MiniCPM-o-4.5 with the same
 stage order and English-only user generation and agent instructions. Scheduling
@@ -38,6 +32,6 @@ fresh post-user-turn heard snapshots and played utterance extents are exported s
 semantic outcomes. A missing opportunity stays missing; no native model stop
 or successful backchannel is manufactured to complete the checklist.
 
-The scheduler still exchanges previous-tick audio with frozen simulation time
-and native 80ms / 1000ms widths. Normal user synthesis, chunking, ASR and queues
+The scheduler exchanges previous-tick audio in 100 ms windows. The adapter
+assembles native input blocks of 80 ms for SALMONN and 1000 ms for MiniCPM. Normal user synthesis, chunking, ASR and queues
 are reused. The model owns its own playback and listening transitions.

@@ -56,9 +56,10 @@ def build_scheduler(
     model, audio, runtime_config, transport, *, realtime=False, window_ms=100
 ):
     """Build actual production step/agent/adapter; only user and runtime are injected."""
-    from tau2.agent.open_model_agent import create_open_model_agent
+    from tau2.agent.discrete_time_audio_native_agent import DiscreteTimeAudioNativeAgent
     from tau2.domains.mock.environment import get_environment, get_tasks
     from tau2.orchestrator.full_duplex_orchestrator import FullDuplexOrchestrator
+    from tau2.voice.audio_native.open_model.adapter import OpenModelAdapter
 
     width = window_ms if realtime else WIDTHS[model]
     # Moshi/Freeze are experimental runtime bindings to the existing adapter;
@@ -72,32 +73,22 @@ def build_scheduler(
     if realtime:
         from realtime_adapter import RealtimeOpenModelAdapter
 
-        from tau2.agent.discrete_time_audio_native_agent import (
-            DiscreteTimeAudioNativeAgent,
-        )
-
         adapter = RealtimeOpenModelAdapter(
             config, runtime_config, transport, native_width_ms=WIDTHS[model]
         )
-        agent = DiscreteTimeAudioNativeAgent(
-            tools=[],
-            domain_policy=PROMPT,
-            tick_duration_ms=width,
-            adapter=adapter,
-            provider=model,
-            model=config.model_identity,
-            vad_config={},
-            max_inactive_seconds=0,
-        )
-        agent._owns_adapter = True
     else:
-        agent = create_open_model_agent(
-            [],
-            PROMPT,
-            open_model_config=config,
-            runtime_config=runtime_config,
-            transport=transport,
-        )
+        adapter = OpenModelAdapter(config, runtime_config, transport)
+    agent = DiscreteTimeAudioNativeAgent(
+        tools=[],
+        domain_policy=PROMPT,
+        tick_duration_ms=width,
+        adapter=adapter,
+        provider=model,
+        model=config.model_identity,
+        vad_config={},
+        max_inactive_seconds=0,
+    )
+    agent._owns_adapter = True
     task = next(t for t in get_tasks() if t.id == "create_task_1")
     scheduler = FullDuplexOrchestrator(
         domain="mock",

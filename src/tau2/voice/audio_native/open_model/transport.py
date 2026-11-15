@@ -16,13 +16,17 @@ class SubprocessTransport:
         self.command = command
         self.timeout = timeout_seconds
         self.process = None
+        self._close_lock = threading.Lock()
         self.session = uuid.uuid4().hex
         self.sequence = 0
 
     def request(self, op, **payload):
         """Wait for a completed operation, independent of audio time."""
-        if self.process is None:
-            self.process = subprocess.Popen(
+        process = self.process
+        if process is None:
+            if op != "connect":
+                raise RuntimeError("Native runtime is closed")
+            self.process = process = subprocess.Popen(
                 self.command,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
@@ -30,17 +34,22 @@ class SubprocessTransport:
                 bufsize=1,
             )
             self.lines = queue.Queue()
+            stdout, lines = process.stdout, self.lines
 
             def read():
-                for line in self.process.stdout:
-                    self.lines.put(line)
-                self.lines.put(None)
+                # A reader draining a closed child must never publish to the
+                # replacement process's queue after reconnect.
+                try:
+                    for line in stdout:
+                        lines.put(line)
+                finally:
+                    lines.put(None)
 
             threading.Thread(target=read, daemon=True).start()
         self.sequence += 1
         request = dict(payload, op=op, session_id=self.session, sequence=self.sequence)
-        self.process.stdin.write(json.dumps(request) + "\n")
-        self.process.stdin.flush()
+        process.stdin.write(json.dumps(request) + "\n")
+        process.stdin.flush()
         try:
             line = self.lines.get(timeout=self.timeout)
         except queue.Empty as exc:
@@ -52,14 +61,17 @@ class SubprocessTransport:
 
     def close(self):
         """Terminate and reap the isolated process."""
-        if self.process is not None:
-            self.process.terminate()
-            try:
-                self.process.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                self.process.kill()
-                self.process.wait()
+        with self._close_lock:
+            process = self.process
+            if process is None:
+                return
             self.process = None
+            process.terminate()
+            try:
+                process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
 
 
 def validate_response(response, session, sequence):
@@ -92,26 +104,29 @@ class MailboxTransport:
             self.directory.mkdir(exist_ok=False)
             self.sequence = 0
         self.sequence += 1
-        stem = f"{self.sequence:08d}"
-        temporary = self.directory / (stem + ".tmp")
+        directory, session, sequence = self.directory, self.session, self.sequence
+        closed = directory / "closed"
+        stem = f"{sequence:08d}"
+        temporary = directory / (stem + ".tmp")
         temporary.write_text(
-            json.dumps(
-                dict(payload, op=op, session_id=self.session, sequence=self.sequence)
-            )
+            json.dumps(dict(payload, op=op, session_id=session, sequence=sequence))
         )
-        temporary.replace(self.directory / (stem + ".request.json"))
-        response = self.directory / (stem + ".response.json")
+        temporary.replace(directory / (stem + ".request.json"))
+        response = directory / (stem + ".response.json")
         deadline = time.monotonic() + self.timeout
-        while not response.exists():
+        while True:
+            if closed.exists():
+                raise RuntimeError(f"Mailbox session {session} is closed")
+            if response.exists():
+                return validate_response(
+                    json.loads(response.read_text()), session, sequence
+                )
             if time.monotonic() >= deadline:
-                self.close()
+                closed.touch()
                 raise TimeoutError(
-                    f"Merlin runtime {op} exceeded {self.timeout}s; session {self.session}"
+                    f"Merlin runtime {op} exceeded {self.timeout}s; session {session}"
                 )
             time.sleep(0.05)
-        return validate_response(
-            json.loads(response.read_text()), self.session, self.sequence
-        )
 
     def close(self):
         """Mark abandoned sessions so the worker releases model state."""

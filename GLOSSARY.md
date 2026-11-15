@@ -35,3 +35,9 @@ A brief listener acknowledgement that does not seek to take the floor.
 
 **User speech cancellation**:
 Withdrawal of the user's remaining unheard speech after yielding the floor. Speech already heard by the agent remains part of the conversation.
+
+**Session resumption**:
+Continuing an existing conversation after a connection loss using its retained state.
+
+**Session isolation**:
+Keeping the inputs, outputs, and errors of each conversation within that conversation, even when another starts before earlier work has finished.

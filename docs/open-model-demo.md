@@ -1,12 +1,6 @@
-# Frozen-time open-model demo
+# Realtime open-model demo
 
-> 2026-11-14 决策：默认采用 **100ms 异步调度窗口**，不等待原生推理完成才推进。
-> 原生输入块仍为 SALMONN 80ms、MiniCPM 1000ms，由接入层缓冲拼接。
-> 注册的 SALMONN/MiniCPM agent 和 demo 默认采用此模式；`pacing="frozen"`
-> （demo 的 `--pacing frozen`）仅用于显式复现旧实验。Moshi/Freeze-Omni
-> 仍通过实验入口接入。本决策不表示已通过全事件误差 ≤100ms 的公平性认证。
-> 下文原生 tick / 冻结时间的描述保留作历史方案记录。
-
+See [ADR 0002](adr/0002-realtime-open-model-scheduling.md) for the active 100 ms scheduler.
 
 The controller runs the existing `FullDuplexOrchestrator.initialize()/step()` and
 `VoiceStreamingUserSimulator` generation, synthesis, state and chunking. A scenario
@@ -22,14 +16,15 @@ the authenticated controller:
 
 ```bash
 python -m tau2.scripts.open_model_demo \
-  --model minicpm --tick-ms 1000 --scenario user_backchannel \
+  --model minicpm --tick-ms 100 --scenario user_backchannel \
   --runtime-config /path/to/frozen-minicpm-runtime.json \
   --mailbox /shared/run/mailbox --output /shared/run/demo --seconds 30
 ```
 
-Use `salmonn --tick-ms 80` for the selected 0519 / Llama 3.1 checkpoint-44000
+Use `--model salmonn` for the selected 0519 / Llama 3.1 checkpoint-44000
 (see [checkpoint details](open-model-contract-20261102.md)). Omitting `--tick-ms`
-selects the native duration. A mismatching value fails before runtime connection.
+selects the fixed 100 ms scheduler window for either model. A mismatching value
+fails before runtime connection.
 Each independent run requires a fresh empty output directory and clean mailbox.
 The controller disconnects the adapter after the run, including failure.
 

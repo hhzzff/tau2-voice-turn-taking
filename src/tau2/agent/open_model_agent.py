@@ -3,7 +3,6 @@
 from tau2.agent.discrete_time_audio_native_agent import DiscreteTimeAudioNativeAgent
 from tau2.config import OPEN_MODEL_TICK_DURATION_MS
 from tau2.data_model.simulation import OpenModelConfig
-from tau2.voice.audio_native.open_model.adapter import OpenModelAdapter
 from tau2.voice.audio_native.open_model.realtime_adapter import RealtimeOpenModelAdapter
 
 
@@ -15,19 +14,11 @@ def create_open_model_agent(tools, domain_policy, **kwargs):
     if kwargs.get("tick_duration_seconds") is not None:
         options["tick_duration_seconds"] = kwargs["tick_duration_seconds"]
     config = kwargs.get("open_model_config") or OpenModelConfig(**options)
-    adapter_class = (
-        RealtimeOpenModelAdapter if config.pacing == "realtime" else OpenModelAdapter
-    )
-    adapter_options = (
-        {"native_width_ms": OPEN_MODEL_TICK_DURATION_MS[config.model]}
-        if config.pacing == "realtime"
-        else {}
-    )
-    adapter = adapter_class(
+    adapter = RealtimeOpenModelAdapter(
         config,
         runtime_config=kwargs.get("runtime_config"),
         transport=kwargs.get("transport"),
-        **adapter_options,
+        native_width_ms=OPEN_MODEL_TICK_DURATION_MS[config.model],
     )
     agent = DiscreteTimeAudioNativeAgent(
         tools=[],

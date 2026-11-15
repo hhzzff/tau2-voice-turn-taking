@@ -1,8 +1,8 @@
 """SALMONN's existing public adapter seam against an external runtime double."""
 
 import base64
+from types import SimpleNamespace
 
-from tau2.data_model.simulation import OpenModelConfig
 from tau2.voice.audio_native.open_model.adapter import OpenModelAdapter
 
 
@@ -32,7 +32,12 @@ class Runtime:
 
 def test_salmonn_startup_does_not_consume_future_tick_and_reconnect_is_fresh():
     adapter = OpenModelAdapter(
-        OpenModelConfig(pacing="frozen", model="salmonn"),
+        SimpleNamespace(
+            pacing="frozen",
+            model="salmonn",
+            tick_duration_ms=80,
+            model_identity="SALMONN-Omni-0519-fc180-aes-er0-chunk30-llama31-checkpoint-44000",
+        ),
         runtime_config={},
         transport=Runtime(),
     )

@@ -1,9 +1,19 @@
 """Public adapter behavior using an external runtime boundary double."""
 
 import base64
+from types import SimpleNamespace
 
-from tau2.data_model.simulation import OpenModelConfig
 from tau2.voice.audio_native.open_model.adapter import OpenModelAdapter
+
+
+def _native_step_config():
+    """Drive one synchronous native request per tick for playback unit tests."""
+    return SimpleNamespace(
+        pacing="frozen",
+        model="minicpm",
+        tick_duration_ms=1000,
+        model_identity="MiniCPM-o-4.5",
+    )
 
 
 class Runtime:
@@ -30,7 +40,7 @@ class Runtime:
 
 def test_buffered_output_still_consumes_each_input_and_reconnect_resets():
     adapter = OpenModelAdapter(
-        OpenModelConfig(pacing="frozen", model="minicpm"),
+        _native_step_config(),
         runtime_config={},
         transport=Runtime(),
     )
@@ -64,7 +74,7 @@ for line in sys.stdin:
  print(json.dumps(dict(out,session_id=r['session_id'],sequence=r['sequence'])),flush=True)
 """)
     adapter = OpenModelAdapter(
-        OpenModelConfig(pacing="frozen", model="minicpm"),
+        _native_step_config(),
         runtime_config={},
         transport=SubprocessTransport(
             [sys.executable, str(worker)], timeout_seconds=10
@@ -114,7 +124,7 @@ class MiniCPMWorker:
     )
     transport = MailboxTransport(mailbox, timeout_seconds=5)
     adapter = OpenModelAdapter(
-        OpenModelConfig(pacing="frozen", model="minicpm"),
+        _native_step_config(),
         runtime_config={},
         transport=transport,
     )
@@ -171,7 +181,7 @@ def test_native_listen_state_is_preserved_alongside_delivered_audio():
             return result
 
     adapter = OpenModelAdapter(
-        OpenModelConfig(pacing="frozen", model="minicpm"),
+        _native_step_config(),
         runtime_config={},
         transport=ListeningRuntime(),
     )
@@ -218,7 +228,7 @@ def test_native_listen_cancels_unplayed_tail_without_claiming_user_interruption(
             return result
 
     adapter = OpenModelAdapter(
-        OpenModelConfig(pacing="frozen", model="minicpm"),
+        _native_step_config(),
         runtime_config={},
         transport=ListeningRuntime(),
     )
@@ -246,7 +256,7 @@ def test_natural_turn_end_drains_tail_even_when_next_tick_reports_listening():
             return result
 
     adapter = OpenModelAdapter(
-        OpenModelConfig(pacing="frozen", model="minicpm"),
+        _native_step_config(),
         runtime_config={},
         transport=FinishedRuntime(),
     )
@@ -279,7 +289,7 @@ def test_explicit_interrupt_is_forwarded_and_keeps_replacement_response_tail():
             return result
 
     adapter = OpenModelAdapter(
-        OpenModelConfig(pacing="frozen", model="minicpm"),
+        _native_step_config(),
         runtime_config={},
         transport=InterruptedRuntime(),
     )
@@ -301,3 +311,23 @@ def test_explicit_interrupt_is_forwarded_and_keeps_replacement_response_tail():
         assert control["signal"] == "external_interrupt"
     finally:
         adapter.disconnect()
+
+
+def test_mailbox_close_unblocks_pending_request_without_waiting_for_response(tmp_path):
+    import time
+    from concurrent.futures import ThreadPoolExecutor
+
+    import pytest
+
+    from tau2.voice.audio_native.open_model.transport import MailboxTransport
+
+    transport = MailboxTransport(tmp_path, timeout_seconds=3)
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        pending = pool.submit(transport.request, "step")
+        deadline = time.monotonic() + 1
+        while not list(tmp_path.glob("*/*.request.json")):
+            assert time.monotonic() < deadline, "request was not published"
+            time.sleep(0.01)
+        transport.close()
+        with pytest.raises(RuntimeError, match="is closed"):
+            pending.result(timeout=1)

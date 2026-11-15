@@ -233,5 +233,124 @@ def test_registered_open_models_default_to_100ms_realtime():
             [], "", model=model, runtime_config={}, transport=object()
         )
         assert isinstance(agent.adapter, RealtimeOpenModelAdapter)
+        assert agent.adapter.pacing == "realtime"
         assert agent.adapter.native_width_ms == native_width
         assert agent.adapter.bytes_per_tick == 800
+
+
+def test_reconnect_cannot_reuse_transport_with_old_inference_in_flight(monkeypatch):
+    import pytest
+
+    from tau2.data_model.simulation import OpenModelConfig
+    from tau2.voice.audio_native.open_model import realtime_adapter
+
+    monkeypatch.setattr(realtime_adapter, "_SHUTDOWN_WAIT_SECONDS", 0.05, raising=False)
+    started = threading.Event()
+    release = threading.Event()
+    returned = threading.Event()
+
+    class Runtime:
+        connects = 0
+
+        def request(self, op, **payload):
+            if op == "connect":
+                self.connects += 1
+                return {"sample_rate": 16000}
+            if op == "step":
+                label = "old" if self.connects == 1 else "new"
+                if label == "old":
+                    started.set()
+                    assert release.wait(25)
+                    returned.set()
+                return {
+                    "sample_rate": 16000,
+                    "audio_pcm16_b64": "",
+                    "events": [{"session_label": label}],
+                }
+            return {}
+
+        def close(self):
+            pass  # A runtime that cannot immediately cancel the old request.
+
+    runtime = Runtime()
+    adapter = realtime_adapter.RealtimeOpenModelAdapter(
+        OpenModelConfig(model="salmonn"), {}, runtime, native_width_ms=80
+    )
+    adapter.connect("old", [], {})
+    try:
+        adapter.run_tick(b"\xff" * 800)
+        assert started.wait(2)
+        adapter.disconnect()
+        with pytest.raises(RuntimeError, match="previous session"):
+            adapter.connect("new", [], {})
+        assert runtime.connects == 1
+
+        release.set()
+        assert returned.wait(2)
+        deadline = time.monotonic() + 2
+        while True:
+            try:
+                adapter.connect("new", [], {})
+                break
+            except RuntimeError as exc:
+                assert "previous session" in str(exc)
+                assert time.monotonic() < deadline
+                time.sleep(0.01)
+        labels = []
+        for _ in range(3):
+            result = adapter.run_tick(b"\xff" * 800)
+            labels.extend(
+                e["session_label"] for e in result.events if "session_label" in e
+            )
+        assert labels and set(labels) == {"new"}
+    finally:
+        release.set()
+        adapter.disconnect()
+
+
+def test_registered_minicpm_does_not_forward_forced_listening():
+    import pytest
+
+    from tau2.registry import registry
+
+    requests = []
+    submitted = threading.Event()
+
+    class Runtime:
+        def request(self, op, **payload):
+            if op == "connect":
+                return {"sample_rate": 24000}
+            if op == "step":
+                requests.append(payload)
+                submitted.set()
+                return {
+                    "sample_rate": 24000,
+                    "audio_pcm16_b64": "",
+                    "is_listen": True,
+                }
+            return {}
+
+        def close(self):
+            pass
+
+    factory = registry.get_agent_factory("open_model_agent")
+    adapter = factory(
+        [], "", model="minicpm", runtime_config={}, transport=Runtime()
+    ).adapter
+    adapter.connect("", [], {})
+    try:
+        audio = b"\xff" * adapter.bytes_per_tick
+        for controls in ({"interrupt": True}, {"force_listen": True}):
+            with pytest.raises(ValueError, match="native autonomous control only"):
+                adapter.run_tick(audio, **controls)
+        assert not requests
+
+        # Ten accepted 100 ms windows complete the native 1000 ms input block.
+        for _ in range(10):
+            adapter.run_tick(audio)
+        assert submitted.wait(2)
+        assert len(requests) == 1
+        assert set(requests[0]) == {"audio_pcm16_b64"}
+        assert len(base64.b64decode(requests[0]["audio_pcm16_b64"])) == 32000
+    finally:
+        adapter.disconnect()

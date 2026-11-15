@@ -224,7 +224,6 @@ If you use a specific component of $\tau^3$-bench, please cite the corresponding
 Open-model agents and `open_model_demo` now default to 100ms asynchronous
 scheduler windows. SALMONN still consumes native 80ms blocks and MiniCPM consumes
 native 1000ms blocks; the adapter buffers input independently of the output
-collection clock. Explicit `OpenModelConfig(pacing="frozen", ...)` or demo
-`--pacing frozen` retains the historical native-step replay. The shared voice
-tick default is also 100ms. See [timing results and decision](docs/open-model-equivalence-50-plan.md);
+collection clock. Historical native-step replay lives in the comparison
+scripts. The shared voice tick default is also 100ms. See [timing results and decision](docs/open-model-equivalence-50-plan.md);
 this engineering choice is not a claim that all events meet a 100ms error bound.

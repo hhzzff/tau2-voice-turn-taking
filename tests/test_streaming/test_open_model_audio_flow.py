@@ -14,12 +14,14 @@ from tau2.registry import registry
 
 
 @pytest.mark.parametrize(
-    "model,width,byte_count", [("salmonn", 0.08, 2560), ("minicpm", 1.0, 32000)]
+    "model,native_width,byte_count", [("salmonn", 80, 2560), ("minicpm", 1000, 32000)]
 )
-def test_frozen_user_generation_waits_without_losing_previous_audio(
-    model, width, byte_count, get_environment, base_task
+def test_realtime_user_generation_waits_without_losing_previous_audio(
+    model, native_width, byte_count, get_environment, base_task
 ):
     """Wall time can pause, but the previous audio still reaches the native step."""
+    width = 0.1
+    second_block = threading.Event()
     generation_started = threading.Event()
     finish_generation = threading.Event()
     native_inputs = []
@@ -30,6 +32,8 @@ def test_frozen_user_generation_waits_without_losing_previous_audio(
                 return {"sample_rate": 16000}
             if op == "step":
                 native_inputs.append(base64.b64decode(payload["audio_pcm16_b64"]))
+                if len(native_inputs) >= 2:
+                    second_block.set()
                 return {
                     "sample_rate": 16000,
                     "audio_pcm16_b64": "",
@@ -50,7 +54,7 @@ def test_frozen_user_generation_waits_without_losing_previous_audio(
                 generation_started.set()
                 assert finish_generation.wait(10), "test did not release generation"
             # Three known, distinguishable constant mu-law input intervals.
-            value = [0x80, 0x90, 0xA0][state]
+            value = 0x80 if state == 0 else 0x90
             return UserMessage(
                 role="user",
                 content="",
@@ -71,7 +75,7 @@ def test_frozen_user_generation_waits_without_losing_previous_audio(
     agent = registry.get_agent_factory("open_model_agent")(
         [],
         "Listen to every input interval.",
-        open_model_config=OpenModelConfig(pacing="frozen", model=model),
+        open_model_config=OpenModelConfig(model=model),
         runtime_config={},
         transport=NativeRuntime(),
     )
@@ -82,7 +86,6 @@ def test_frozen_user_generation_waits_without_losing_previous_audio(
         environment=get_environment(),
         task=base_task,
         tick_duration_seconds=width,
-        pacing="frozen",
     )
     try:
         scheduler.initialize()
@@ -97,15 +100,17 @@ def test_frozen_user_generation_waits_without_losing_previous_audio(
             finally:
                 finish_generation.set()
             future.result(timeout=10)
-        scheduler.step()
-        assert len(native_inputs) == 2
+        for _ in range((2 * native_width + 99) // 100 - 1):
+            scheduler.step()
+        assert second_block.wait(5)
         assert all(len(chunk) == byte_count for chunk in native_inputs)
-        # Mu-law 0x80 and 0x90 decode to +32124 and +15996. Skip the single
-        # resampler boundary sample; these literals come from the mu-law codec.
+        # The first 100 ms are preserved, followed by the next user's chunk,
+        # even when that boundary falls inside a native model block.
         import struct
 
-        assert struct.unpack_from("<h", native_inputs[0], 4)[0] == 32124
-        assert struct.unpack_from("<h", native_inputs[1], 4)[0] == 15996
+        received = b"".join(native_inputs[:2])
+        assert struct.unpack_from("<h", received, 4)[0] == 32124
+        assert struct.unpack_from("<h", received, 3204)[0] == 15996
     finally:
         finish_generation.set()
         agent.stop()

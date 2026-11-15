@@ -1,4 +1,4 @@
-"""Run and export frozen-time voice demos on the existing orchestrator.
+"""Run and export realtime voice demos on the existing orchestrator.
 
 Launch with ``python -m tau2.scripts.open_model_demo --help``.
 """
@@ -238,7 +238,9 @@ def export_demo(
         '<!doctype html><meta charset="utf-8"><title>τ-voice demo</title>'
         "<style>body{font:16px system-ui;max-width:1100px;margin:2rem auto}td,th{padding:.4rem;border-bottom:1px solid #ddd}pre{white-space:pre-wrap}button{cursor:pointer}</style>"
         f"<h1>{html.escape(config.model_identity)} · {html.escape(scenario)}</h1>"
-        "<p>Left: user · Right: model. Simulation time freezes during computation. Click a tick to seek.</p>"
+        f"<p>Left: user · Right: model. The scheduler uses {config.tick_duration_ms} ms windows "
+        "without waiting for model inference. If user generation pauses audio submission, "
+        "overdue windows may advance without another wait. Click a tick to seek.</p>"
         '<audio id="p" controls src="conversation.wav"></audio>'
         "<p>Speech activity uses audio energy. Semantic outcomes require listening.</p>"
         "<table><thead><tr><th>Tick</th><th>Simulation seconds</th><th>User active s</th><th>Model active s</th><th>Overlap s</th><th>Compute s</th></tr></thead>"
@@ -384,7 +386,6 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--model", required=True, choices=["salmonn", "minicpm"])
     parser.add_argument("--tick-ms", type=int)
-    parser.add_argument("--pacing", choices=["realtime", "frozen"], default="realtime")
     parser.add_argument("--scenario", choices=SCENARIOS, required=True)
     parser.add_argument("--mailbox", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
@@ -393,7 +394,6 @@ def main(argv=None):
     args = parser.parse_args(argv)
     config = OpenModelConfig(
         model=args.model,
-        pacing=args.pacing,
         **(
             {"tick_duration_seconds": args.tick_ms / 1000}
             if args.tick_ms is not None

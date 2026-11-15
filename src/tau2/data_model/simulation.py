@@ -51,7 +51,6 @@ from tau2.config import (
     DEFAULT_YIELD_THRESHOLD_WHEN_INTERRUPTING_SECONDS,
     OPEN_MODEL_IDENTITIES,
     OPEN_MODEL_SCHEDULER_TICK_MS,
-    OPEN_MODEL_TICK_DURATION_MS,
 )
 from tau2.data_model.audio_effects import EffectTimeline
 from tau2.data_model.message import Message, Tick
@@ -67,32 +66,21 @@ SIMULATIONS_DIR = "simulations"
 
 
 class OpenModelConfig(BaseModel):
-    """Use 100ms realtime windows; retain explicit frozen native replay."""
+    """Configure a native open model on the fixed 100 ms scheduler."""
 
     model: Literal["salmonn", "minicpm"]
-    tick_duration_seconds: float = Field(gt=0)
-    pacing: Literal["frozen", "realtime"] = "realtime"
+    tick_duration_seconds: float = OPEN_MODEL_SCHEDULER_TICK_MS / 1000
+    pacing: Literal["realtime"] = "realtime"
 
-    @model_validator(mode="before")
-    @classmethod
-    def native_duration(cls, values):
-        """Validate scheduler width independently of native inference blocks."""
-        if (
-            isinstance(values, dict)
-            and values.get("model") in OPEN_MODEL_TICK_DURATION_MS
-        ):
-            values = dict(values)
-            duration = (
-                OPEN_MODEL_TICK_DURATION_MS[values["model"]] / 1000
-                if values.get("pacing", "realtime") == "frozen"
-                else OPEN_MODEL_SCHEDULER_TICK_MS / 1000
+    @model_validator(mode="after")
+    def validate_scheduler_tick(self):
+        """Reject widths other than the supported scheduler window."""
+        if self.tick_duration_seconds != OPEN_MODEL_SCHEDULER_TICK_MS / 1000:
+            raise ValueError(
+                f"{self.model} requires scheduler tick "
+                f"{OPEN_MODEL_SCHEDULER_TICK_MS / 1000}s"
             )
-            if values.get("tick_duration_seconds", duration) != duration:
-                raise ValueError(
-                    f"{values['model']} requires scheduler tick {duration}s"
-                )
-            values["tick_duration_seconds"] = duration
-        return values
+        return self
 
     @property
     def tick_duration_ms(self) -> int:

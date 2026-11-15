@@ -291,11 +291,15 @@ class DiscreteTimeAdapter(ABC):
         elapsed = asyncio.get_running_loop().time() - tick_start
         remaining = (self.tick_duration_ms / 1000) - elapsed
         result.computation_duration_seconds = elapsed
-        if self.pacing == "realtime" and remaining > 0:
-            await asyncio.sleep(remaining)
+        await self._wait_for_tick_end(remaining)
 
         logger.info(f"Tick {tick_number} completed:\n{result.summary()}")
         return result
+
+    async def _wait_for_tick_end(self, remaining: float) -> None:
+        """Apply the default relative wait unless the adapter owns its clock."""
+        if self.pacing == "realtime" and remaining > 0:
+            await asyncio.sleep(remaining)
 
     @abstractmethod
     async def _execute_tick(
