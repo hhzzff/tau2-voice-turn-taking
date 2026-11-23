@@ -92,9 +92,13 @@ DEFAULT_TEXT_STREAMING_CONFIG = {
 VOICE_USER_SIMULATOR_VERSION = "v1.0"  # fixed, bump on changes
 VOICE_USER_SIMULATOR_DECISION_MODEL = "gpt-4.1"  # overridable
 DEFAULT_DUPLEX_USER_MODEL = "gpt-6.1-terra"
+DEFAULT_DUPLEX_TRANSCRIPTION_MODEL = "whisper-1"
 # Protect recall answers from later test stimuli; these are simulation seconds.
 DEFAULT_DUPLEX_MEMORY_RESPONSE_TIMEOUT_SECONDS = 120.0
 DEFAULT_DUPLEX_RESPONSE_QUIET_SECONDS = 1.0
+DEFAULT_DUPLEX_BACKCHANNEL_MIN_SPEECH_SECONDS = 8.0
+# Deliberate within-turn pauses are kept identical across duplex trials.
+DEFAULT_DUPLEX_PAUSE_SECONDS = 0.75
 DEFAULT_SPEECH_COMPLEXITY = "regular"  # overridable: "control", "regular"
 
 # =============================================================================
@@ -146,6 +150,15 @@ DEFAULT_OPENAI_LIVE_BASE_URL = "wss://api.openai.com/v1/live/sessions"
 DEFAULT_OPENAI_LIVE_MODEL = "gpt-live-1"
 DEFAULT_OPENAI_LIVE_VOICE = "marin"
 DEFAULT_OPENAI_LIVE_CLOSE_TIMEOUT = 15.0
+DEFAULT_VOICE_STREAM_IDLE_SECONDS = 0.5
+DEFAULT_DOUBAO_REALTIME_BASE_URL = (
+    "wss://openspeech.bytedance.com/api/v3/duplex/realtime/dialogue"
+)
+DEFAULT_DOUBAO_REALTIME_MODEL = "1.2.6.1"
+DEFAULT_DOUBAO_REALTIME_VOICE = "zh_female_vv_jupiter_bigtts"
+DEFAULT_DOUBAO_INPUT_SAMPLE_RATE = 16000
+DEFAULT_DOUBAO_OUTPUT_SAMPLE_RATE = 24000
+DEFAULT_DOUBAO_APP_KEY = "PlgvMymc7f3tQnJ6"  # Public protocol constant.
 DEFAULT_OPENAI_VOICE = "alloy"  # overridable
 DEFAULT_OPENAI_NOISE_REDUCTION = "near_field"  # fixed: "near_field", "far_field", None
 DEFAULT_OPENAI_VAD_THRESHOLD_LOW = 0.2  # fixed
@@ -203,6 +216,7 @@ DEFAULT_QWEN_OUTPUT_SAMPLE_RATE = 24000  # fixed, API-defined
 # PROVIDER REGISTRY (derived from above)
 # =============================================================================
 DEFAULT_AUDIO_NATIVE_MODELS = {
+    "doubao": DEFAULT_DOUBAO_REALTIME_MODEL,
     "openai": DEFAULT_OPENAI_REALTIME_MODEL,
     "gemini": DEFAULT_GEMINI_MODEL,
     "xai": DEFAULT_XAI_MODEL,
@@ -221,6 +235,7 @@ DEFAULT_AUDIO_NATIVE_REASONING_EFFORT: dict[str, str | None] = {
 }
 
 AUDIO_NATIVE_PROVIDER_TYPES = {
+    "doubao": "audio_native",
     "openai": "audio_native",
     "gemini": "audio_native",
     "xai": "audio_native",

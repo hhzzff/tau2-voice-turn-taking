@@ -1,0 +1,17 @@
+{
+  "name": "background_speaker_meal_prep_zh",
+  "topic": "忙碌工作日的备餐，重点是省时、省钱和减少额外准备工作。背景中的室友正在和另一位室友讨论周末出行。",
+  "user": {"provider": "openai", "voice": "nova"},
+  "background": {"provider": "openai", "voice": "onyx"},
+  "opening": "我想给工作日准备几顿晚饭，回家热一下就能吃。我周末只有一个小时准备，预算也不高，你有什么简单的建议？",
+  "background_first": "你帮我看看，周六去苏州是坐高铁方便，还是开车方便？",
+  "correction": "刚才是旁边的人在跟别人说话，不是在问你。请记住他的声音，不要回应他，只和我继续聊备餐。",
+  "continuation": [
+    "回到备餐，我不想每天洗很多锅。如果只用一个平底锅，你建议先做哪两样？",
+    "那我就选鸡肉和一种蔬菜。怎么安排这一小时，才能连分装和清洗也一起完成？"
+  ],
+  "background_second": "你再帮我想想，如果当天来回，上午先去博物馆还是先去园林比较好？",
+  "closing": "好的，备餐的事我知道怎么安排了。谢谢你，今天先聊到这里，再见。",
+  "background_gain_db": -8,
+  "min_conversation_seconds": 15
+}

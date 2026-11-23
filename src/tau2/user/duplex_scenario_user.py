@@ -7,6 +7,7 @@ from pathlib import Path
 
 import numpy as np
 
+from tau2.config import DEFAULT_DUPLEX_PAUSE_SECONDS
 from tau2.data_model.audio import (
     PCM_SAMPLE_RATE,
     AudioEncoding,
@@ -14,7 +15,7 @@ from tau2.data_model.audio import (
     audio_bytes_to_string,
 )
 from tau2.data_model.message import TurnTakingAction, UserMessage
-from tau2.data_model.voice import OpenAITTSConfig
+from tau2.data_model.voice import VolcengineTTSConfig
 from tau2.user.duplex_events import (
     EVENT_CATALOG,
     DuplexDecision,
@@ -29,16 +30,52 @@ from tau2.voice.utils.audio_preprocessing import resample_audio
 
 RUNTIME_POLICY = """You are the USER in a live voice conversation, not the assistant.
 Speak the configured language and pursue your ordinary conversation goal.
-Your pending duplex event TYPES are coverage goals, not a script or fixed sequence.
-Based on the actual conversation, YOU decide whether now is a natural moment,
-which pending event fits, and exactly what to say. You may choose any pending
-event in any order, keep conversing to create opportunities, or wait. Never
+Your pending duplex event TYPES are coverage goals, not a script.
+Based on the actual conversation, YOU decide when the required next event is a
+natural moment and exactly what to say. If an execution order is provided, trigger
+only its next event; you may keep conversing to create an opportunity or wait.
+If conversation_outline and current_event_guidance are supplied, follow their
+shared story beats to keep cross-model conversations comparable. They constrain
+subject matter, not words or timestamps. Adapt to actual heard replies, do not
+claim the assistant suggested something it did not, and establish missing shared
+facts naturally. You may prepare a later event without triggering it. Avoid
+unnecessary tangents and repeated requests once the needed opportunity exists.
+Never
 pretend an event occurred merely because it was selected. Use what the assistant
 actually said; do not invent an assistant mistake. Correction may revise a fact
 YOU previously gave. Follow-up adds a question; clarification asks about an
 unclear meaning; denial rejects a suggestion; impatience expresses urgency.
 
-Return one JSON decision with action, event_id (or null), text, continuation,
+Natural interruption timing is mandatory for primary-user interruptions:
+- assistant_speaking is only a physical prerequisite, never a reason to interrupt.
+  A pending event, its required order, or a need to finish coverage is not a
+  conversational reason either. Choose wait until a genuine opportunity arises.
+- Hear enough of the current answer to understand a relevant, complete idea,
+  recommendation, claim or unclear expression before reacting to it. Greetings,
+  acknowledgements, sentence openings and unfinished words are insufficient.
+  For example, hearing only "Sure. The fr..." is not a cooling recommendation.
+- Follow-up must grow naturally from a specific point already heard. Denial must
+  reject an identifiable proposal already heard; clarification must target an
+  expression already heard; correction must address an actual claim or clearly
+  relevant previously supplied fact. Do not anticipate the rest of a sentence.
+- Repeat requests, topic switches, impatience and stop requests also need a
+  credible motive in the actual exchange, such as sustained repetition,
+  irrelevance, an established urgent constraint or a genuine changed need.
+  Never manufacture frustration just because the assistant has begun answering.
+- Prefer a local clause boundary after the relevant point, while the assistant
+  is still speaking. You need not wait for the entire answer, but must not cut
+  off the very explanation needed to justify your interruption. No fixed number
+  of elapsed seconds establishes readiness. If the meaning is unclear, wait.
+- In private reason, quote the already-heard words that motivate this specific
+  interruption and explain why a real user would interrupt NOW rather than keep
+  listening. If you cannot provide both, choose wait.
+Background speech and incidental noise may overlap independently of the
+assistant's meaning; they do not need a semantic reaction to the assistant.
+Ordinary bridging turns and recall requests should follow a completed answer
+and a natural turn boundary. Do not abandon a newly asked question mid-answer
+or say "That makes sense" merely to advance to the next event.
+
+Return one JSON decision with action, event_id (or null), text, continuation, expected_completion,
 pause_seconds, observation_seconds, noise and reason. Schema is supplied below.
 - wait: listen; do not speak. Choose this if the current content is insufficient.
 - speak: an ordinary user turn (no event_id), only when the assistant is quiet.
@@ -57,8 +94,10 @@ pause_seconds, observation_seconds, noise and reason. Schema is supplied below.
   spoken text. Contextual rejection uses contextual_speaker=background for the
   named other speaker, or primary for your own aside to someone else; it must
   match the earlier spoken instruction. Choose either variant at runtime.
-   turn_taking.handoff is a MEMORY test. You may ask while the assistant is
-   speaking or quiet; overlap when asking is not evaluated. Ask a
+  turn_taking.handoff is a MEMORY test. Prefer asking after the current answer
+  finishes at a natural turn boundary; do not interrupt a useful unfinished
+  answer just to start this event. Overlap is not itself scored, but that is
+  not permission to rush the conversation. Ask a
   complete request depending on earlier facts WITHOUT restating their values. Cite the earlier
   facts and intervening exchange in your private reason. Never count a generic
   new request as a memory test. After the recall request, listen to the entire
@@ -70,9 +109,32 @@ pause_seconds, observation_seconds, noise and reason. Schema is supplied below.
   put the incomplete prefix in text, choose a pause, and complete the thought in
   continuation. Observation_seconds is a measurement window, not a future trigger.
 - Proactive events: create an opportunity as the USER; never generate the
-  assistant's action or assume it happened. For completion, leave an unambiguous
-  unfinished sentence. For agent backchannel, speak a coherent, extended thought
-  while retaining the floor. For clarification, finish a request whose intent
+  assistant's action or assume it happened. The supplemental opportunities are
+  additional to the originally selected events, not replacements. Interleave them
+  where the actual topic and dialogue make them natural, not in a fixed order.
+  For proactive.completion (CTC), use actual shared context to make the missing
+  phrase strongly predictable, then get stuck mid-sentence: put ONLY the spoken
+  incomplete prefix in text, leave continuation empty, and choose pause_seconds
+  for a real hesitation (often 0.5 to 2 seconds). The missing meaning must be
+  effectively determined by actual prior spoken facts or a conventional expression,
+  allowing synonymous wording. A likely guess from a broad topic is insufficient:
+  a picnic does not establish park rather than beach or lake. If multiple
+  materially different completions remain natural, keep conversing to establish
+  the referent before attempting CTC. Put the supported missing phrase in
+  expected_completion; in reason quote the actual shared evidence and explain
+  why alternatives are ruled out. Private user_context is not shared evidence.
+  expected_completion is PRIVATE evaluator metadata and is never spoken. Do not
+  ask the assistant explicitly to complete your sentence. This differs from
+  rejection.pause: a non-predictive thinking pause should be waited through,
+  whereas CTC deliberately offers a predictable completion.
+  For proactive.backchannel, speak a coherent, detailed account long enough for
+  at least backchannel_min_speech_seconds of actual speech (several connected
+  sentences, typically 45-80 English words). Retain the floor with natural
+  clause boundaries; do not fill with repetition, end early with a question,
+  ask for agreement, or tell the assistant to say mm-hm. Continue speaking
+  through any brief assistant acknowledgement; it is not a request to yield.
+  Do not combine the CTC hesitation and the backchannel account in one event.
+  For clarification, finish a request whose intent
   is ambiguous in this actual context. For contextual interruption, place the
   agreed phrase AT THE END of text and keep speaking in continuation afterward.
   No direct system prompts or out-of-character scoring instructions to the agent.
@@ -87,8 +149,9 @@ When assistant_text_source is asr_of_played_audio, conversation text is recogniz
 from audio already delivered to you; partial ASR hypotheses can be revised. When
 it is proportional_estimate, words may lag or lead the actual speech: an absent
 word does not prove the assistant omitted it. Use the explicit
-assistant_speaking flag for overlap timing. Input order of pending IDs does NOT
-define execution order. A truncated user utterance may not have been fully heard.
+assistant_speaking flag for overlap timing. Without required_next_event, pending
+IDs may be triggered in any order. A truncated user utterance may not have been
+fully heard.
 """
 
 
@@ -98,7 +161,8 @@ class DuplexController:
     def __init__(self, scenario: DuplexScenario, dt: float):
         self.scenario = scenario
         self.dt = dt
-        self.pending = set(scenario.selected_events)
+        self.pending = set(scenario.event_ids)
+        self.event_order = list(scenario.event_order or scenario.event_ids)
         self.prepared = set()
         self.records = []
         self.decisions = []
@@ -107,6 +171,16 @@ class DuplexController:
         self.observing_until = None
         self.finished = False
         self.feedback = ""
+
+    @property
+    def next_required_event(self):
+        """Return the next event in the enforced sequence, if any."""
+        if self.scenario.event_order is None:
+            return None
+        completed = len(self.records)
+        return (
+            self.event_order[completed] if completed < len(self.event_order) else None
+        )
 
     def allowed(
         self,
@@ -124,6 +198,15 @@ class DuplexController:
             reason = "That event is not pending; choose a selected, unexecuted event."
         elif decision.action == "finish" and (self.pending or self.active):
             reason = "Pending events or an unfinished observation remain."
+        elif (
+            decision.action == "trigger_event"
+            and self.scenario.event_order is not None
+            and decision.event_id != self.next_required_event
+        ):
+            reason = (
+                f"Keep the required event order: trigger {self.next_required_event} next; "
+                f"{decision.event_id} is later. Continue naturally or wait for the required opportunity."
+            )
         elif decision.action in {"speak", "prepare_event"} and assistant_speaking:
             reason = "Ordinary user speech cannot become an unselected interruption; wait or trigger a selected event."
         elif decision.action == "trigger_event":
@@ -194,6 +277,7 @@ class DuplexController:
                     for entry in self.history[:-1]
                     if entry["role"] == "user"
                 ],
+                "prior_conversation": [dict(entry) for entry in self.history[:-1]],
                 "observations": [],
                 "user_stopped_for_agent": False,
             }
@@ -208,7 +292,9 @@ class DuplexController:
             self.records.append(self.active)
         return speaker
 
-    def observe(self, now, speaking, text, item_bearing_audio=False):
+    def observe(
+        self, now, speaking, text, item_bearing_audio=False, user_speaking=None
+    ):
         """Accumulate actual incoming chunks and per-event evidence."""
         if text:
             if self.history and self.history[-1]["role"] == "assistant":
@@ -227,6 +313,7 @@ class DuplexController:
                     "seconds": max(0, now - self.dt),
                     "speaking": speaking,
                     "text": text,
+                    "user_speaking": user_speaking,
                 }
             )
             completion = self.active.get("memory_response_completion")
@@ -279,7 +366,7 @@ class DuplexController:
         reached = {row["event_id"] for row in self.records}
         rows = list(self.records) + [
             {"event_id": key, "status": "not_reached"}
-            for key in self.scenario.selected_events
+            for key in self.scenario.event_ids
             if key not in reached
         ]
         return {
@@ -289,6 +376,16 @@ class DuplexController:
             and all(row["status"] == "observed" for row in rows)
             else "incomplete",
             "events": rows,
+            "selected_events": self.scenario.selected_events,
+            "supplemental_events": self.scenario.supplemental_events,
+            "required_event_order": self.scenario.event_order,
+            "observed_event_order": [row["event_id"] for row in self.records],
+            "out_of_order_proposals": sum(
+                1
+                for row in self.decisions
+                if not row.get("accepted")
+                and "required event order" in row.get("feedback", "")
+            ),
             "decisions": self.decisions,
             "timing_note": "Assistant observations belong to the previous output tick; timing resolution is one tick. Speech activity alone does not prove semantic correctness.",
         }
@@ -313,7 +410,7 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
         self.output_dir = Path(output_dir)
         self.primary_voice = primary_voice
         self.background_voice = background_voice
-        self.tts_model = tts_model or OpenAITTSConfig().model
+        self.tts_model = tts_model or VolcengineTTSConfig().resource_id
         self.pending_decision = None
         self.synthesis_records = []
         self.active_speaker = "primary"
@@ -321,6 +418,7 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
         self.consecutive_errors = 0
         self.assistant_speaking = False
         self.last_assistant_audio_seconds = -1.0
+        self.last_user_speaking = False
         self.perception = self._new_perception()
         super().__init__(**kwargs)
         self.controller = DuplexController(scenario, self.tick_duration_seconds)
@@ -335,6 +433,7 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
         self.next_check = 0
         self.consecutive_errors = 0
         self.last_assistant_audio_seconds = -1.0
+        self.last_user_speaking = False
         self.perception = self._new_perception()
         return super().get_init_state(message_history)
 
@@ -342,7 +441,9 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
         if self.scenario.assistant_observation == "played_audio":
             from tau2.user.duplex_perception import PlayedAudioPerception
 
-            return PlayedAudioPerception(self.scenario.language)
+            return PlayedAudioPerception(
+                self.scenario.language, model=self.scenario.transcription_model
+            )
         return None
 
     def speech_detection(self, chunk):
@@ -361,6 +462,10 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
             "language": self.scenario.language,
             "topic": self.scenario.topic,
             "user_context": self.scenario.user_context,
+            "conversation_outline": self.scenario.conversation_outline,
+            "current_event_guidance": self.scenario.event_guidance.get(
+                c.next_required_event, ""
+            ),
             "elapsed_seconds": now,
             "assistant_speaking": self.assistant_speaking,
             "assistant_text_source": (
@@ -371,6 +476,11 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
             "pending_events": [
                 EVENT_CATALOG[key].model_dump() for key in sorted(c.pending)
             ],
+            "selected_events": self.scenario.selected_events,
+            "supplemental_events": self.scenario.supplemental_events,
+            "required_event_order": self.scenario.event_order,
+            "required_next_event": c.next_required_event,
+            "backchannel_min_speech_seconds": self.scenario.backchannel_min_speech_seconds,
             "prepared_events": sorted(c.prepared),
             "executed_events": [row["event_id"] for row in c.records],
             "recent_conversation": conversation,
@@ -426,6 +536,7 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
             self.assistant_speaking,
             (incoming.content or "") if incoming else "",
             item_bearing_audio=bool(incoming is not None and incoming.utterance_ids),
+            user_speaking=self.last_user_speaking,
         )
         if (
             c.active
@@ -445,6 +556,17 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
             return TurnTakingAction(action="keep_talking")
         c.advance_observation(now, False)
         if c.active or now < self.next_check:
+            return TurnTakingAction(action="wait")
+        if (
+            self.assistant_speaking
+            and c.pending
+            and all(
+                EVENT_CATALOG[key].trigger == "assistant_silent" for key in c.pending
+            )
+        ):
+            # No pending event can run while the assistant speaks, and ordinary
+            # user turns cannot interrupt. Keep listening without repeatedly
+            # freezing the audio clock for identical LLM/ASR wait decisions.
             return TurnTakingAction(action="wait")
         if not c.pending and now - self.last_assistant_audio_seconds < 1.0:
             return TurnTakingAction(action="wait")
@@ -469,17 +591,25 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
             info=f"duplex_runtime:{decision.event_id or decision.action}",
         )
 
-    def _speech(self, text, background=False):
+    def _speech(self, text, background=False, pause_seconds=0.0, continuation=""):
         if not text:
             return np.zeros(0, dtype="<i2")
         voice = self.background_voice if background else self.primary_voice
+        provider_config = VolcengineTTSConfig(
+            resource_id=self.tts_model,
+            speaker=voice,
+        )
+        ssml = None
+        if pause_seconds:
+            pause_seconds = DEFAULT_DUPLEX_PAUSE_SECONDS
+            ssml = (
+                f'<speak>{text}<break time="{int(pause_seconds * 1000)}ms"/>'
+                f"{continuation}</speak>"
+            )
         audio = synthesize_voice(
-            text,
-            "openai",
-            OpenAITTSConfig(
-                model=self.tts_model,
-                voice=voice,
-            ),
+            text + continuation if ssml else text,
+            "volcengine",
+            provider_config.model_copy(update={"ssml": ssml}),
         )
         # The script is an intention, not an ASR transcript: TTS can omit words.
         # Preserve its response before any resampling, chunking or audio effects.
@@ -495,6 +625,8 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
             "script_text": text,
             "script_is_verified_transcript": False,
             "model": self.tts_model,
+            "provider": "volcengine",
+            "ssml": ssml,
             "voice": voice,
             "audio_file": f"synthesized_audio/{filename}",
             "format": audio.format.model_dump(mode="json"),
@@ -561,24 +693,65 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
         first = (
             self._noise(decision.noise)
             if noise
-            else self._speech(decision.text, background)
+            else self._speech(
+                decision.text,
+                background,
+                decision.pause_seconds,
+                decision.continuation,
+            )
         )
-        following = self._speech(decision.continuation)
+        if (
+            is_event
+            and decision.event_id == "proactive.backchannel"
+            and self._audible_seconds(first)
+            < self.scenario.backchannel_min_speech_seconds
+        ):
+            self.controller.feedback = (
+                "The synthesized backchannel opportunity was too short: "
+                f"{self._audible_seconds(first):.2f} audible seconds. Generate a substantive "
+                f"account of at least {self.scenario.backchannel_min_speech_seconds} "
+                "seconds; the event remains pending and nothing was played."
+            )
+            return UserMessage(role="user", content=""), state
+        # A pause is synthesized by Doubao SSML in the same request. CTC has
+        # no continuation, so its audio ends with the SSML break naturally.
+        following = (
+            np.zeros(0, dtype="<i2")
+            if decision.pause_seconds
+            else self._speech(decision.continuation)
+        )
         samples = np.concatenate(
             [
                 first,
-                np.zeros(round(decision.pause_seconds * PCM_SAMPLE_RATE), dtype="<i2"),
                 following,
             ]
         )
+        marker = len(first) / PCM_SAMPLE_RATE
+        pause_evidence = None
+        if decision.pause_seconds:
+            from tau2.voice.utils.pause_evidence import locate_synthesized_pause
+
+            pause_evidence = locate_synthesized_pause(
+                first, PCM_SAMPLE_RATE, decision.pause_seconds
+            )
+            if pause_evidence["status"] != "measured":
+                self.controller.feedback = (
+                    "The requested SSML pause could not be uniquely located in the "
+                    "synthesized audio; nothing was played. Try a clearer unfinished "
+                    "phrase with only one deliberate pause."
+                )
+                return UserMessage(role="user", content=""), state
+            marker = pause_evidence["start_seconds"]
         now = state.elapsed_samples / PCM_SAMPLE_RATE
         self.active_speaker = self.controller.begin(
             decision,
             now,
             len(samples) / PCM_SAMPLE_RATE,
-            len(first) / PCM_SAMPLE_RATE,
+            marker,
             self.assistant_speaking,
         )
+        if pause_evidence and self.controller.active:
+            self.controller.active["pause_audio_evidence"] = pause_evidence
         if self.perception is not None:
             self.perception.start_user_turn()
         text = "" if noise else decision.text + decision.continuation
@@ -600,7 +773,23 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
             chunk.contains_speech = self.active_speaker != "noise" and is_audible_chunk(
                 chunk
             )
+        self.last_user_speaking = (
+            is_audible_chunk(chunk) and self.active_speaker != "noise"
+        )
         return chunk, state
+
+    @staticmethod
+    def _audible_seconds(samples):
+        """Count actual active 20 ms frames so padded silence cannot satisfy length."""
+        from tau2.voice.utils.audio_activity import AUDIO_RMS_THRESHOLD
+
+        width = round(PCM_SAMPLE_RATE * 0.02)
+        if not len(samples):
+            return 0.0
+        padded = np.pad(samples, (0, (-len(samples)) % width)).astype(np.float64)
+        frames = padded.reshape(-1, width)
+        active = np.sqrt(np.mean(frames**2, axis=1)) >= AUDIO_RMS_THRESHOLD
+        return float(np.count_nonzero(active) * 0.02)
 
     def save_report(self):
         """Persist runtime decisions and coverage even after a failed run."""

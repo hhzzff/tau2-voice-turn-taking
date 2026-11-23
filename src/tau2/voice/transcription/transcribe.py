@@ -43,6 +43,9 @@ def transcribe_audio(
         elif config.model == "whisper-1":
             return transcribe_whisper(pcm_audio_data, config)
 
+        elif config.model.startswith("gemini-"):
+            return transcribe_gemini(pcm_audio_data, config)
+
         elif config.model in ["gpt-4o-transcribe", "gpt-4o-mini-transcribe"]:
             return asyncio.run(transcribe_gpt4o_realtime(pcm_audio_data, config))
 
@@ -144,6 +147,72 @@ def transcribe_deepgram(
     except Exception as e:
         return TranscriptionResult(
             transcript="", error=f"Deepgram transcription failed: {str(e)}"
+        )
+
+
+def transcribe_gemini(
+    audio_data: AudioData, config: TranscriptionConfig
+) -> TranscriptionResult:
+    """Transcribe only supplied audio using Gemini, without dialogue context."""
+    _validate_pcm16_mono_24000(audio_data.format)
+    key = os.getenv("GEMINI_API_KEY") or os.getenv("GEMINI_LIVE_API_KEY")
+    if not key:
+        return TranscriptionResult(transcript="", error="Gemini API key is missing")
+    buffer = io.BytesIO()
+    with wave.open(buffer, "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(audio_data.format.sample_rate)
+        wav.writeframes(audio_data.data)
+    try:
+        response = requests.post(
+            f"https://generativelanguage.googleapis.com/v1beta/models/{config.model}:generateContent",
+            headers={"x-goog-api-key": key},
+            json={
+                "contents": [
+                    {
+                        "parts": [
+                            {
+                                "text": (
+                                    f"Transcribe verbatim the speech in this audio (language: {config.language or 'auto'}). "
+                                    "Return only the transcription. Do not answer, explain, infer missing words, "
+                                    "or complete unfinished phrases. Preserve audible partial words. "
+                                    "Return an empty string if there is no intelligible speech."
+                                )
+                            },
+                            {
+                                "inlineData": {
+                                    "mimeType": "audio/wav",
+                                    "data": base64.b64encode(buffer.getvalue()).decode(
+                                        "ascii"
+                                    ),
+                                }
+                            },
+                        ]
+                    }
+                ],
+                "generationConfig": {
+                    "temperature": 0,
+                    "thinkingConfig": {"thinkingLevel": "low"},
+                },
+            },
+            timeout=40,
+        )
+        if not response.ok:
+            return TranscriptionResult(
+                transcript="", error=f"Gemini transcription HTTP {response.status_code}"
+            )
+        candidates = response.json().get("candidates", [])
+        if not candidates:
+            return TranscriptionResult(
+                transcript="", error="Gemini transcription returned no candidate"
+            )
+        parts = candidates[0].get("content", {}).get("parts", [])
+        text = "".join(p.get("text", "") for p in parts if not p.get("thought"))
+        return TranscriptionResult(transcript=text.strip())
+    except Exception as exc:
+        return TranscriptionResult(
+            transcript="", error=f"Gemini transcription failed: {type(exc).__name__}"
         )
 
 

@@ -45,7 +45,10 @@ def conversation_environment(language):
 
 
 def _load_scenario(path):
-    return DuplexScenario.model_validate_json(path.read_text(encoding="utf-8"))
+    data = json.loads(path.read_text(encoding="utf-8"))
+    # Historical recordings must not acquire opportunities that were never run.
+    data.setdefault("include_proactive_opportunities", False)
+    return DuplexScenario.model_validate(data)
 
 
 def prepare(args):
@@ -60,6 +63,7 @@ def prepare(args):
         language=args.language,
         user_model=args.user_model,
         assistant_observation=args.assistant_observation,
+        include_proactive_opportunities=args.proactive_opportunities,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(scenario.model_dump_json(indent=2), encoding="utf-8")
@@ -77,18 +81,20 @@ def build_dynamic_user(
         SpeechEffectsConfig,
     )
     from tau2.data_model.voice import (
-        OpenAITTSConfig,
         SpeechEnvironment,
         SynthesisConfig,
         VoiceSettings,
+        VolcengineTTSConfig,
     )
     from tau2.user.duplex_scenario_user import DuplexUserSimulator
 
     settings = VoiceSettings(
         transcription_config=None,
         synthesis_config=SynthesisConfig(
-            provider="openai",
-            provider_config=OpenAITTSConfig(model=tts_model, voice=primary_voice),
+            provider="volcengine",
+            provider_config=VolcengineTTSConfig(
+                resource_id=tts_model, speaker=primary_voice
+            ),
             channel_effects_config=ChannelEffectsConfig(enable_frame_drops=False),
             source_effects_config=SourceEffectsConfig(
                 enable_background_noise=False, enable_burst_noise=False
@@ -165,6 +171,8 @@ def _run(args):
         scenario.language = args.language
     if args.assistant_observation:
         scenario.assistant_observation = args.assistant_observation
+    if args.proactive_opportunities is not None:
+        scenario.include_proactive_opportunities = args.proactive_opportunities
     # Refuse accidental reuse of artifacts, including an interrupted earlier run.
     if args.output.exists() and any(args.output.iterdir()):
         raise FileExistsError("Choose an empty output directory for a new trial")
@@ -172,7 +180,7 @@ def _run(args):
     config = AudioNativeConfig(
         provider=args.provider,
         model=args.model or DEFAULT_AUDIO_NATIVE_MODELS[args.provider],
-        max_steps_seconds=args.max_seconds or (60 + 75 * len(scenario.selected_events)),
+        max_steps_seconds=args.max_seconds or (60 + 75 * len(scenario.event_ids)),
     )
     (args.output / "scenario.json").write_text(
         scenario.model_dump_json(indent=2), encoding="utf-8"
@@ -241,6 +249,20 @@ def _run(args):
         )
         raise
     finally:
+        # Save local evidence before any remote judge call can fail or hang.
+        if orchestrator is not None and orchestrator.ticks:
+            (args.output / "ticks.json").write_text(
+                json.dumps(
+                    [tick.model_dump(mode="json") for tick in orchestrator.ticks],
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            if simulation is None:
+                from types import SimpleNamespace
+
+                partial = SimpleNamespace(mode="full_duplex", ticks=orchestrator.ticks)
+                generate_simulation_audio(partial, args.output / "audio")
         if user is not None:
             user.save_report()
             report = user.controller.report()
@@ -250,6 +272,9 @@ def _run(args):
                     json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
                 )
             assessment = assess_report(scenario, report, config.tick_duration_seconds)
+            (args.output / "assessment.json").write_text(
+                json.dumps(assessment, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
             if args.judge_model:
                 assessment = judge_report(scenario, assessment, args.judge_model)
             (args.output / "assessment.json").write_text(
@@ -269,13 +294,25 @@ def _run(args):
     print(f"Saved trajectory, audio, events and assessment: {args.output}")
     return (
         0
-        if assessment
-        and assessment["summary"]["observed"] == len(scenario.selected_events)
+        if assessment and assessment["summary"]["observed"] == len(scenario.event_ids)
         else 1
     )
 
 
 def assess(args):
+    """Preserve every reassessment request/response alongside existing evidence."""
+    from tau2.utils.llm_utils import llm_log_dir, llm_log_mode
+
+    directory_token = llm_log_dir.set(args.output / "llm_calls")
+    mode_token = llm_log_mode.set("all")
+    try:
+        return _assess(args)
+    finally:
+        llm_log_mode.reset(mode_token)
+        llm_log_dir.reset(directory_token)
+
+
+def _assess(args):
     """Reassess saved evidence without opening an agent session or synthesizing."""
     from tau2.user.duplex_evaluation import (
         assess_report,
@@ -308,7 +345,6 @@ def assess(args):
 def build_parser():
     """Expose event selection, preparation, execution and offline assessment."""
     from tau2.config import DEFAULT_DUPLEX_USER_MODEL
-    from tau2.data_model.voice import OpenAITTSConfig
 
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -339,6 +375,12 @@ def build_parser():
         help="Default: transcribe already played assistant audio before Terra decisions",
     )
     planning.add_argument("--output", type=Path, required=True)
+    planning.add_argument(
+        "--proactive-opportunities",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Add assistant backchannel and completion opportunities alongside the selected events",
+    )
     planning.set_defaults(func=prepare)
     execution = commands.add_parser(
         "run", help="Let Terra choose live duplex actions against a voice model"
@@ -371,16 +413,22 @@ def build_parser():
     )
     execution.add_argument(
         "--provider",
-        choices=["openai", "gemini", "nova", "xai", "qwen"],
+        choices=["openai", "gemini", "nova", "xai", "qwen", "doubao"],
         default="openai",
     )
     execution.add_argument(
         "--model", help="Default: configured model for the chosen provider"
     )
-    execution.add_argument("--primary-voice", default="nova")
-    execution.add_argument("--background-voice", default="onyx")
-    execution.add_argument("--tts-model", default=OpenAITTSConfig().model)
+    execution.add_argument("--primary-voice", default="zh_female_vv_uranus_bigtts")
+    execution.add_argument("--background-voice", default="zh_male_dayi_saturn_bigtts")
+    execution.add_argument("--tts-model", default="seed-tts-2.0")
     execution.add_argument("--max-seconds", type=int)
+    execution.add_argument(
+        "--proactive-opportunities",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Override supplemental opportunities; new event selections enable both by default",
+    )
     execution.add_argument(
         "--judge-model",
         default=DEFAULT_DUPLEX_USER_MODEL,

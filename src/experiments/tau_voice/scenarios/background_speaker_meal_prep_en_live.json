@@ -1,0 +1,23 @@
+{
+  "name": "background_speaker_meal_prep_en_live",
+  "language": "English",
+  "user_goal": "Get practical help planning affordable weekday dinners that can be reheated quickly.",
+  "user_constraints": [
+    "Only about one hour is available for preparation on the weekend.",
+    "The budget is modest and extra ingredients should be limited.",
+    "Prefer a single pan and include portioning and cleanup in the preparation time."
+  ],
+  "background_context": "A roommate nearby is talking to another roommate about a Saturday day trip to Boston. They are deciding how to travel and which places to visit. Questions may sound directed at 'you', but they are not addressed to the assistant. Keep the same roommate identity and topic in both inserts.",
+  "user": {"provider": "openai", "voice": "nova"},
+  "background": {"provider": "openai", "voice": "onyx"},
+  "background_gain_db": -8,
+  "min_turns_before_probe": 1,
+  "min_turns_after_correction": 2,
+  "min_seconds_after_correction": 15,
+  "correction_interrupt_min_speech_seconds": 0.6,
+  "decision_interval_seconds": 0.4,
+  "response_window_seconds": 3,
+  "response_timeout_seconds": 60,
+  "quiet_seconds": 0.6,
+  "max_seconds": 300
+}

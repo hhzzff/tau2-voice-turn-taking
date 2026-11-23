@@ -408,6 +408,17 @@ def create_adapter(
                 reasoning_effort=reasoning_effort,
                 audio_format=audio_format,
             )
+    elif provider == "doubao":
+        from tau2.voice.audio_native.doubao.discrete_time_adapter import (
+            DiscreteTimeDoubaoAdapter,
+        )
+
+        adapter = DiscreteTimeDoubaoAdapter(
+            tick_duration_ms=tick_duration_ms,
+            send_audio_instant=send_audio_instant,
+            model=model,
+            audio_format=audio_format,
+        )
     elif provider == "gemini":
         from tau2.voice.audio_native.gemini.discrete_time_adapter import (
             DiscreteTimeGeminiAdapter,
