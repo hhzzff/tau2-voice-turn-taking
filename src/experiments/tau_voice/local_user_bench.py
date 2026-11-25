@@ -13,6 +13,10 @@ import numpy as np
 import soundfile as sf
 from dotenv import load_dotenv
 
+from tau2.config import (
+    DEFAULT_LOCAL_USER_TARGET_MODEL,
+    DEFAULT_LOCAL_USER_TARGET_OUTPUT_TOKENS,
+)
 from tau2.orchestrator.continuous_voice import ContinuousVoiceDriver
 from tau2.user.local.config import LocalUserConfig
 from tau2.user.local.recording import Recorder, now
@@ -126,7 +130,10 @@ async def run_case(cfg, case, output, model):
             async with asyncio.timeout(45):
                 await target.start(
                     case.get("target_instructions", TARGET_INSTRUCTIONS),
-                    max_output_tokens=2048,
+                    max_output_tokens=case.get(
+                        "target_max_output_tokens",
+                        DEFAULT_LOCAL_USER_TARGET_OUTPUT_TOKENS,
+                    ),
                 )
             origin = rec.emit("live_start", model=model, scene_id=case["id"])
             runtime.begin_live(origin)
@@ -151,6 +158,8 @@ async def run_case(cfg, case, output, model):
             )
         finally:
             duration = (now() - origin) / 1e9 if origin else 0
+            if target:
+                target.finish_playback()
             if runtime:
                 await runtime.close()
             if provider:
@@ -176,6 +185,7 @@ async def run_case(cfg, case, output, model):
             "status": status,
             "error_class": error,
             "duration_s": duration,
+            "observations_drained": getattr(runtime, "observations_drained", False),
             "origin_ns": origin,
             "turns": [runtime.serial_turn(t) for t in runtime.turns] if runtime else [],
             "backchannels": [runtime.serial_turn(t) for t in runtime.backchannels]
@@ -207,6 +217,10 @@ async def run_suite(args):
     selected = set(args.scenes.split(",")) if args.scenes else set(SCENE_EVENTS)
     if unknown := selected - set(SCENE_EVENTS):
         raise ValueError(f"Unknown scene IDs: {sorted(unknown)}")
+    if args.max_seconds is not None and args.max_seconds <= 0:
+        raise ValueError("--max-seconds must be positive")
+    if args.target_max_output_tokens is not None and args.target_max_output_tokens <= 0:
+        raise ValueError("--target-max-output-tokens must be positive")
     if args.output.exists():
         raise FileExistsError(
             "Use a new output directory; trials are never overwritten"
@@ -230,6 +244,10 @@ async def run_suite(args):
     for case in load_scenes():
         if case["id"] not in selected:
             continue
+        if args.max_seconds is not None:
+            case["max_seconds"] = args.max_seconds
+        if args.target_max_output_tokens is not None:
+            case["target_max_output_tokens"] = args.target_max_output_tokens
         print(f"START {case['id']} {case['title']}", flush=True)
         result = await run_case(cfg, case, args.output / case["id"], args.model)
         results.append(
@@ -242,7 +260,7 @@ async def run_suite(args):
             f"END {case['id']} {result['status']} {result['error_class']} {result['duration_s']:.1f}s",
             flush=True,
         )
-    return 1 if any(r["status"] == "error" for r in results) else 0
+    return 1 if any(r["status"] != "ok" for r in results) else 0
 
 
 def add_parser(commands):
@@ -253,6 +271,16 @@ def add_parser(commands):
     parser.add_argument("--scenes", help="Comma-separated IDs; default all 19")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--asr-model-path", type=Path, required=True)
-    parser.add_argument("--model", default="gpt-realtime-1.5")
+    parser.add_argument("--model", default=DEFAULT_LOCAL_USER_TARGET_MODEL)
+    parser.add_argument(
+        "--max-seconds",
+        type=float,
+        help="Override each selected scene's real deadline; recorded in case.json",
+    )
+    parser.add_argument(
+        "--target-max-output-tokens",
+        type=int,
+        help="Override target output cap; recorded in case.json and session acknowledgement",
+    )
     parser.add_argument("--env-file", type=Path, default=Path(".env"))
     parser.set_defaults(func=lambda args: asyncio.run(run_suite(args)))

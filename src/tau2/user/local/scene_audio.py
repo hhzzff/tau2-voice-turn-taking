@@ -5,16 +5,13 @@ from __future__ import annotations
 import asyncio
 import copy
 import re
-from pathlib import Path
 
 import numpy as np
 import soundfile as sf
 
 from .recording import Track, TurnRecorder
-from .scenarios import load_clip as read_scene_clip
+from .scenarios import load_clip
 from .streaming import update_spoken_text
-
-ROOT = Path(__file__).resolve().parents[2]
 
 
 def environment_trigger_evidence(stage, heard):
@@ -26,10 +23,6 @@ def environment_trigger_evidence(stage, heard):
         if match:
             return match.group()
     return ""
-
-
-def load_clip(manifest_path, ident):
-    return read_scene_clip(ident)
 
 
 class ScenarioAudioMixin:
@@ -100,7 +93,7 @@ class ScenarioAudioMixin:
         ]
         chunks, segments, gaps, cursor = [], [], [], 0
         for i, part in enumerate(parts):
-            pcm, metadata = load_clip(stage["asset_manifest"], part["asset"])
+            pcm, metadata = load_clip(part["asset"])
             gain = float(stage.get("gain", 1))
             if gain != 1:
                 x = np.frombuffer(pcm, dtype="<i2").astype(np.float64) * gain

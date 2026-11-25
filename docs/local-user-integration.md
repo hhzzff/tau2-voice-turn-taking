@@ -85,7 +85,7 @@ python -m experiments.tau_voice.duplex_bench local \
 
 ```bash
 python -m experiments.tau_voice.local_user_report data/simulations/local-user-review
-python -m http.server 8796 --directory data/simulations/local-user-review
+python -m experiments.tau_voice.local_user_report data/simulations/local-user-review --serve --port 8796
 ```
 
 页面默认播放外置 `mix.flac`，同时提供用户/助手分声道、时间戳对齐录音、
@@ -93,4 +93,25 @@ python -m http.server 8796 --directory data/simulations/local-user-review
 音频使用相对链接和 `preload=none`，整目录下载后也可直接打开。
 语义结论默认待人工审阅；不会把正常结束、B的met或agenda推进算成成功。
 
-阶段4报告入口已在真实P03产物验证；全量19例运行与最后审阅记录待补。
+内置本地服务支持HTTP Range，长录音可以按需跳转；不需要公网部署。
+
+## 首轮全量与修复
+
+首轮19例均从干净提交 `d598655` 运行，位于
+`data/simulations/local-user-integration/20261125-all19-r1/`。
+16例正常结束，I04/M01触及原时间上限，R05因目标先询问操作系统而未形成
+噪声刺激。P03虽已计算出正确净转账，长解释仍触及目标2048输出token上限；
+它是目标输出截断，不是本地9B上下文越界，也不应计作完整目标回答。
+
+首轮暴露出收尾ASR尚未排空就被取消的问题。修复在实时音频时钟结束后，
+只刷新已经播放的音频，并等待有界观察队列排空；未播缓冲仍不可见。
+新增回归测试覆盖延迟最终识别，报告对历史缺少收尾确认的文本显式标注，
+不拿服务端全文替代本地观察。清除未使用的WAV/路径包装，保留唯一落盘通道。
+
+可用 `--max-seconds` 和 `--target-max-output-tokens` 为选定场景调整预算，
+实际值保存到场景快照、哈希和服务端配置确认。超时/未触发使批处理返回非零，
+原始失败记录不覆盖。补测限定为上述有证据的问题。
+
+首音以20ms包和绝对采样幅度0.005阈值定位，不是RMS或音素检测，也不是
+远端设备播放确认。流式表达请求总时长可能包含下游队列背压；评估纯响应速度
+应结合首token/首可用文本/TTS首音/发送回执，不能仅用总时长推算解码速度。

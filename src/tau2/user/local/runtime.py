@@ -17,10 +17,6 @@ from .recording import Frame, Track, TurnRecorder, now
 from .streaming import SpeechStream, update_spoken_text
 
 
-def save_json(path, value):
-    path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n")
-
-
 class UserRuntime:
     """A user owns its agenda and PCM queue, never a target WebSocket."""
 
@@ -60,9 +56,11 @@ class UserRuntime:
         self.origin = origin
         self.user_track = Track(origin, self.cfg.audio.sample_rate)
         self.agent_track = Track(origin, self.cfg.audio.sample_rate)
-        self.tasks = [
-            asyncio.create_task(coro()) for coro in (self.decode, self.transcripts)
-        ]
+        self.decode_task = asyncio.create_task(self.decode(), name="local-asr-decode")
+        self.transcript_task = asyncio.create_task(
+            self.transcripts(), name="local-asr-text"
+        )
+        self.tasks = [self.decode_task, self.transcript_task]
         self.control_task = asyncio.create_task(self.control())
         self.tasks.append(self.control_task)
 
@@ -165,8 +163,31 @@ class UserRuntime:
                 self._active = self._ending = None
 
     async def close(self):
-        """Cancel generation before a new session can reuse the transport."""
+        """Stop generation, then drain observations of audio already played.
+
+        This runs after the live clocks stop. It must never discard a queued
+        utterance-end just because the scenario controller finished first.
+        """
         self.stop = True
+        control = getattr(self, "control_task", None)
+        if control:
+            control.cancel()
+            await asyncio.gather(control, return_exceptions=True)
+        self.observations_drained = False
+        decoder = getattr(self, "decode_task", None)
+        if decoder and not decoder.done():
+            barrier = asyncio.get_running_loop().create_future()
+            try:
+                async with asyncio.timeout(3):
+                    await self.asr_queue.put(("drain", None, barrier))
+                    await barrier
+                await asyncio.sleep(0)
+                self.observations_drained = True
+                self.rec.emit("observation_drain_complete")
+            except TimeoutError:
+                self.rec.emit(
+                    "observation_drain_timeout", pending_frames=self.asr_queue.qsize()
+                )
         for task in self.tasks:
             task.cancel()
         await asyncio.gather(*self.tasks, return_exceptions=True)
@@ -264,6 +285,10 @@ class UserRuntime:
     async def decode(self):
         while True:
             kind, item, value = await self.asr_queue.get()
+            if kind == "drain":
+                if not value.done():
+                    value.set_result(None)
+                continue
             if kind == "begin":
                 await self.asr.reset(preserve_events=True)
                 self.current_asr_item = item.item_id

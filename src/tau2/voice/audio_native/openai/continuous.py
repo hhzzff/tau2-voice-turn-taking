@@ -4,6 +4,7 @@ import base64
 import hashlib
 from dataclasses import dataclass, field
 
+from tau2.config import DEFAULT_LOCAL_USER_TARGET_OUTPUT_TOKENS
 from tau2.data_model.audio import AudioEncoding, AudioFormat, audio_bytes_to_string
 from tau2.data_model.message import AssistantMessage
 from tau2.user.local.audio import first_effective
@@ -51,7 +52,9 @@ class ContinuousOpenAITarget:
         self.input_converter = StreamingPCMConverter()
         self.cancelled_responses = set()
 
-    async def start(self, instructions, max_output_tokens=2048):
+    async def start(
+        self, instructions, max_output_tokens=DEFAULT_LOCAL_USER_TARGET_OUTPUT_TOKENS
+    ):
         """Await an acknowledged native-PCM configuration before starting clocks."""
         await self.provider.connect()
         await self.provider.configure_session(
@@ -201,6 +204,13 @@ class ContinuousOpenAITarget:
             native_sha256=hashlib.sha256(raw).hexdigest(),
         )
         return stamp
+
+    def finish_playback(self):
+        """Flush only already-played audio when a trial ends mid-utterance."""
+        for output in self.buffers.values():
+            item = output.heard
+            if item.started_ns is not None and not item.ended:
+                self.end_item(item, "trial_end")
 
     def end_item(self, item, reason):
         """End only what was actually audible; unplayed transcripts stay private."""

@@ -176,3 +176,41 @@ async def test_future_transcript_is_audit_only_and_sessions_are_isolated(tmp_pat
         assert not users[0].runtime.history and not targets[1].transcripts
     for rec in records:
         await rec.close()
+
+
+@pytest.mark.asyncio
+async def test_shutdown_drains_played_utterance_before_cancelling_asr(tmp_path):
+    class SlowFinalASR(FakeASR):
+        last_text = ""
+        revision = 0
+
+        async def finish(self, **kwargs):
+            await asyncio.sleep(0.15)
+            self.last_text = "最后一句已经实际播放"
+            self.revision += 1
+
+    rec = Recorder(tmp_path / "final-asr")
+    async with httpx.AsyncClient() as client:
+        runtime = ScenarioRuntime(
+            LocalUserConfig(asr={"model_path": tmp_path}),
+            load_scenes()[0],
+            rec,
+            client,
+            asr=SlowFinalASR(),
+        )
+
+        async def idle_control():
+            await asyncio.Event().wait()
+
+        runtime.control = idle_control
+        runtime.begin_live(now())
+        item = HeardItem("last", "response", 0, played=320, complete=True)
+        runtime.playback.items[item.item_id] = item
+        runtime.begin_agent(item)
+        runtime.agent_frame(item, b"\x00\x10" * 320, now())
+        runtime.end_agent(item, "complete")
+        await runtime.close()
+        assert runtime.observations_drained
+        assert runtime.history[-1]["content"] == "最后一句已经实际播放"
+        assert any(e["kind"] == "heard_agent_complete" for e in rec.events)
+    await rec.close()

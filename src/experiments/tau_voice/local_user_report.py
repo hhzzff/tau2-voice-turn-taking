@@ -29,6 +29,40 @@ def delta(marks, end, start):
     )
 
 
+def heard_utterances(events, audit, origin):
+    """Show only locally observed text, including explicitly unfinished finals."""
+    starts, complete, partial = {}, {}, {}
+    for event in events:
+        ident = event.get("item_id")
+        if not ident:
+            continue
+        if event["kind"] == "target_first_play":
+            starts[ident] = event["mono_ns"]
+        elif event["kind"] == "heard_agent_complete":
+            complete[ident] = event
+        elif event["kind"] == "heard_partial":
+            partial[ident] = event
+    rows = []
+    for ident in dict.fromkeys([*starts, *complete, *partial]):
+        event = complete.get(ident) or partial.get(ident) or {}
+        stamp = event.get("mono_ns", starts.get(ident, origin))
+        rows.append(
+            {
+                "at": round((starts.get(ident, stamp) - origin) / 1e9, 2),
+                "text_available_at": round((stamp - origin) / 1e9, 2),
+                "speaker": "助手·本地ASR"
+                if ident in complete
+                else "助手·本地ASR（未完成尾部刷新）",
+                "text": event.get("text", "[已有播放音频，暂无本地转写]"),
+                "audit_text": audit.get(ident, ""),
+                "interrupted": event.get("interrupted"),
+                "item_id": ident,
+                "asr_finalized": ident in complete,
+            }
+        )
+    return rows
+
+
 def scene_record(path):
     """Derive evidence without treating agenda advancement as target success."""
     summary = json.loads((path / "summary.json").read_text())
@@ -94,19 +128,7 @@ def scene_record(path):
                 }
             )
     audit = summary.get("target_transcripts_audit_only", {})
-    for event in events:
-        if event["kind"] != "heard_agent_complete":
-            continue
-        utterances.append(
-            {
-                "at": round((event["mono_ns"] - origin) / 1e9, 2),
-                "speaker": "助手·本地ASR（结束时刻）",
-                "text": event["text"],
-                "audit_text": audit.get(event["item_id"], ""),
-                "interrupted": event.get("interrupted"),
-                "item_id": event["item_id"],
-            }
-        )
+    utterances.extend(heard_utterances(events, audit, origin))
     utterances.sort(key=lambda row: row["at"])
     actions = [e for e in events if e["kind"] == "decision_result"]
     markers = [
@@ -171,8 +193,11 @@ def scene_record(path):
         "progress": summary["script_progress"],
         "semantic_verdict": "待人工听测；运行结束不等于目标行为正确",
         "audio": str(path.name) + "/mix.flac",
+        "target_incomplete_count": sum(
+            r.get("status") == "incomplete" for r in summary["target_responses"]
+        ),
         "target_status": [
-            {k: r.get(k) for k in ("for_turn", "status", "status_details")}
+            {k: r.get(k) for k in ("for_turn", "status", "status_details", "usage")}
             for r in summary["target_responses"]
         ],
     }
@@ -184,7 +209,7 @@ PAGE = """<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="vi
 <main><nav><input id="filter" placeholder="搜索场景 / ID"><div id="menu"></div></nav><article id="detail"></article></main>
 <script>const DATA=__DATA__;const $=id=>document.getElementById(id);const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const labels={decision_ms:'B 判断完整耗时',decision_to_audio_ms:'决定开口 → 首音提交',llm_ttft_ms:'B 表达首 token',tts_first_voice_ms:'TTS 请求 → 首个有效音频'};let selected=DATA[0]?.id;
 function menu(){const q=$('filter').value.toLowerCase();$('menu').innerHTML=DATA.filter(s=>(s.id+s.title).toLowerCase().includes(q)).map(s=>`<button class="${s.id===selected?'active':''}" onclick="show('${s.id}')"><b>${esc(s.id)}</b> ${esc(s.title)}<br><span class="tag">${esc(s.status)} · ${s.seconds}s · 打断 ${s.counts.INTERRUPT}</span></button>`).join('')}
-function show(id){document.querySelectorAll('audio').forEach(a=>a.pause());selected=id;const s=DATA.find(x=>x.id===id);location.hash=id;menu();$('detail').innerHTML=`<section><div class="tag">${esc(s.event)} · ${esc(s.commit.slice(0,12))} ${s.dirty?'（有未提交修改）':'（干净提交）'}</div><h2>${esc(s.id+' '+s.title)}</h2><p>${esc(s.goal)}</p><span class="${s.status==='ok'?'ok':'warn'}">运行状态：${esc(s.status)} ${esc(s.error)}</span><p class="note">${esc(s.semantic_verdict)}</p><audio id="player" controls preload="none" src="${esc(s.audio)}"></audio><div><a href="${s.id}/stereo.flac">双声道听测录音</a> · <a href="${s.id}/stereo-timing.flac">时间戳对齐录音</a> · <a href="${s.id}/summary.json">原始摘要</a> · <a href="${s.id}/events.jsonl">完整事件日志</a> · <a href="${s.id}/provenance.json">版本和配置</a></div><p class="note">跳转按钮使用事件时间，选择“时间戳对齐录音”核对精确间隔；普通听测录音保留每段连续 PCM，可能有少量调度差异。client submit 是本地发送完成，不代表远端已听到。</p><button onclick="$('player').src='${s.id}/stereo-timing.flac'">切到时间戳双声道</button> <button onclick="$('player').src='${s.audio}'">切回混音</button></section><section><h3>组件时延（ms）</h3><div class="metrics">${Object.entries(labels).map(([k,l])=>{const m=s.metrics[k];return `<div class="metric"><span>${l}</span><strong>${m.p50??'—'}</strong><span class="note">p50 · p95 ${m.p95??'—'} · n=${m.n}</span></div>`}).join('')}</div><p class="note">p50/p95 由每项实际样本的线性分位数计算；无样本显示 —。预录音频、模板表达没有对应模型生成耗时，不补零。首音统计仅包含实际发出的语音，过期取消单独显示。判断耗时不包含随后表达和 TTS；“决定开口”指判断返回完成。</p><p>决策：${esc(JSON.stringify(s.counts))}。&gt;5ms 时钟迟到：${esc(JSON.stringify(s.metrics.clock_late_ms_over_5))}</p></section><section><h3>对话与实际观察</h3>${s.utterances.map(u=>`<div class="utterance ${u.speaker==='用户'?'user':''}"><button class="time" onclick="seek(${u.at})">${u.at.toFixed(2)}s ▶</button> <b>${esc(u.speaker)}</b> <span class="tag">${esc(u.action)} ${esc(u.stage)}</span><div>${esc(u.text)}</div>${u.speaker==='用户'?`<div class="note">决定→首音 ${u.decision_to_audio_ms??'—'}ms；表达 TTFT ${u.llm_ttft_ms??'—'}ms；TTS ${u.tts_first_voice_ms??'—'}ms；${u.model_generated?'模型表达':'预录/模板刺激'}</div>`:''}${u.audit_text?`<details><summary class="note">服务端完整转写（仅审计，B 不可见；可能含未播放内容）</summary>${esc(u.audit_text)}</details>`:''}</div>`).join('')}</section><section><h3>B 输入 token 与耗时</h3><p class="note">每一行对应实际请求；展开可核对送入 B 的上下文以及结构化输出。</p><div class="scroll"><table><tr><th>时间</th><th>阶段</th><th>输入/输出 token</th><th>总耗时 ms</th><th>输入与输出</th></tr>${s.decisions.map(d=>`<tr><td>${d.at}s</td><td>${esc(d.phase)}</td><td>${d.input_tokens??'—'} / ${d.output_tokens??'—'}</td><td>${d.ms?.toFixed(1)??'—'}</td><td><details><summary>${esc(d.raw.slice(0,90))}</summary><pre>${esc(JSON.stringify(d,null,2))}</pre></details></td></tr>`).join('')}</table></div></section><section><h3>刺激有效性、异常与推进证据</h3><p class="note">not_triggered 表示未形成预期刺激窗口；不将它算成目标失败。advance 表示完成预定输入，met 只是 B 的判断，都不是独立成功分数。</p>${s.markers.map(m=>`<details><summary>${m.at}s · ${esc(m.kind)}</summary><pre>${esc(JSON.stringify(m.detail,null,2))}</pre></details>`).join('')}<details><summary>完整 agenda 状态与私有信息披露记录</summary><pre>${esc(JSON.stringify(s.progress,null,2))}</pre></details><details><summary>目标响应终止状态</summary><pre>${esc(JSON.stringify(s.target_status,null,2))}</pre></details></section>`}
+function show(id){document.querySelectorAll('audio').forEach(a=>a.pause());selected=id;const s=DATA.find(x=>x.id===id);location.hash=id;menu();$('detail').innerHTML=`<section><div class="tag">${esc(s.event)} · ${esc(s.commit.slice(0,12))} ${s.dirty?'（有未提交修改）':'（干净提交）'}</div><h2>${esc(s.id+' '+s.title)}</h2><p>${esc(s.goal)}</p><span class="${s.status==='ok'?'ok':'warn'}">运行状态：${esc(s.status)} ${esc(s.error)}</span><p class="note">${esc(s.semantic_verdict)}</p>${s.target_incomplete_count?`<p class="warn">目标有 ${s.target_incomplete_count} 次输出未完整结束；查看下方响应状态与原因。</p>`:""}<audio id="player" controls preload="none" src="${esc(s.audio)}"></audio><div><a href="${s.id}/stereo.flac">双声道听测录音</a> · <a href="${s.id}/stereo-timing.flac">时间戳对齐录音</a> · <a href="${s.id}/summary.json">原始摘要</a> · <a href="${s.id}/events.jsonl">完整事件日志</a> · <a href="${s.id}/provenance.json">版本和配置</a></div><p class="note">跳转按钮使用事件时间，选择“时间戳对齐录音”核对精确间隔；普通听测录音保留每段连续 PCM，可能有少量调度差异。client submit 是本地发送完成，不代表远端已听到。</p><button onclick="$('player').src='${s.id}/stereo-timing.flac'">切到时间戳双声道</button> <button onclick="$('player').src='${s.audio}'">切回混音</button></section><section><h3>组件时延（ms）</h3><div class="metrics">${Object.entries(labels).map(([k,l])=>{const m=s.metrics[k];return `<div class="metric"><span>${l}</span><strong>${m.p50??'—'}</strong><span class="note">p50 · p95 ${m.p95??'—'} · n=${m.n}</span></div>`}).join('')}</div><p class="note">p50/p95 由每项实际样本的线性分位数计算；无样本显示 —。预录音频、模板表达没有对应模型生成耗时，不补零。首音统计仅包含实际发出的语音，过期取消单独显示。判断耗时不包含随后表达和 TTS；“决定开口”指判断返回完成。首音用绝对采样幅度 0.005 阈值与 20ms 音频包定位，不是 RMS、音素检测或远端声卡播放时间。</p><p>决策：${esc(JSON.stringify(s.counts))}。&gt;5ms 时钟迟到：${esc(JSON.stringify(s.metrics.clock_late_ms_over_5))}</p></section><section><h3>对话与实际观察</h3><p class="note">助手条目按首播时刻定位；完整文本在之后逐步识别，未完成尾部刷新会显式标注。服务端完整转写仅作审计。</p>${s.utterances.map(u=>`<div class="utterance ${u.speaker==='用户'?'user':''}"><button class="time" onclick="seek(${u.at})">${u.at.toFixed(2)}s ▶</button> <b>${esc(u.speaker)}</b> <span class="tag">${esc(u.action)} ${esc(u.stage)}</span><div>${esc(u.text)}</div>${u.speaker==='用户'?`<div class="note">决定→首音 ${u.decision_to_audio_ms??'—'}ms；表达 TTFT ${u.llm_ttft_ms??'—'}ms；TTS ${u.tts_first_voice_ms??'—'}ms；${u.model_generated?'模型表达':'预录/模板刺激'}</div>`:''}${u.audit_text?`<details><summary class="note">服务端完整转写（仅审计，B 不可见；可能含未播放内容）</summary>${esc(u.audit_text)}</details>`:''}</div>`).join('')}</section><section><h3>B 输入 token 与耗时</h3><p class="note">每一行对应实际请求；表达请求总时长可能含下游音频队列等待，不等于纯模型解码耗时。展开可核对送入 B 的上下文以及结构化输出。</p><div class="scroll"><table><tr><th>时间</th><th>阶段</th><th>输入/输出 token</th><th>总耗时 ms</th><th>输入与输出</th></tr>${s.decisions.map(d=>`<tr><td>${d.at}s</td><td>${esc(d.phase)}</td><td>${d.input_tokens??'—'} / ${d.output_tokens??'—'}</td><td>${d.ms?.toFixed(1)??'—'}</td><td><details><summary>${esc(d.raw.slice(0,90))}</summary><pre>${esc(JSON.stringify(d,null,2))}</pre></details></td></tr>`).join('')}</table></div></section><section><h3>刺激有效性、异常与推进证据</h3><p class="note">not_triggered 表示未形成预期刺激窗口；不将它算成目标失败。advance 表示完成预定输入，met 只是 B 的判断，都不是独立成功分数。</p>${s.markers.map(m=>`<details><summary>${m.at}s · ${esc(m.kind)}</summary><pre>${esc(JSON.stringify(m.detail,null,2))}</pre></details>`).join('')}<details><summary>完整 agenda 状态与私有信息披露记录</summary><pre>${esc(JSON.stringify(s.progress,null,2))}</pre></details><details><summary>目标响应状态与上下文 token</summary><pre>${esc(JSON.stringify(s.target_status,null,2))}</pre></details></section>`}
 function seek(t){const a=$('player');a.currentTime=t;a.play().catch(()=>{})}$('filter').addEventListener('input',menu);$('suite').textContent=`已记录 ${DATA.length}/19 条 · ${DATA.filter(s=>s.status==='ok').length} 条正常结束 · ${DATA.filter(s=>s.status!=='ok').length} 条需检查`;if(DATA.length)show(DATA.some(s=>s.id===location.hash.slice(1))?location.hash.slice(1):DATA[0].id);
 </script></html>"""
 
@@ -213,10 +238,32 @@ def build(root):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("directory", type=Path)
+    parser.add_argument(
+        "--serve", action="store_true", help="Serve locally with audio Range support"
+    )
+    parser.add_argument("--port", type=int, default=8796)
     args = parser.parse_args()
     print(
         f"Built {len(build(args.directory))} scenes in {args.directory / 'index.html'}"
     )
+
+    if args.serve:
+        import uvicorn
+        from starlette.applications import Starlette
+        from starlette.routing import Mount
+        from starlette.staticfiles import StaticFiles
+
+        app = Starlette(
+            routes=[
+                Mount(
+                    "/",
+                    app=StaticFiles(
+                        directory=args.directory, html=True, follow_symlink=True
+                    ),
+                )
+            ]
+        )
+        uvicorn.run(app, host="127.0.0.1", port=args.port)
 
 
 if __name__ == "__main__":

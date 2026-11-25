@@ -1,17 +1,8 @@
-"""PCM measurements and WAV output shared by the local user and driver."""
+"""PCM measurements shared by the local user and driver."""
 
 from __future__ import annotations
 
-import wave
-from pathlib import Path
-
 import numpy as np
-
-
-def wav_writer(path: Path, rate: int = 16000):
-    wav = wave.open(str(path), "wb")
-    wav.setparams((1, 2, rate, 0, "NONE", "not compressed"))
-    return wav
 
 
 def rms(pcm: bytes) -> float:
