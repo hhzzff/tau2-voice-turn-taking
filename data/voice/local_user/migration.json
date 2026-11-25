@@ -11,5 +11,13 @@
   ],
   "preserved_scene_count": 19,
   "preserved_audio_count": 16,
-  "scope": "Current FloorController and bounded scene sampling retained. Asset bytes unchanged; manifest locations remapped. No runtime imports from the development repository."
+  "scope": "Current FloorController and bounded scene sampling retained. Asset bytes unchanged; manifest locations remapped. No runtime imports from the development repository.",
+  "local_adjustments": [
+    {
+      "date": "2026-11-26",
+      "scene": "R05",
+      "change": "Disclose Windows in the opening; preserve noise bytes and trigger policy.",
+      "evidence": "20261125-all19-r1/R05: target asked Windows or Mac; no procedural step, probe correctly not triggered."
+    }
+  ]
 }

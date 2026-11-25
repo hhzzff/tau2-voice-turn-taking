@@ -1975,15 +1975,21 @@
           "kind": "opening",
           "need": "获取步骤说明",
           "required": [
+            "电脑使用Windows系统",
             "把电脑重要文件备份到移动硬盘，按步骤说并说明如何确认成功"
           ],
-          "example": "我想把电脑里的重要文件备份到移动硬盘，你按步骤讲一下，还要提醒我怎么确认备份成功。",
+          "example": "我想把Windows电脑里的重要文件备份到移动硬盘，你按步骤讲一下，还要提醒我怎么确认备份成功。",
           "criteria": {
             "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
           },
           "trigger": "handoff",
           "trigger_condition": "",
-          "update": {}
+          "update": {
+            "computer_os": "Windows"
+          },
+          "facts": {
+            "computer_os": "Windows"
+          }
         },
         {
           "id": "probe",

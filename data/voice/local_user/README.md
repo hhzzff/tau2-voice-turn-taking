@@ -31,3 +31,10 @@ The keyboard clip is derived from ESC-50 `1-137-A-32.wav` (Freesound source 137)
 under CC BY-NC 3.0. Its source URL, original hash, crop and gain are retained in
 the manifest. This material retains its own license, independently of the
 repository's MIT code license. Source: https://github.com/karolpiczak/ESC-50 .
+
+## Local calibration after initial live trials
+
+R05 now says the computer runs Windows. In the first integrated trial the
+target reasonably asked Windows or Mac, so the required procedural explanation
+never began and the noise probe was not sent. This supplies a setup fact only;
+the noise asset and insertion condition are unchanged. The first trial is retained.
