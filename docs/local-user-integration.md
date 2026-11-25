@@ -52,3 +52,31 @@ TTS 不得冻结目标会话。模型太慢造成的迟到和错过窗口就是�
   “饭钱实际付了二百八十八块”识别成“饭前实际付了二百八十八”，保留
   该识别误差。证据位于忽略目录
   `data/simulations/local-user-integration/stage2-audio/`。
+- 阶段 3：新增 `LocalStreamingUser` 注册项和 `duplex_bench local` 显式入口，
+  使用 τ² OpenAI provider 的连接/配置/发送/截断接口。接收、播放和发送
+  独立运行；服务端 VAD 才触发播放截断，B 的 INTERRUPT 不直接取消目标。
+  provider 保留原有参数默认行为，新增可选音色、输入转写语言和输出上限。
+- 原共享转换器只支持 8k μ-law；在同一共享模块新增原生 PCM 转换器，
+  避免损失带宽。16→24k 使用有状态线性插值（小于一个源样本的延迟），
+  24→16k 使用 soxr 抗混叠滤波并在句末排空；不在 provider 内复制转换逻辑。
+- P03真实冒烟 `stage3-smoke-01`：117.65秒正常结束，目标一次询问两笔
+  金额，实际发送金额后得到小林→我57元、阿哲→我96元，与独立账本一致。
+  金额答案只在目标明确询问后披露。普通收尾后保留目标回答窗口。
+- 阶段3定向测试18项通过；其中慢B和慢TTS各1.1秒时收发、播放和ASR持续。
+  通用 provider suite 已执行：77项因未配置各供应商测试凭据而跳过，
+  不能视为77项通过；本阶段的实际OpenAI证据来自上述真实P03。
+
+## 运行入口
+
+安装：`uv sync --extra local-user --extra dev`。把目标密钥放入忽略的
+`.env`，变量名 `OPENAI_REALTIME_API_KEY`。本地后端地址和音色默认值在
+`tau2/config.py`；ASR权重通过参数指定，不绑定旧代码库。
+
+```bash
+python -m experiments.tau_voice.duplex_bench local \
+  --asr-model-path /path/to/x-asr-160ms \
+  --output data/simulations/local-user-review
+```
+
+可加 `--scenes P03` 做单例验证；省略则逐条运行19例。拒绝覆盖已有目录。
+这是受控场景接入，不会悄悄替换原有动态用户构建器或领域任务评分。
