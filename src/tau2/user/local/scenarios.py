@@ -3,6 +3,7 @@
 import hashlib
 import json
 import wave
+from functools import lru_cache
 from pathlib import Path
 
 from tau2.user.duplex_events import EVENT_CATALOG
@@ -56,6 +57,7 @@ def load_scenes(path: Path | None = None) -> list[dict]:
     return cases
 
 
+@lru_cache(maxsize=32)
 def load_clip(ident: str) -> tuple[bytes, dict]:
     """Read an immutable 20 ms aligned stimulus, with hash and format checks."""
     folder = SCENE_DIR / "audio"

@@ -67,6 +67,12 @@ API_PORT = 8000
 # AUDIO CONSTANTS (fixed, protocol-defined)
 # ======================================================================
 DEFAULT_PCM_SAMPLE_RATE = 16000  # User simulator synthesis rate
+DEFAULT_LOCAL_USER_MODEL = "Qwen/Qwen3.5-9B"
+DEFAULT_LOCAL_USER_LLM_URL = "http://127.0.0.1:8778/v1"
+DEFAULT_LOCAL_USER_TTS_URL = "http://127.0.0.1:8793/synthesize"
+DEFAULT_LOCAL_USER_TTS_MODEL = "Qwen/Qwen3-TTS-12Hz-1.7B-Base"
+DEFAULT_LOCAL_USER_SPEAKER = "emilia-zh-3"
+DEFAULT_LOCAL_USER_FRAME_MS = 20
 DEFAULT_TELEPHONY_RATE = 8000  # API/agent rate (8kHz μ-law, 1 byte/sample)
 TELEPHONY_ULAW_SILENCE = b"\x7f"  # μ-law silence byte
 
