@@ -1,0 +1,15 @@
+{
+  "source": "dynamic_pi controlled scene implementation, migrated 2026-11-25",
+  "source_suite_sha256": "05b30a149a01bbc3b471376cee1db549629508d2dba3fd5f12ac72a7291a9221",
+  "source_suite": "runs/duplex-all/20261125-v17/cases-r3.json",
+  "source_modules": {
+    "turn_control.py": "d00e3dae12c2ff524f03507f10b1ce7c01636f84c85460d6581f3c45709de710",
+    "scenario_agenda.py": "060f6cdff38f3f545f89ec65722e436d6c47b6352c2311f1e561f41481d785c3"
+  },
+  "protocols": [
+    "single-b-floor-scenarios-v17"
+  ],
+  "preserved_scene_count": 19,
+  "preserved_audio_count": 16,
+  "scope": "Current FloorController and bounded scene sampling retained. Asset bytes unchanged; manifest locations remapped. No runtime imports from the development repository."
+}

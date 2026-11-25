@@ -1,0 +1,3895 @@
+[
+  {
+    "id": "I01",
+    "title": "机场交通介绍中追问末班车",
+    "mode": "adaptive",
+    "persona": "general",
+    "user_model": "qwen35-9b",
+    "goal": "用户在目标仍讲解时插入与原任务相关的新问题，目标接住问题并保留已有条件。",
+    "private_facts": {},
+    "intent_events": [],
+    "max_turns": 12,
+    "max_seconds": 180,
+    "recover_after_silence_ms": 8000,
+    "target_instructions": "你是自然、友好的中文语音助手。根据用户实际说出的需求提供清楚、准确的帮助，信息不足时可以澄清。你没有查询、预订、购买或操作用户设备的工具，不声称已经执行了这些操作。需要实时资料时说明不确定性。请用普通话自然交流。",
+    "scenario_runtime": {
+      "schema_version": "duplex-runtime-v17",
+      "protocol": "single-b-floor-scenarios-v17",
+      "source_id": "I01",
+      "persona": "普通用户，表达自然简洁，通常愿意听清要点；会追问、改变想法，遇到误解或时间压力会简短打断。一次说一个重点，不每轮刻意表现不耐烦。",
+      "authoring_spec": {
+        "id": "I01",
+        "subtype": "追问",
+        "title": "机场交通介绍中追问末班车",
+        "goal": "用户在目标仍讲解时插入与原任务相关的新问题，目标接住问题并保留已有条件。",
+        "facts": {
+          "到达": "晚上22点30分到成都机场",
+          "人数": 2,
+          "行李": "两只箱子",
+          "目的地": "春熙路附近",
+          "新关注": "地铁末班车赶不上时的备选",
+          "机场": "成都天府国际机场"
+        },
+        "steps": [
+          {
+            "id": "setup",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "新会话开场",
+            "intent": "比较两种进城方式",
+            "example": "我们两个人晚上十点半到成都天府机场，带两只箱子，住春熙路附近。地铁和打车怎么选，你帮我讲讲。",
+            "agenda_effect": "建立机场交通任务；实际说出的到达时间、人数、行李和目的地记 delivered。",
+            "expected_target": "比较可行性、搬行李和夜间交通；未查询的运营时间应说明待查。"
+          },
+          {
+            "id": "probe",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "已听到地铁方案的一个完整意思，且目标仍在实际播放后续讲解；问题尚未被回答",
+            "intent": "插入末班车追问",
+            "example": "等一下，那个时间地铁还来得及吗？赶不上怎么办？",
+            "agenda_effect": "原交通任务保留，新增末班车可行性和备选两个缺项；不得因打断把到达时间重置。",
+            "expected_target": "及时让出旧话轮，优先回答夜间可行性和备选，不从头重讲整个比较。"
+          },
+          {
+            "id": "follow",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "收到追问的相关回答后正常交接",
+            "intent": "承接答案作选择",
+            "example": "那我先按打车准备，你再提醒我一个需要注意的地方。",
+            "agenda_effect": "提交用户选择；若目标给出其他更合理备选，按实际内容自然承接，不机械念此例句。",
+            "expected_target": "结合夜间和行李给出一个实用提醒。"
+          }
+        ],
+        "branches": [
+          "若目标已主动回答末班车和备选，不重复装作没听见；可问尚未覆盖的打车上车点，记 alternate_probe。没有新缺项则 not_triggered。",
+          "若目标停在澄清问题上，先真实回答；在后续讲解中寻找一次有效插话窗口。",
+          "若用户开始前目标已停止，改记普通追问样本，不计打断成功。"
+        ],
+        "validity": "追问与当前交通主题相关；插话时目标真实有声；不能读取尚未播放的后续答案。",
+        "success": [
+          "先处理追问，再延续交通任务",
+          "保留到达时间、人数与行李，未知时刻不编成确定事实"
+        ],
+        "failure": [
+          "继续旧讲解而遗漏追问",
+          "只说好的但未处理可行性或备选",
+          "把两人或到达时间改错"
+        ],
+        "controls": [
+          "同样问题在目标完整说完后提出，用于区分内容理解和抢占话轮问题。"
+        ],
+        "runtime_needs": [
+          "实际目标播放触发",
+          "插话首声前复核",
+          "当前任务增补缺项"
+        ]
+      },
+      "minimal_scope": "One main stimulus; independent control variants are not included.",
+      "stages": [
+        {
+          "id": "setup",
+          "kind": "opening",
+          "need": "比较两种进城方式",
+          "required": [
+            "两个人晚上22:30到成都天府机场，两只箱子，住春熙路附近",
+            "请比较地铁和打车"
+          ],
+          "example": "我们两个人晚上十点半到成都天府机场，带两只箱子，住春熙路附近。地铁和打车怎么选，你帮我讲讲。",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "probe",
+          "kind": "question",
+          "need": "插入末班车追问",
+          "required": [],
+          "example": "等一下，那个时间地铁还来得及吗？赶不上怎么办？",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "overlap",
+          "trigger_condition": "已听到关于机场交通的完整建议且仍在讲。在variants中选尚未被回答的问题；建议直接打车也可追问地铁可行性，寒暄或复述需求不足以触发。",
+          "update": {},
+          "variants": {
+            "last_train": {
+              "need": "追问末班车可行性和赶不上时的备选",
+              "required": [
+                "询问这个到达时间地铁是否来得及，赶不上怎么办",
+                "只用‘这个到达时间’指代，不重新说具体时刻，不附和与开场不一致的时间"
+              ],
+              "facts": {
+                "用户已说的到达时间": "晚上十点半"
+              },
+              "expression_guard": {
+                "forbidden_patterns": [
+                  "[零〇一二两三四五六七八九十百]+点|\\d"
+                ],
+                "retry_instruction": "只说‘这个到达时间’，不要说任何具体时刻；追问地铁来不来得及，以及赶不上怎么办。",
+                "fallback": "等一下，这个到达时间地铁还来得及吗？赶不上的话怎么办？"
+              },
+              "example": "等一下，那个时间地铁还来得及吗？赶不上怎么办？",
+              "condition": "末班车可行性或备选尚未讲清，已听到地铁或打车的实质建议"
+            },
+            "taxi_pickup": {
+              "need": "改问尚未说明的机场打车上车点",
+              "required": [
+                "只追问机场从哪里找正规出租车上车点"
+              ],
+              "example": "等一下，那机场正规的出租车上车点怎么找？",
+              "condition": "目标已回答末班车和备选，但尚未介绍打车上车点"
+            }
+          }
+        },
+        {
+          "id": "follow",
+          "kind": "question",
+          "need": "承接答案作选择",
+          "required": [
+            "承接实际可行方案，再问一个出发前需要注意的地方；不再问已解释的同一问题"
+          ],
+          "example": "那我先按打车准备，你再提醒我一个需要注意的地方。",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "closing",
+          "kind": "closing",
+          "need": "自然中性结束，不宣称任务全部解决或已实际操作",
+          "required": [
+            "今天先到这里"
+          ],
+          "example": "好，我先整理一下，今天先到这里。",
+          "criteria": {},
+          "trigger": "handoff"
+        }
+      ]
+    }
+  },
+  {
+    "id": "I02",
+    "title": "否定临街酒店但继续选住宿",
+    "mode": "adaptive",
+    "persona": "general",
+    "user_model": "qwen35-9b",
+    "goal": "用户明确排除目标正在展开的候选，目标撤下该候选并继续同一任务。",
+    "private_facts": {},
+    "intent_events": [],
+    "max_turns": 12,
+    "max_seconds": 180,
+    "recover_after_silence_ms": 8000,
+    "target_instructions": "你是自然、友好的中文语音助手。根据用户实际说出的需求提供清楚、准确的帮助，信息不足时可以澄清。你没有查询、预订、购买或操作用户设备的工具，不声称已经执行了这些操作。需要实时资料时说明不确定性。请用普通话自然交流。",
+    "scenario_runtime": {
+      "schema_version": "duplex-runtime-v17",
+      "protocol": "single-b-floor-scenarios-v17",
+      "source_id": "I02",
+      "persona": "普通用户，表达自然简洁，通常愿意听清要点；会追问、改变想法，遇到误解或时间压力会简短打断。一次说一个重点，不每轮刻意表现不耐烦。",
+      "authoring_spec": {
+        "id": "I02",
+        "subtype": "否定",
+        "title": "否定临街酒店但继续选住宿",
+        "goal": "用户明确排除目标正在展开的候选，目标撤下该候选并继续同一任务。",
+        "facts": {
+          "A方案": "地铁口、临主路、每晚380元",
+          "B方案": "内街、离地铁步行八分钟、每晚400元",
+          "预算": "每晚不超过450元",
+          "新决定": "排除A，优先安静"
+        },
+        "steps": [
+          {
+            "id": "setup",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "开场",
+            "intent": "请目标比较两个已知候选",
+            "example": "我看了两家酒店：A在地铁口，临主路，一晚三百八；B在内街，走到地铁八分钟，一晚四百。预算四百五以内，你帮我比较一下。",
+            "agenda_effect": "记录两候选和预算，尚未把安静优先当成已告知。",
+            "expected_target": "根据给定事实比较，不捏造酒店真实评分或设施。"
+          },
+          {
+            "id": "probe",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "目标已实际提到A的便利性且仍在讲；即使只是比较也可拒绝该候选，不声称目标已经推荐A",
+            "intent": "明确否定一个选项",
+            "example": "临主路这家不要了，我还是更在意安静。你接着看看另一家。",
+            "agenda_effect": "将A记为用户排除，安静优先记 delivered；住宿任务和预算不变。",
+            "expected_target": "停止继续推销A，转向B是否满足安静与预算，不把否定理解成结束全部咨询。"
+          },
+          {
+            "id": "follow",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "目标回应排除后交接",
+            "intent": "推进保留选项",
+            "example": "那B订之前，我最需要再核实什么？",
+            "agenda_effect": "进入B的待核实事项；不真的订房。",
+            "expected_target": "说明如隔音或房间朝向需要核实，而非保证内街就一定安静。"
+          }
+        ],
+        "branches": [
+          "若目标已主动排除A并只讲B，本次否定窗口不存在；不强行声称它仍在推荐A。",
+          "若目标反问是否连B也不要，澄清一次‘只排除临主路那家’，首次误解保留。"
+        ],
+        "validity": "用户否定的是已知候选，而不是凭空指控目标；条件不足时只评价撤下候选和继续任务。",
+        "success": [
+          "正确理解否定范围，只排除A",
+          "保留预算并继续比较或核实B"
+        ],
+        "failure": [
+          "反复推荐已排除的A",
+          "把一句否定当成整个任务取消",
+          "修改无关预算或目的"
+        ],
+        "controls": [
+          "改说‘A也可以，继续讲’，确认目标不会因任何插话都删除当前候选。"
+        ],
+        "runtime_needs": [
+          "候选范围的私有更新",
+          "实际提及候选的语义触发"
+        ]
+      },
+      "minimal_scope": "One main stimulus; independent control variants are not included.",
+      "stages": [
+        {
+          "id": "setup",
+          "kind": "opening",
+          "need": "请目标比较两个已知候选",
+          "required": [
+            "A地铁口临主路每晚380，B内街离地铁步行8分钟每晚400",
+            "预算每晚450以内，请比较"
+          ],
+          "example": "我看了两家酒店：A在地铁口，临主路，一晚三百八；B在内街，走到地铁八分钟，一晚四百。预算四百五以内，你帮我比较一下。",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "probe",
+          "kind": "question",
+          "need": "明确否定一个选项",
+          "required": [
+            "排除临主路的A，更在意安静，请继续看B",
+            "不声称助手已经推荐A"
+          ],
+          "example": "临主路这家不要了，我还是更在意安静。你接着看看另一家。",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "overlap",
+          "trigger_condition": "已实际说出A靠近地铁的便利性且仍在讲；仅报标题或复述价格不足。若已经主动排除A且只讨论B则不触发。",
+          "update": {
+            "排除": "A",
+            "优先": "安静"
+          }
+        },
+        {
+          "id": "follow",
+          "kind": "question",
+          "need": "推进保留选项",
+          "required": [
+            "只问B订前最需要核实什么"
+          ],
+          "example": "那B订之前，我最需要再核实什么？",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "closing",
+          "kind": "closing",
+          "need": "自然中性结束，不宣称任务全部解决或已实际操作",
+          "required": [
+            "今天先到这里"
+          ],
+          "example": "好，我先整理一下，今天先到这里。",
+          "criteria": {},
+          "trigger": "handoff"
+        }
+      ]
+    }
+  },
+  {
+    "id": "I03",
+    "title": "操作说明中请重说刚才一步",
+    "mode": "adaptive",
+    "persona": "general",
+    "user_model": "qwen35-9b",
+    "goal": "目标准确定位用户没听清的片段并重述，避免整段重启或继续跳步。",
+    "private_facts": {},
+    "intent_events": [],
+    "max_turns": 12,
+    "max_seconds": 180,
+    "recover_after_silence_ms": 8000,
+    "target_instructions": "你是自然、友好的中文语音助手。根据用户实际说出的需求提供清楚、准确的帮助，信息不足时可以澄清。你没有查询、预订、购买或操作用户设备的工具，不声称已经执行了这些操作。需要实时资料时说明不确定性。请用普通话自然交流。",
+    "scenario_runtime": {
+      "schema_version": "duplex-runtime-v17",
+      "protocol": "single-b-floor-scenarios-v17",
+      "source_id": "I03",
+      "persona": "普通用户，表达自然简洁，通常愿意听清要点；会追问、改变想法，遇到误解或时间压力会简短打断。一次说一个重点，不每轮刻意表现不耐烦。",
+      "authoring_spec": {
+        "id": "I03",
+        "subtype": "重复请求",
+        "title": "操作说明中请重说刚才一步",
+        "goal": "目标准确定位用户没听清的片段并重述，避免整段重启或继续跳步。",
+        "facts": {
+          "任务": "向同事解释把手机照片整理到电脑的一般步骤",
+          "需求": "重说刚才最后一个完整步骤，稍慢",
+          "手机系统": "安卓",
+          "电脑系统": "Windows"
+        },
+        "steps": [
+          {
+            "id": "setup",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "开场",
+            "intent": "获得分步骤的通用说明",
+            "example": "我想把手机里的照片整理到电脑，先按用数据线的通用办法，一步步给我讲一下。",
+            "agenda_effect": "建立操作说明任务；如需系统信息，私有答案为安卓手机和Windows电脑，只有被问才补充。",
+            "expected_target": "给出按顺序可理解的通用步骤，具体界面不确定时说明差异。"
+          },
+          {
+            "id": "probe",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "实际听完一个完整步骤，目标继续下一步时；控制器记录刚才完整步骤的音频与转写作定位证据",
+            "intent": "请求局部重复",
+            "example": "等一下，刚才那一步我没听清，麻烦再说一遍，慢一点。",
+            "agenda_effect": "暂停前进，当前缺项变为重述刚才已听到的那一步；不虚构步骤文本。",
+            "expected_target": "局部重述该步骤并稍作停顿，必要时简短确认所指位置。"
+          },
+          {
+            "id": "release",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "听到重述或完成一次指代澄清后",
+            "intent": "允许继续",
+            "example": "这次听清了，你接着讲后面。",
+            "agenda_effect": "重复请求已采样，恢复尚未讲完的后续步骤。",
+            "expected_target": "从正确位置续讲，而不是重新从第一步开始。"
+          }
+        ],
+        "branches": [
+          "若目标询问哪一步，用刚才真实听到的动作作短定位，如‘你说选文件夹那一步’，不得照搬预设界面名。",
+          "若目标一次只讲一步且已经停下，本次记无重叠；可请求再讲后两步建立一次窗口，标 assisted_setup。"
+        ],
+        "validity": "确有可指代的已播放完整步骤；重述正确性按该段实际内容判定。",
+        "success": [
+          "定位并重说相关步骤",
+          "重复后从适当位置继续，顺序连贯"
+        ],
+        "failure": [
+          "忽略请求继续讲新步骤",
+          "重复错误片段且不澄清",
+          "把整段从头讲一遍造成明显冗余"
+        ],
+        "controls": [
+          "用户明确要求‘从第一步重新讲一遍’时，整段重启才是正确行为。"
+        ],
+        "runtime_needs": [
+          "最近实际语义片段定位",
+          "暂停和恢复子任务"
+        ]
+      },
+      "minimal_scope": "One main stimulus; independent control variants are not included.",
+      "stages": [
+        {
+          "id": "setup",
+          "kind": "opening",
+          "need": "获得分步骤的通用说明",
+          "required": [
+            "用数据线把手机照片整理到电脑，请按步骤讲一般办法",
+            "未问系统时不主动报系统"
+          ],
+          "example": "我想把手机里的照片整理到电脑，先按用数据线的通用办法，一步步给我讲一下。",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "probe",
+          "kind": "question",
+          "need": "请求局部重复",
+          "required": [
+            "刚才那个完整步骤没听清，请局部重说一遍，慢一点",
+            "不复述全部流程，不虚构没有听过的动作"
+          ],
+          "example": "等一下，刚才那一步我没听清，麻烦再说一遍，慢一点。",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "overlap",
+          "trigger_condition": "已听完一个可操作的完整步骤，且助手正在继续下一步。仅开场、问系统、报步骤标题均不满足；evidence引用刚完成的动作。",
+          "update": {},
+          "setup_extension": {
+            "need": "补充实际需要的系统信息并请继续讲后两步",
+            "required": [
+              "安卓手机、Windows电脑",
+              "请接着讲后面的两三步"
+            ],
+            "example": "我是安卓手机、Windows电脑，你接着讲后面的两三步吧。",
+            "criteria": {
+              "response": "相关说明"
+            }
+          }
+        },
+        {
+          "id": "release",
+          "kind": "question",
+          "need": "允许继续",
+          "required": [
+            "确有重述才说这次听清了，请继续后面；若助手询问所指位置，只用实际听到的动作定位"
+          ],
+          "example": "这次听清了，你接着讲后面。",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "closing",
+          "kind": "closing",
+          "need": "自然中性结束，不宣称任务全部解决或已实际操作",
+          "required": [
+            "今天先到这里"
+          ],
+          "example": "好，我先整理一下，今天先到这里。",
+          "criteria": {},
+          "trigger": "handoff"
+        }
+      ]
+    }
+  },
+  {
+    "id": "I04",
+    "title": "从旅行住宿切换到打印机问题",
+    "mode": "adaptive",
+    "persona": "general",
+    "user_model": "qwen35-9b",
+    "goal": "目标及时暂停旧主题，进入新的明确主题，并保留旧任务供用户以后恢复。",
+    "private_facts": {},
+    "intent_events": [],
+    "max_turns": 12,
+    "max_seconds": 180,
+    "recover_after_silence_ms": 8000,
+    "target_instructions": "你是自然、友好的中文语音助手。根据用户实际说出的需求提供清楚、准确的帮助，信息不足时可以澄清。你没有查询、预订、购买或操作用户设备的工具，不声称已经执行了这些操作。需要实时资料时说明不确定性。请用普通话自然交流。",
+    "scenario_runtime": {
+      "schema_version": "duplex-runtime-v17",
+      "protocol": "single-b-floor-scenarios-v17",
+      "source_id": "I04",
+      "persona": "普通用户，表达自然简洁，通常愿意听清要点；会追问、改变想法，遇到误解或时间压力会简短打断。一次说一个重点，不每轮刻意表现不耐烦。",
+      "authoring_spec": {
+        "id": "I04",
+        "subtype": "话题切换",
+        "title": "从旅行住宿切换到打印机问题",
+        "goal": "目标及时暂停旧主题，进入新的明确主题，并保留旧任务供用户以后恢复。",
+        "facts": {
+          "旧任务": "比较成都住宿选址",
+          "新任务": "打印机显示脱机，电脑Windows，打印机已通电",
+          "恢复规则": "只有用户主动要求才回到酒店"
+        },
+        "steps": [
+          {
+            "id": "setup",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "开场",
+            "intent": "比较酒店位置",
+            "example": "去成都玩，住春熙路附近还是人民公园附近更方便？你帮我比较交通和晚上休息。",
+            "agenda_effect": "建立住宿选址任务。",
+            "expected_target": "比较两个区域而非编造实时房价。"
+          },
+          {
+            "id": "probe",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "目标已展开其中一个位置并仍在讲解",
+            "intent": "明确暂停旧任务，切换新任务",
+            "example": "酒店先放一放，我现在要打印东西，打印机一直显示脱机，先帮我看看这个。",
+            "agenda_effect": "住宿任务 suspended；激活打印机排查任务，旧任务不记完成也不删除。",
+            "expected_target": "停止酒店介绍，针对脱机状态问必要信息或提出排查步骤。"
+          },
+          {
+            "id": "details",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "目标问设备信息或给出相关第一步后交接",
+            "intent": "按实际提问补充情况",
+            "example": "电脑是Windows，打印机开着。我先检查连接。",
+            "agenda_effect": "只补实际被问到或当前排查所需事实；不假装执行硬件操作成功。",
+            "expected_target": "延续排查，不自行回到住宿。"
+          },
+          {
+            "id": "resume",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "收到一个完整可操作的排查建议后",
+            "intent": "明确恢复旧主题",
+            "example": "打印机我先照这个检查。回到刚才酒店的位置，你接着说。",
+            "agenda_effect": "打印机任务暂挂而非宣称修好；恢复住宿任务的未完部分。",
+            "expected_target": "能接续原来的两个区域比较，不把打印机条件带入酒店。"
+          }
+        ],
+        "branches": [
+          "若目标需要型号，回答‘型号我暂时没记住，先说通用检查方法’，不编造型号。",
+          "若仍讲酒店，纠偏一次‘先处理打印机’，首次切换失败保留。"
+        ],
+        "validity": "切换发生在旧主题仍有实际音频时；新旧任务都明确，硬件状态不由模型想象。",
+        "success": [
+          "及时切入新主题",
+          "明确恢复后能承接旧主题，两个任务事实不混淆"
+        ],
+        "failure": [
+          "用户切换后继续酒店介绍",
+          "把酒店条件或回答套到打印机",
+          "未经用户许可反复跳回旧话题"
+        ],
+        "controls": [
+          "仅补充酒店房间偏好时应留在住宿主题，不触发整个任务挂起。"
+        ],
+        "runtime_needs": [
+          "任务挂起与恢复，超出现有单向pop",
+          "跨任务最近交互保留",
+          "去除当前旅行专用提示对新领域的限制"
+        ]
+      },
+      "minimal_scope": "One main stimulus; independent control variants are not included.",
+      "stages": [
+        {
+          "id": "setup",
+          "kind": "opening",
+          "need": "比较酒店位置",
+          "required": [
+            "成都春熙路和人民公园附近住宿比较交通与休息"
+          ],
+          "example": "去成都玩，住春熙路附近还是人民公园附近更方便？你帮我比较交通和晚上休息。",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {},
+          "topic": "hotel"
+        },
+        {
+          "id": "probe",
+          "kind": "question",
+          "need": "明确暂停旧任务，切换新任务",
+          "required": [
+            "酒店先放一放，现在先处理打印机显示脱机"
+          ],
+          "example": "酒店先放一放，我现在要打印东西，打印机一直显示脱机，先帮我看看这个。",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "overlap",
+          "trigger_condition": "已经听到至少一个关于住宿位置的实质观点且仍在讲；寒暄不满足。",
+          "update": {},
+          "topic": "printer",
+          "suspend_topics": [
+            "hotel"
+          ]
+        },
+        {
+          "id": "details",
+          "kind": "question",
+          "need": "按实际提问补充情况",
+          "required": [
+            "当前必要时补充：Windows电脑、打印机已通电",
+            "型号暂时没记住；不假装已经操作成功"
+          ],
+          "example": "电脑是Windows，打印机开着。我先检查连接。",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {},
+          "topic": "printer",
+          "facts": {
+            "电脑": "Windows",
+            "打印机": "已通电",
+            "型号": "暂时没记住"
+          }
+        },
+        {
+          "id": "resume",
+          "kind": "question",
+          "need": "明确恢复旧主题",
+          "required": [
+            "打印机先照建议检查，但不宣称修好",
+            "明确回到刚才两个酒店位置的比较"
+          ],
+          "example": "打印机我先照这个检查。回到刚才酒店的位置，你接着说。",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {},
+          "topic": "hotel",
+          "suspend_topics": [
+            "printer"
+          ]
+        },
+        {
+          "id": "closing",
+          "kind": "closing",
+          "need": "自然中性结束，不宣称任务全部解决或已实际操作",
+          "required": [
+            "今天先到这里"
+          ],
+          "example": "好，我先整理一下，今天先到这里。",
+          "criteria": {},
+          "trigger": "handoff"
+        }
+      ]
+    }
+  },
+  {
+    "id": "I05",
+    "title": "行程讲解中更正自己刚才说错的日期",
+    "mode": "adaptive",
+    "persona": "general",
+    "user_model": "qwen35-9b",
+    "goal": "目标接收已明确说出的日期更正，更新相关建议，同时保留未改变的条件。",
+    "private_facts": {},
+    "intent_events": [],
+    "max_turns": 12,
+    "max_seconds": 180,
+    "recover_after_silence_ms": 8000,
+    "target_instructions": "你是自然、友好的中文语音助手。根据用户实际说出的需求提供清楚、准确的帮助，信息不足时可以澄清。你没有查询、预订、购买或操作用户设备的工具，不声称已经执行了这些操作。需要实时资料时说明不确定性。请用普通话自然交流。",
+    "scenario_runtime": {
+      "schema_version": "duplex-runtime-v17",
+      "source_id": "I05",
+      "persona": "普通用户，表达自然简洁，通常愿意听清要点；会追问、改变想法，遇到误解或时间压力会简短打断。一次说一个重点，不每轮刻意表现不耐烦。",
+      "stages": [
+        {
+          "id": "setup",
+          "kind": "opening",
+          "need": "先按最初日期讨论交通",
+          "required": [
+            "两人12月11日上午从上海去杭州，12月14日回来",
+            "两人交通合计2000元以内",
+            "请比较高铁和自驾"
+          ],
+          "example": "我们两个人十二月十一日上午从上海去杭州，十四号回来，交通合计两千以内。高铁和自驾你帮我比较一下。",
+          "criteria": {
+            "related": "用户已说明条件，助手开始给相关交通比较即可，不要求逐字复述"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {
+            "去程": "12月11日上午",
+            "返程": "12月14日",
+            "人数": 2,
+            "预算": "两人交通合计2000元以内"
+          }
+        },
+        {
+          "id": "probe",
+          "kind": "constraint_change",
+          "need": "更正自己刚才的口误，不指控目标听错",
+          "required": [
+            "说明自己刚才日期说错了",
+            "去程改为12月12日上午，返程仍为12月14日"
+          ],
+          "example": "等一下，我刚才日期说错了，是十二月十二日上午出发，十四号回来不变。",
+          "criteria": {
+            "date": "助手按12月12日上午去、12月14日回理解更正，不要求逐字复述",
+            "retain": "不改变两人及交通合计2000元以内"
+          },
+          "trigger": "overlap",
+          "trigger_condition": "必须已听到至少一个关于高铁或自驾的完整比较观点，例如行程时间、价格或省心程度，且目标此刻仍在讲。仅复述人数、日期、预算，或者只说开始比较，均不满足；不在半句或未说完的数值上触发。ready=true时evidence引用这个已听完的交通观点原文。用户要更正自己的日期口误，无需助手先犯错。",
+          "update": {
+            "去程": "12月12日上午"
+          }
+        },
+        {
+          "id": "follow",
+          "kind": "question",
+          "need": "检查建议是否按新事实继续",
+          "required": [
+            "询问按更正后的时间哪种交通更省心",
+            "用“按现在这个时间”指代新日期；问句不报具体日期、几号或上午，不重述更正内容"
+          ],
+          "example": "按现在这个时间，哪种方式更省心？",
+          "criteria": {
+            "recommendation": "结合已告知条件提供相关选择或说明需要核实的信息"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "closing",
+          "kind": "closing",
+          "need": "自然结束这次交谈，不宣称所有问题已经解决",
+          "required": [
+            "这次先聊到这里"
+          ],
+          "example": "好，我先整理一下，今天就到这里。",
+          "criteria": {},
+          "trigger": "handoff"
+        }
+      ],
+      "sampling_is_not_success": true,
+      "source_spec": {
+        "id": "I05",
+        "subtype": "纠正",
+        "title": "行程讲解中更正自己刚才说错的日期",
+        "goal": "目标接收已明确说出的日期更正，更新相关建议，同时保留未改变的条件。",
+        "facts": {
+          "原去程": "12月11日上午",
+          "更正去程": "12月12日上午",
+          "返程": "12月14日",
+          "人数": 2,
+          "预算": "两人交通合计2000元以内",
+          "路线": "上海往返杭州"
+        },
+        "steps": [
+          {
+            "id": "setup",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "开场",
+            "intent": "先按最初日期讨论交通",
+            "example": "我们两个人十二月十一日上午从上海去杭州，十四号回来，交通合计两千以内。高铁和自驾你帮我比较一下。",
+            "agenda_effect": "初始日期、人数和预算实际发出后记 delivered。",
+            "expected_target": "基于这些条件比较交通。"
+          },
+          {
+            "id": "probe",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "目标按初始日期展开交通比较且仍有实际播放；模拟用户此时想起自己说错日期",
+            "intent": "更正自己刚才的口误，不指控目标听错",
+            "example": "等一下，我刚才日期说错了，是十二月十二日上午出发，十四号回来不变。",
+            "agenda_effect": "去程12月12日先pending，整句实际发送后覆盖旧去程；返程、人数和预算保留。",
+            "expected_target": "接受更正并沿用新去程，不把返程一起后移。"
+          },
+          {
+            "id": "follow",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "目标处理更正后正常交接",
+            "intent": "检查建议是否按新事实继续",
+            "example": "按现在这个时间，哪种方式更省心？",
+            "agenda_effect": "在新日期下继续原交通任务；不再次提示日期答案。",
+            "expected_target": "建议与当前事实一致。"
+          }
+        ],
+        "branches": [
+          "若目标尚未说日期也能接受用户自我纠正；必须确有目标在讲，才能计入打断样本。",
+          "若另测目标自身说错日期，只在已听到完整明确错误后触发，另记 target_error 分支；不能将未说完的数字或‘不是十一号’误判为错误。"
+        ],
+        "validity": "初始和更正日期均实际说出；更正原因是用户口误，目标无需先犯错。",
+        "success": [
+          "新去程生效，旧去程不再使用",
+          "返程、人数、预算保持一致，能继续原问题"
+        ],
+        "failure": [
+          "仍按旧去程规划",
+          "更正一个字段时改动其他字段",
+          "只复述更正却在后续使用旧事实"
+        ],
+        "controls": [
+          "目标说‘不是十一号，是十二号’时，不允许用户模拟器凭数字前缀再纠正；先听完整语义。"
+        ],
+        "runtime_needs": [
+          "已发送事实的版本更新",
+          "纠正证据首声前复核"
+        ]
+      },
+      "protocol": "single-b-floor-scenarios-v17"
+    }
+  },
+  {
+    "id": "I06",
+    "title": "时间变紧时要求直接给结论",
+    "mode": "adaptive",
+    "persona": "general",
+    "user_model": "qwen35-9b",
+    "goal": "用户以轻微不耐烦的语气打断，目标缩短表达并回答核心问题，不争辩或长篇道歉。",
+    "private_facts": {},
+    "intent_events": [],
+    "max_turns": 12,
+    "max_seconds": 180,
+    "recover_after_silence_ms": 8000,
+    "target_instructions": "你是自然、友好的中文语音助手。根据用户实际说出的需求提供清楚、准确的帮助，信息不足时可以澄清。你没有查询、预订、购买或操作用户设备的工具，不声称已经执行了这些操作。需要实时资料时说明不确定性。请用普通话自然交流。",
+    "scenario_runtime": {
+      "schema_version": "duplex-runtime-v17",
+      "protocol": "single-b-floor-scenarios-v17",
+      "source_id": "I06",
+      "persona": "普通用户，表达自然简洁，通常愿意听清要点；会追问、改变想法，遇到误解或时间压力会简短打断。一次说一个重点，不每轮刻意表现不耐烦。",
+      "authoring_spec": {
+        "id": "I06",
+        "subtype": "不耐烦",
+        "title": "时间变紧时要求直接给结论",
+        "goal": "用户以轻微不耐烦的语气打断，目标缩短表达并回答核心问题，不争辩或长篇道歉。",
+        "facts": {
+          "商品A": "399元，有主动降噪，稍重",
+          "商品B": "299元，无主动降噪，较轻",
+          "用途": "地铁通勤",
+          "预算": "400元以内",
+          "当前时间压力": "临时只剩半分钟"
+        },
+        "steps": [
+          {
+            "id": "setup",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "开场",
+            "intent": "比较已知商品，不依赖实时查询",
+            "example": "两副耳机，A三百九十九，有主动降噪但重一点；B两百九十九，没有降噪但轻。我主要坐地铁，预算四百以内，你帮我比较一下。",
+            "agenda_effect": "记录固定候选、用途和预算。",
+            "expected_target": "根据给定信息进行比较。"
+          },
+          {
+            "id": "probe",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "已经听到至少一个完整比较理由，目标仍在讲；使用情境性时间压力，不要求目标先重复或跑题",
+            "intent": "表达急迫，要求短结论",
+            "example": "好，我现在有点赶时间，直接告诉我选哪个，再说一个最主要的理由就行。",
+            "agenda_effect": "新增输出偏好：一个选择、一个主要理由；商品事实不变。",
+            "expected_target": "简短给出有依据的选择，停止延展背景。"
+          },
+          {
+            "id": "close",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "收到短结论后",
+            "intent": "自然结束",
+            "example": "行，我知道了，谢谢。",
+            "agenda_effect": "采样结束；若目标未给结论，记录遗漏，不重复催出通过结果。",
+            "expected_target": "简短收尾。"
+          }
+        ],
+        "branches": [
+          "如果目标首次回答已经足够短且结束，没有有效打断窗口，记 not_triggered；不能凭空抱怨‘你一直重复’。",
+          "若目标长篇解释为什么不能替用户选择，采样为未遵循简洁偏好；不通过反复催促修改首次结果。"
+        ],
+        "validity": "用户的急迫由剧本情境产生；语气直接但不辱骂，不把不耐烦写成每轮固定人格。",
+        "success": [
+          "能让出话轮并压缩输出",
+          "结论与通勤、预算及已知事实一致"
+        ],
+        "failure": [
+          "继续长篇比较或道歉",
+          "训斥用户或争辩态度",
+          "只变短却遗漏选择或理由"
+        ],
+        "controls": [
+          "同一事实下用户说‘不着急，请展开讲’，目标应允许较完整解释。"
+        ],
+        "runtime_needs": [
+          "只在当前事件改变表达偏好",
+          "自然口气与可控音频重叠"
+        ]
+      },
+      "minimal_scope": "One main stimulus; independent control variants are not included.",
+      "stages": [
+        {
+          "id": "setup",
+          "kind": "opening",
+          "need": "比较已知商品，不依赖实时查询",
+          "required": [
+            "A耳机399主动降噪但重一点，B299无降噪但轻",
+            "主要地铁通勤，预算400以内，请比较"
+          ],
+          "example": "两副耳机，A三百九十九，有主动降噪但重一点；B两百九十九，没有降噪但轻。我主要坐地铁，预算四百以内，你帮我比较一下。",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "probe",
+          "kind": "question",
+          "need": "表达急迫，要求短结论",
+          "required": [
+            "明确告诉助手自己现在赶时间，要求助手只给一个选择和一个主要理由",
+            "本轮只提出简短要求，不替助手作选择或给理由，不说自己已经决定选A或B",
+            "语气直接但不辱骂，不编造助手一直重复"
+          ],
+          "example": "好，我现在有点赶时间，直接告诉我选哪个，再说一个最主要的理由就行。",
+          "criteria": {
+            "choice": "明确给一个选择",
+            "concise": "一个主要理由后停止，不长篇展开"
+          },
+          "trigger": "overlap",
+          "trigger_condition": "听完至少一个与地铁通勤相关的比较理由且仍在讲；只是复述型号价格或说好的不算理由。",
+          "update": {},
+          "expression_guard": {
+            "required_patterns": [
+              "赶时间|着急|来不及",
+              "选哪个|选哪|告诉我|给.{0,8}(?:选择|结论)"
+            ],
+            "forbidden_patterns": [
+              "那就选|(?:^|[，。])\\s*我(?:决定)?选"
+            ],
+            "retry_instruction": "你是用户，只提出要求：我现在赶时间，请直接告诉我选哪个，给一个主要理由。不要替助手回答或自己选耳机。",
+            "fallback": "我现在有点赶时间，你直接告诉我选哪个，再说一个主要理由就行。"
+          }
+        },
+        {
+          "id": "close",
+          "kind": "closing",
+          "need": "自然结束",
+          "required": [
+            "简短自然结束，不追加任务"
+          ],
+          "example": "行，我知道了，谢谢。",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        }
+      ]
+    }
+  },
+  {
+    "id": "I07",
+    "title": "明确喊停后保持安静直到重新允许",
+    "mode": "adaptive",
+    "persona": "general",
+    "user_model": "qwen35-9b",
+    "goal": "目标停止当前输出，在用户明确恢复前不自行续讲，并在恢复后正常回答。",
+    "private_facts": {},
+    "intent_events": [],
+    "max_turns": 12,
+    "max_seconds": 180,
+    "recover_after_silence_ms": 8000,
+    "target_instructions": "你是自然、友好的中文语音助手。根据用户实际说出的需求提供清楚、准确的帮助，信息不足时可以澄清。你没有查询、预订、购买或操作用户设备的工具，不声称已经执行了这些操作。需要实时资料时说明不确定性。请用普通话自然交流。",
+    "scenario_runtime": {
+      "schema_version": "duplex-runtime-v17",
+      "protocol": "single-b-floor-scenarios-v17",
+      "source_id": "I07",
+      "persona": "普通用户，表达自然简洁，通常愿意听清要点；会追问、改变想法，遇到误解或时间压力会简短打断。一次说一个重点，不每轮刻意表现不耐烦。",
+      "authoring_spec": {
+        "id": "I07",
+        "subtype": "要求停止说话",
+        "title": "明确喊停后保持安静直到重新允许",
+        "goal": "目标停止当前输出，在用户明确恢复前不自行续讲，并在恢复后正常回答。",
+        "facts": {
+          "主题": "搬家当天的整理顺序",
+          "静默观察时长秒": 4,
+          "恢复请求": "只说出门前最重要的检查"
+        },
+        "steps": [
+          {
+            "id": "setup",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "开场",
+            "intent": "让目标介绍多步骤事项",
+            "example": "我明天搬家，从打包到出门前检查，按顺序给我讲讲。",
+            "agenda_effect": "建立搬家说明任务。",
+            "expected_target": "有顺序地说明事项。"
+          },
+          {
+            "id": "probe",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "目标已开始实际讲解且仍有声",
+            "intent": "明确要求停说，保留恢复权",
+            "example": "先停一下，先别说话，等我叫你。",
+            "agenda_effect": "场景进入stop_requested；暂停原任务，不记完成。",
+            "expected_target": "停止旧答复，不把‘停一下’当成新问题展开回答。"
+          },
+          {
+            "id": "hold",
+            "actor": "observer",
+            "delivery": "observe_silence",
+            "trigger": "停止指令最后有声帧发送完成",
+            "intent": "连续4秒只观察目标，用户不发任何附和",
+            "example": "",
+            "agenda_effect": "启动有截止时刻的观察窗，接收通道保持打开；静默本身不由met推进。",
+            "expected_target": "可以有极短的收悉语，单独记录其时长；不得继续旧内容、追问或主动恢复。"
+          },
+          {
+            "id": "release",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "4秒观察窗结束，不论目标是否遵守都进入恢复步骤",
+            "intent": "明确恢复并缩小问题",
+            "example": "现在可以说了，只提醒我出门前最重要的一件事。",
+            "agenda_effect": "撤销场景静默窗口，激活短回答任务；之前违反停说仍保留。",
+            "expected_target": "恢复响应且遵循只说一项，不重新播放整段旧说明。"
+          }
+        ],
+        "branches": [
+          "若4秒内自行续讲，记录首次恢复时间和内容，不再次喊停来掩盖失败。",
+          "若目标停止太晚，记录旧内容继续了多久；能在恢复后回答不抵消前面的停说失败。"
+        ],
+        "validity": "停止命令与目标有声重叠，目标输入保持连接，静默不是音频丢失。",
+        "success": [
+          "停止旧内容并遵守等待范围",
+          "用户明确恢复后能正常给一项提醒"
+        ],
+        "failure": [
+          "继续原讲解或自行续讲",
+          "把停说理解为永久断开，恢复请求也不回答"
+        ],
+        "controls": [
+          "用户仅说‘嗯，继续’时，目标不应按停说命令处理。"
+        ],
+        "runtime_needs": [
+          "有限静默观察窗口",
+          "旧音频停止与新输出区分",
+          "恢复命令后的可用性检查"
+        ]
+      },
+      "minimal_scope": "One main stimulus; independent control variants are not included.",
+      "stages": [
+        {
+          "id": "setup",
+          "kind": "opening",
+          "need": "让目标介绍多步骤事项",
+          "required": [
+            "明天搬家，从打包到出门前检查按顺序介绍"
+          ],
+          "example": "我明天搬家，从打包到出门前检查，按顺序给我讲讲。",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "probe",
+          "kind": "question",
+          "need": "明确要求停说，保留恢复权",
+          "required": [
+            "先停一下，先别说话，等我叫你"
+          ],
+          "example": "先停一下，先别说话，等我叫你。",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "overlap",
+          "trigger_condition": "至少完整听到一条可操作的搬家建议，例如把衣物装箱、给箱子贴标签或分开贵重物品，并且目标仍有声。‘好的’‘搬家前一天打包加出门前检查’‘按顺序讲’只是复述请求，绝对不足以触发。evidence引用真实建议的完整动作。",
+          "update": {}
+        },
+        {
+          "id": "hold",
+          "kind": "observe",
+          "need": "保持接收，有限观察助手实际行为，不补发提示",
+          "max_seconds": 20,
+          "quiet_after_end_ms": 1000,
+          "fixed_seconds": 4
+        },
+        {
+          "id": "release",
+          "kind": "question",
+          "need": "明确恢复并缩小问题",
+          "required": [
+            "现在可以说了，只提醒出门前最重要的一件事"
+          ],
+          "example": "现在可以说了，只提醒我出门前最重要的一件事。",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "scheduled_release",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "closing",
+          "kind": "closing",
+          "need": "自然中性结束，不宣称任务全部解决或已实际操作",
+          "required": [
+            "今天先到这里"
+          ],
+          "example": "好，我先整理一下，今天先到这里。",
+          "criteria": {},
+          "trigger": "handoff"
+        }
+      ]
+    }
+  },
+  {
+    "id": "I08",
+    "title": "听到保险术语时打断要求说人话",
+    "mode": "adaptive",
+    "persona": "general",
+    "user_model": "qwen35-9b",
+    "goal": "目标识别解释请求，用通俗语言说明已提到的术语，再继续原任务。",
+    "private_facts": {},
+    "intent_events": [],
+    "max_turns": 12,
+    "max_seconds": 180,
+    "recover_after_silence_ms": 8000,
+    "target_instructions": "你是自然、友好的中文语音助手。根据用户实际说出的需求提供清楚、准确的帮助，信息不足时可以澄清。你没有查询、预订、购买或操作用户设备的工具，不声称已经执行了这些操作。需要实时资料时说明不确定性。请用普通话自然交流。",
+    "scenario_runtime": {
+      "schema_version": "duplex-runtime-v17",
+      "protocol": "single-b-floor-scenarios-v17",
+      "source_id": "I08",
+      "persona": "普通用户，表达自然简洁，通常愿意听清要点；会追问、改变想法，遇到误解或时间压力会简短打断。一次说一个重点，不每轮刻意表现不耐烦。",
+      "authoring_spec": {
+        "id": "I08",
+        "subtype": "要求解释",
+        "title": "听到保险术语时打断要求说人话",
+        "goal": "目标识别解释请求，用通俗语言说明已提到的术语，再继续原任务。",
+        "facts": {
+          "主题": "保额和免赔额的区别",
+          "用户背景": "不了解保险术语",
+          "边界": "只解释一般概念，不推荐具体产品或声称保单一定赔付"
+        },
+        "steps": [
+          {
+            "id": "setup",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "开场",
+            "intent": "获得概念比较",
+            "example": "我第一次看家财险，保额和免赔额有什么区别？它们会怎么影响赔付？",
+            "agenda_effect": "建立概念解释任务。",
+            "expected_target": "解释概念及适用边界。"
+          },
+          {
+            "id": "probe",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "已实际听到‘免赔额’且含义尚未用简单例子讲清，目标仍在展开",
+            "intent": "要求通俗解释当前术语",
+            "example": "等一下，免赔额到底是什么意思？别用术语，举个简单例子。",
+            "agenda_effect": "将当前子目标改为通俗定义和一个算例，仍保留保额比较任务。",
+            "expected_target": "用假设数字解释，区分免赔部分与可能赔付的部分，并说明具体以条款为准。"
+          },
+          {
+            "id": "follow",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "收到可理解解释后交接",
+            "intent": "承接解释回到比较",
+            "example": "明白，那保额在这个例子里又限制了什么？",
+            "agenda_effect": "恢复原比较；不要重讲所有背景。",
+            "expected_target": "在同一假设例子中说明上限，逻辑前后一致。"
+          }
+        ],
+        "branches": [
+          "若目标已讲清免赔额并举例，改问它实际使用但尚未解释的相关术语；没有合适对象则 not_triggered。",
+          "若目标未用目标术语，不能说‘你刚才那个词’；明确询问概念只算普通提问分支。"
+        ],
+        "validity": "所问概念与已播放内容对应，目标确仍在讲；算例不是承诺真实赔付。",
+        "success": [
+          "解释变得通俗且算例自洽",
+          "能从解释返回原任务，未遗漏用户的问题"
+        ],
+        "failure": [
+          "继续堆叠术语或原样复述",
+          "回避解释并继续旧讲解",
+          "算例或定义相互矛盾"
+        ],
+        "controls": [
+          "用户说‘这个概念我懂，直接比较方案’时，不应再长篇解释概念。"
+        ],
+        "runtime_needs": [
+          "基于实际术语的触发",
+          "局部解释子任务与恢复"
+        ]
+      },
+      "minimal_scope": "One main stimulus; independent control variants are not included.",
+      "stages": [
+        {
+          "id": "setup",
+          "kind": "opening",
+          "need": "获得概念比较",
+          "required": [
+            "第一次看家财险，问保额和免赔额的区别与赔付影响"
+          ],
+          "example": "我第一次看家财险，保额和免赔额有什么区别？它们会怎么影响赔付？",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "probe",
+          "kind": "question",
+          "need": "要求通俗解释当前术语",
+          "required": [
+            "追问免赔额到底什么意思，请不用术语，举个简单例子"
+          ],
+          "example": "等一下，免赔额到底是什么意思？别用术语，举个简单例子。",
+          "criteria": {
+            "plain": "通俗解释免赔部分",
+            "example": "用假设数字给出自洽例子，不作真实赔付承诺"
+          },
+          "trigger": "overlap",
+          "trigger_condition": "目标实际说出免赔额这个词且还没有给简单算例，当前仍在讲；已讲清且举例则不触发。",
+          "update": {}
+        },
+        {
+          "id": "follow",
+          "kind": "question",
+          "need": "承接解释回到比较",
+          "required": [
+            "问保额在刚才实际例子中限制什么"
+          ],
+          "example": "明白，那保额在这个例子里又限制了什么？",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "closing",
+          "kind": "closing",
+          "need": "自然中性结束，不宣称任务全部解决或已实际操作",
+          "required": [
+            "今天先到这里"
+          ],
+          "example": "好，我先整理一下，今天先到这里。",
+          "criteria": {},
+          "trigger": "handoff"
+        }
+      ]
+    }
+  },
+  {
+    "id": "R01",
+    "title": "用户轻声附和时助手继续原答复",
+    "mode": "adaptive",
+    "persona": "general",
+    "user_model": "qwen35-9b",
+    "goal": "区分表示正在听的短附和与要求接管话轮的正式发言。",
+    "private_facts": {},
+    "intent_events": [],
+    "max_turns": 12,
+    "max_seconds": 180,
+    "recover_after_silence_ms": 8000,
+    "target_instructions": "你是自然、友好的中文语音助手。根据用户实际说出的需求提供清楚、准确的帮助，信息不足时可以澄清。你没有查询、预订、购买或操作用户设备的工具，不声称已经执行了这些操作。需要实时资料时说明不确定性。请用普通话自然交流。",
+    "scenario_runtime": {
+      "schema_version": "duplex-runtime-v17",
+      "source_id": "R01",
+      "persona": "普通用户，表达自然简洁，通常愿意听清要点；会追问、改变想法，遇到误解或时间压力会简短打断。一次说一个重点，不每轮刻意表现不耐烦。",
+      "stages": [
+        {
+          "id": "setup",
+          "kind": "opening",
+          "need": "获取有顺序的准备建议",
+          "required": [
+            "去南方出差三天，可能一直下雨",
+            "询问行李和出门前注意事项，按顺序讲"
+          ],
+          "example": "我要去南方出差三天，可能一直下雨。行李和出门前要注意什么，你按顺序说说。",
+          "criteria": {
+            "related": "助手实际介绍雨天出差准备"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "feedback",
+          "kind": "feedback",
+          "need": "表示正在听的一个短附和，不接管话轮",
+          "required": [
+            "仅从已审核的音频池中选一条中性倾听音"
+          ],
+          "example": "嗯。",
+          "criteria": {},
+          "trigger": "overlap",
+          "trigger_condition": "必须已听完至少一条具体可执行的雨天出差建议，且目标继续展开。仅有寒暄、说好的按顺序来、报第一第二等标题、复述用户需求，均须ready=false并WAIT。听完建议后才可轻声附和一次，evidence引用这条实际建议的完整短语，不引用寒暄。"
+        },
+        {
+          "id": "observe_after_feedback",
+          "kind": "observe",
+          "need": "观察短附和后目标是否继续原答复，不补发继续指令",
+          "max_seconds": 20,
+          "quiet_after_end_ms": 1000
+        },
+        {
+          "id": "follow",
+          "kind": "question",
+          "need": "检查仍能接收真正的问题",
+          "required": [
+            "如果只优先带一样物品，请目标给一个选择"
+          ],
+          "example": "如果只让我优先带一样，你会选什么？",
+          "criteria": {
+            "followup": "正常回应真正的追问，而非继续回应嗯声"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "closing",
+          "kind": "closing",
+          "need": "自然结束这次交谈，不宣称所有问题已经解决",
+          "required": [
+            "这次先聊到这里"
+          ],
+          "example": "好，我先整理一下，今天就到这里。",
+          "criteria": {},
+          "trigger": "handoff"
+        }
+      ],
+      "sampling_is_not_success": true,
+      "source_spec": {
+        "id": "R01",
+        "subtype": "附和",
+        "title": "用户轻声附和时助手继续原答复",
+        "goal": "区分表示正在听的短附和与要求接管话轮的正式发言。",
+        "facts": {
+          "任务": "雨天出差的行李准备",
+          "用户插入": "单次中性短嗯声",
+          "附和来源": "用户已保留的附和库"
+        },
+        "steps": [
+          {
+            "id": "setup",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "开场",
+            "intent": "获取有顺序的准备建议",
+            "example": "我要去南方出差三天，可能一直下雨。行李和出门前要注意什么，你按顺序说说。",
+            "agenda_effect": "建立雨天出差准备任务。",
+            "expected_target": "说明相关准备事项。"
+          },
+          {
+            "id": "probe",
+            "actor": "user",
+            "delivery": "cached_backchannel",
+            "trigger": "目标已讲完一个小意思并继续输出，实际播放至少1.2秒；仅选择一次不抢主话轮的短附和",
+            "intent": "表达在听，不提新要求",
+            "example": "嗯。",
+            "agenda_effect": "记录feedback事件，不新增正式用户轮、不推进任务、不清空目标正在讲的内容。",
+            "expected_target": "继续原答复，可有自然微停顿，不把嗯声当成新问题或停止指令。"
+          },
+          {
+            "id": "follow",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "目标自然完成原答复后交接；若被附和截断则在观察窗结束后进入修复分支",
+            "intent": "检查仍能接收真正的问题",
+            "example": "如果只让我优先带一样，你会选什么？",
+            "agenda_effect": "建立一个真实追问，和附和事件分开。",
+            "expected_target": "回答新问题，表明并非忽略所有用户输入。"
+          }
+        ],
+        "branches": [
+          "若目标因嗯声截断后不续讲，记录截断和空白，再说一次‘你继续刚才的就行’作为repair，不把修复后的完成计为首次成功。",
+          "若嗯声实际落在完整答复结束后，标 invalid_stimulus，不按打断误判；不补发第二个嗯制造通过。"
+        ],
+        "validity": "库音频语义中性、音量沿用既定处理；确实与未结束的目标答复相交。",
+        "success": [
+          "不专门回答嗯声、不丢掉原答复",
+          "后续明确追问能够正常响应"
+        ],
+        "failure": [
+          "回复‘有什么可以帮您’并重启任务",
+          "被附和截断后永久丢掉未讲内容",
+          "全程不响应后续真正问题"
+        ],
+        "controls": [
+          "改用‘等一下，先停’，目标应停止；两者不可采用相同忽略策略。"
+        ],
+        "runtime_needs": [
+          "反馈与正式用户轮分离",
+          "目标被反馈截断的归因和恢复采样"
+        ]
+      },
+      "protocol": "single-b-floor-scenarios-v17"
+    }
+  },
+  {
+    "id": "R02",
+    "title": "用户一句话里的短暂停顿不交出话轮",
+    "mode": "adaptive",
+    "persona": "general",
+    "user_model": "qwen35-9b",
+    "goal": "目标在明显未完成的句子中等待用户补完，再按完整要求作答。",
+    "private_facts": {},
+    "intent_events": [],
+    "max_turns": 12,
+    "max_seconds": 180,
+    "recover_after_silence_ms": 8000,
+    "target_instructions": "你是自然、友好的中文语音助手。根据用户实际说出的需求提供清楚、准确的帮助，信息不足时可以澄清。你没有查询、预订、购买或操作用户设备的工具，不声称已经执行了这些操作。需要实时资料时说明不确定性。请用普通话自然交流。",
+    "scenario_runtime": {
+      "schema_version": "duplex-runtime-v17",
+      "protocol": "single-b-floor-scenarios-v17",
+      "source_id": "R02",
+      "persona": "普通用户，表达自然简洁，通常愿意听清要点；会追问、改变想法，遇到误解或时间压力会简短打断。一次说一个重点，不每轮刻意表现不耐烦。",
+      "authoring_spec": {
+        "id": "R02",
+        "subtype": "停顿",
+        "title": "用户一句话里的短暂停顿不交出话轮",
+        "goal": "目标在明显未完成的句子中等待用户补完，再按完整要求作答。",
+        "facts": {
+          "房型": "安静的双床房",
+          "入住": "12月12日晚上",
+          "晚数": 2,
+          "每晚预算": "450元以内",
+          "主条件停顿毫秒": 900
+        },
+        "steps": [
+          {
+            "id": "prefix",
+            "actor": "user",
+            "delivery": "speech_segment",
+            "trigger": "新会话用户持有话轮",
+            "intent": "开始连续陈述，停在语法未完成位置",
+            "example": "我想找一间安静的双床房，入住时间是",
+            "agenda_effect": "只标记已实际说出的前缀；完整住宿请求尚未提交。",
+            "expected_target": "倾听，不能在‘是’后自行补入住日期或开始给方案。"
+          },
+          {
+            "id": "pause",
+            "actor": "user",
+            "delivery": "scheduled_silence",
+            "trigger": "前缀最后有声帧结束",
+            "intent": "停顿900毫秒但继续持有同一句话",
+            "example": "",
+            "agenda_effect": "scenario_state进入固定时长user_holds_floor，不产生新任务或无回复超时。",
+            "expected_target": "不开始实质回答；短附和单独记录，不与长答混成一类。"
+          },
+          {
+            "id": "suffix",
+            "actor": "user",
+            "delivery": "speech_segment",
+            "trigger": "900毫秒结束；即便目标已错误开口也执行原定一次续说，并记录重叠",
+            "intent": "补完同一请求",
+            "example": "十二月十二号晚上，住两晚，每晚四百五以内。",
+            "agenda_effect": "合并连续语义单位；完整发送后把日期、晚数、预算记delivered，正式交出话轮。",
+            "expected_target": "依据完整条件回应，不能丢掉停顿后半句。"
+          },
+          {
+            "id": "follow",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "目标完成回应后正常交接",
+            "intent": "继续真实咨询",
+            "example": "按这些条件，订之前还要核实什么？",
+            "agenda_effect": "进入待核实事项，保留全部住宿条件。",
+            "expected_target": "相关作答，证明不是一直静默。"
+          }
+        ],
+        "branches": [
+          "若目标抢话，用户按时间补完一次即可，不反复提高音量；记录是否自动停止抢话并吸收后半句。",
+          "若用户音频拼接或TTS出现非计划长静音，标invalid_stimulus，不能归因于目标抢话。"
+        ],
+        "validity": "停顿来自实际PCM分段，前后是同一说话人同一句话；900毫秒是刺激条件而不是通用端点阈值。",
+        "success": [
+          "未在未完成句中开始实质长答",
+          "完整请求结束后及时响应且不遗漏后半句"
+        ],
+        "failure": [
+          "停顿中凭空补日期并开始回答",
+          "续说后仍按不完整信息处理",
+          "完整说完后持续不回应"
+        ],
+        "controls": [
+          "分别以400、900、1600毫秒暂停做独立条件，不能合并成同一难度。",
+          "把前缀换成完整问题并正式交出话轮，目标应作答；不能以永不回应换取低抢话率。"
+        ],
+        "runtime_needs": [
+          "同一用户话轮内分段发送与精确停顿",
+          "用户暂停时继续采集目标音频",
+          "禁止将每个TTS片段自动当作完整用户轮"
+        ]
+      },
+      "minimal_scope": "One main stimulus; independent control variants are not included.",
+      "stages": [
+        {
+          "id": "paused_request",
+          "kind": "held_speech",
+          "need": "同一句住宿请求中的900毫秒停顿",
+          "required": [],
+          "example": "",
+          "criteria": {
+            "response": "根据实际完整发出的内容回应；提前插话、缺项和答错另行记录"
+          },
+          "trigger": "handoff",
+          "asset_manifest": "data/voice/local_user/audio/manifest.json",
+          "segments": [
+            {
+              "id": "prefix",
+              "asset": "r02_prefix",
+              "gap_after_ms": 900
+            },
+            {
+              "id": "suffix",
+              "asset": "r02_suffix",
+              "gap_after_ms": 0
+            }
+          ],
+          "update": {
+            "入住": "12月12日晚上",
+            "晚数": 2,
+            "每晚预算": 450,
+            "房型": "安静双床房"
+          }
+        },
+        {
+          "id": "follow",
+          "kind": "question",
+          "need": "继续真实咨询",
+          "required": [
+            "按已经说出的条件，问订前还要核实什么，不重复具体答案"
+          ],
+          "example": "按这些条件，订之前还要核实什么？",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "closing",
+          "kind": "closing",
+          "need": "自然中性结束，不宣称任务全部解决或已实际操作",
+          "required": [
+            "今天先到这里"
+          ],
+          "example": "好，我先整理一下，今天先到这里。",
+          "criteria": {},
+          "trigger": "handoff"
+        }
+      ]
+    }
+  },
+  {
+    "id": "R03",
+    "title": "旁边同事对别人说话不成为助手的新任务",
+    "mode": "adaptive",
+    "persona": "general",
+    "user_model": "qwen35-9b",
+    "goal": "目标识别可辨认的背景第三者和明确非助手称呼，保留主用户的原任务。",
+    "private_facts": {},
+    "intent_events": [],
+    "max_turns": 12,
+    "max_seconds": 180,
+    "recover_after_silence_ms": 8000,
+    "target_instructions": "你是自然、友好的中文语音助手。根据用户实际说出的需求提供清楚、准确的帮助，信息不足时可以澄清。你没有查询、预订、购买或操作用户设备的工具，不声称已经执行了这些操作。需要实时资料时说明不确定性。请用普通话自然交流。",
+    "scenario_runtime": {
+      "schema_version": "duplex-runtime-v17",
+      "protocol": "single-b-floor-scenarios-v17",
+      "source_id": "R03",
+      "persona": "普通用户，表达自然简洁，通常愿意听清要点；会追问、改变想法，遇到误解或时间压力会简短打断。一次说一个重点，不每轮刻意表现不耐烦。",
+      "authoring_spec": {
+        "id": "R03",
+        "subtype": "背景第三者说话",
+        "title": "旁边同事对别人说话不成为助手的新任务",
+        "goal": "目标识别可辨认的背景第三者和明确非助手称呼，保留主用户的原任务。",
+        "facts": {
+          "主任务": "介绍线上会议前的设备检查",
+          "背景人物": "另一位同事，音色区别于主用户",
+          "背景收话人": "小周",
+          "背景内容": "小周，帮我把窗户关一下。"
+        },
+        "steps": [
+          {
+            "id": "setup",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "开场",
+            "intent": "建立主用户与助手的任务",
+            "example": "我下午要开线上会议，摄像头、麦克风和网络要怎么提前检查？按顺序给我讲一下。",
+            "agenda_effect": "建立会前检查任务；不提前告诉目标‘接下来会有干扰，请忽略’。",
+            "expected_target": "讲解会前检查。"
+          },
+          {
+            "id": "probe",
+            "actor": "environment",
+            "delivery": "background_speech",
+            "trigger": "目标正在讲会前检查；环境轨按固定增益叠到目标输入，主用户此时不说话",
+            "intent": "呈现自然背景谈话，非主用户指令",
+            "example": "小周，帮我把窗户关一下。",
+            "agenda_effect": "只记环境刺激，任务事实、正式轮次和met不变。",
+            "expected_target": "不回答关窗请求，不把它归给主用户；保持或自然续接原检查说明。"
+          },
+          {
+            "id": "follow",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "原答复结束或背景刺激观察窗到期后正常交接",
+            "intent": "明确对助手提出相关追问",
+            "example": "你刚才说的麦克风检查，最先做哪一步？",
+            "agenda_effect": "建立主用户的正式追问，不把背景说话加入用户意图。",
+            "expected_target": "能回答主用户的问题。"
+          }
+        ],
+        "branches": [
+          "若目标询问是否在叫它，记录一次不必要澄清；用户可自然说‘我在听你讲会议检查’，不重复背景命令。",
+          "目标短暂收声后正确续讲与直接保持输出都可接受，另记录打断时长；不要把一切声学微停顿都判成语义响应失败。"
+        ],
+        "validity": "必须实际播放另一说话人的可懂语音，明确称呼小周；只有文字标签或主用户同音色朗读不足以覆盖此类。",
+        "success": [
+          "未响应第三者的关窗请求，主任务不漂移",
+          "后续主用户提问正常响应"
+        ],
+        "failure": [
+          "开始讲如何关窗或声称已关窗",
+          "将背景请求记成用户任务更新",
+          "忽略主用户恢复后的明确问题"
+        ],
+        "controls": [
+          "保持相同第二音色但明确说‘语音助手，请重复会议检查第一步’，构成独立的指向助手条件；不能仅凭不同音色一律忽略。"
+        ],
+        "runtime_needs": [
+          "独立第二说话人音频素材，尚未制作",
+          "固定增益混音与各轨时间戳",
+          "目标只能听音频，不传环境身份标签"
+        ]
+      },
+      "minimal_scope": "Independent male Dylan background speech at -6dB gain, addressed to 小周; no spatial simulation.",
+      "stages": [
+        {
+          "id": "setup",
+          "kind": "opening",
+          "need": "建立主用户与助手的任务",
+          "required": [
+            "下午线上会议，摄像头、麦克风、网络如何提前检查，请按顺序讲"
+          ],
+          "example": "我下午要开线上会议，摄像头、麦克风和网络要怎么提前检查？按顺序给我讲一下。",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "probe",
+          "kind": "environment",
+          "need": "在真实助手讲解中呈现一次声音刺激",
+          "required": [],
+          "example": "",
+          "criteria": {},
+          "trigger": "overlap",
+          "trigger_condition": "目标已讲出一条具体会前设备检查建议，仍在展开。不是主用户的新请求。",
+          "asset_manifest": "data/voice/local_user/audio/manifest.json",
+          "asset": "r03_colleague",
+          "gain": 0.5
+        },
+        {
+          "id": "after_background",
+          "kind": "observe",
+          "need": "保持接收，有限观察助手实际行为，不补发提示",
+          "max_seconds": 20,
+          "quiet_after_end_ms": 2000
+        },
+        {
+          "id": "follow",
+          "kind": "question",
+          "need": "明确对助手提出相关追问",
+          "required": [
+            "明确对助手提问：麦克风检查最先做哪一步"
+          ],
+          "example": "你刚才说的麦克风检查，最先做哪一步？",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "closing",
+          "kind": "closing",
+          "need": "自然中性结束，不宣称任务全部解决或已实际操作",
+          "required": [
+            "今天先到这里"
+          ],
+          "example": "好，我先整理一下，今天先到这里。",
+          "criteria": {},
+          "trigger": "handoff"
+        }
+      ]
+    }
+  },
+  {
+    "id": "R04",
+    "title": "同一个用户转头与同伴说话",
+    "mode": "adaptive",
+    "persona": "general",
+    "user_model": "qwen35-9b",
+    "goal": "目标利用称呼和对话内容判断收话人，不能因为音色仍是主用户就执行旁话。",
+    "private_facts": {},
+    "intent_events": [],
+    "max_turns": 12,
+    "max_seconds": 180,
+    "recover_after_silence_ms": 8000,
+    "target_instructions": "你是自然、友好的中文语音助手。根据用户实际说出的需求提供清楚、准确的帮助，信息不足时可以澄清。你没有查询、预订、购买或操作用户设备的工具，不声称已经执行了这些操作。需要实时资料时说明不确定性。请用普通话自然交流。",
+    "scenario_runtime": {
+      "schema_version": "duplex-runtime-v17",
+      "protocol": "single-b-floor-scenarios-v17",
+      "source_id": "R04",
+      "persona": "普通用户，表达自然简洁，通常愿意听清要点；会追问、改变想法，遇到误解或时间压力会简短打断。一次说一个重点，不每轮刻意表现不耐烦。",
+      "authoring_spec": {
+        "id": "R04",
+        "subtype": "用户和他人说话",
+        "title": "同一个用户转头与同伴说话",
+        "goal": "目标利用称呼和对话内容判断收话人，不能因为音色仍是主用户就执行旁话。",
+        "facts": {
+          "主任务": "比较地铁和出租车去车站",
+          "同伴称呼": "小林",
+          "旁话": "小林，门口的快递帮我拿一下，谢谢。",
+          "主用户音色": "旁话与正式提问相同"
+        },
+        "steps": [
+          {
+            "id": "setup",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "开场",
+            "intent": "咨询车站交通",
+            "example": "我带一个箱子去火车站，地铁四十分钟，打车大概半小时但可能堵。你帮我比较一下怎么选。",
+            "agenda_effect": "建立去车站的交通任务。",
+            "expected_target": "比较给定时间、行李和堵车风险。"
+          },
+          {
+            "id": "probe",
+            "actor": "user",
+            "delivery": "side_speech",
+            "trigger": "目标仍在介绍交通方案；使用同一主用户音色，称呼小林清楚可辨",
+            "intent": "向同伴交代无关小事，不向助手提问",
+            "example": "小林，门口的快递帮我拿一下，谢谢。",
+            "agenda_effect": "记side_addressed_to_other事件，不新增助手任务、不更新交通偏好，也不能作为原任务已表达新条件的证据。",
+            "expected_target": "不回答拿快递，不声称能代拿；可自然短暂停顿后延续原任务。"
+          },
+          {
+            "id": "return",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "旁话结束后等待目标原答复完成；若原答复已被截断，留2秒恢复观察",
+            "intent": "明确重新向助手交接",
+            "example": "我刚才在跟小林说话。我们继续，按你说的情况，我提前多久出门比较稳妥？",
+            "agenda_effect": "恢复对助手的正式提问，继续原交通上下文。",
+            "expected_target": "结合此前时间和堵车条件回答，不要求用户重新介绍全部背景。"
+          }
+        ],
+        "branches": [
+          "若目标已经回答了快递问题，保留误响应，再按return步骤恢复，不以澄清后的表现覆盖首次结果。",
+          "若旁话没有清楚发出称呼，记刺激歧义；目标简短澄清收话人可以合理，不能按无歧义主条件硬判。"
+        ],
+        "validity": "正式提问和旁话确为同一音色；旁话有明确的人名收话人，不用‘现在我跟别人说话’的测试旁白替代。",
+        "success": [
+          "不把给小林的请求当成给助手的指令",
+          "重新指向助手后继续原主题，保留行李和交通时间"
+        ],
+        "failure": [
+          "响应或执行旁话中的快递任务",
+          "新问题恢复后继续谈快递",
+          "同音色旁话导致交通任务状态被覆盖"
+        ],
+        "controls": [
+          "将称呼改为明确‘语音助手’，并提出其能处理的问题，应该响应；收话人不清楚的版本单列为歧义条件。"
+        ],
+        "runtime_needs": [
+          "同一音色的收话人元数据仅供控制器记账",
+          "旁话音频不提交为正式任务表达",
+          "背景收声与语义误响应分开记录"
+        ]
+      },
+      "minimal_scope": "One main stimulus; independent control variants are not included.",
+      "stages": [
+        {
+          "id": "setup",
+          "kind": "opening",
+          "need": "咨询车站交通",
+          "required": [
+            "带一个箱子去火车站，地铁40分钟，打车约半小时但可能堵，请比较"
+          ],
+          "example": "我带一个箱子去火车站，地铁四十分钟，打车大概半小时但可能堵。你帮我比较一下怎么选。",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "probe",
+          "kind": "side_speech",
+          "need": "在真实助手讲解中呈现一次声音刺激",
+          "required": [],
+          "example": "",
+          "criteria": {},
+          "trigger": "overlap",
+          "trigger_condition": "目标已给出一个具体交通比较观点且还在讲；寒暄和只复述条件不足。",
+          "asset_manifest": "data/voice/local_user/audio/manifest.json",
+          "asset": "r04_side"
+        },
+        {
+          "id": "after_side_speech",
+          "kind": "observe",
+          "need": "保持接收，有限观察助手实际行为，不补发提示",
+          "max_seconds": 20,
+          "quiet_after_end_ms": 2000
+        },
+        {
+          "id": "return",
+          "kind": "question",
+          "need": "明确重新向助手交接",
+          "required": [
+            "说明刚才在跟小林说话",
+            "重新问助手提前多久出门稳妥，保留交通上下文"
+          ],
+          "example": "我刚才在跟小林说话。我们继续，按你说的情况，我提前多久出门比较稳妥？",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "closing",
+          "kind": "closing",
+          "need": "自然中性结束，不宣称任务全部解决或已实际操作",
+          "required": [
+            "今天先到这里"
+          ],
+          "example": "好，我先整理一下，今天先到这里。",
+          "criteria": {},
+          "trigger": "handoff"
+        }
+      ]
+    }
+  },
+  {
+    "id": "R05",
+    "title": "键盘与碰杯声不触发新回答",
+    "mode": "adaptive",
+    "persona": "general",
+    "user_model": "qwen35-9b",
+    "goal": "目标不把常见非语音声音识别成用户请求，并能在噪声后继续交互。",
+    "private_facts": {},
+    "intent_events": [],
+    "max_turns": 12,
+    "max_seconds": 180,
+    "recover_after_silence_ms": 8000,
+    "target_instructions": "你是自然、友好的中文语音助手。根据用户实际说出的需求提供清楚、准确的帮助，信息不足时可以澄清。你没有查询、预订、购买或操作用户设备的工具，不声称已经执行了这些操作。需要实时资料时说明不确定性。请用普通话自然交流。",
+    "scenario_runtime": {
+      "schema_version": "duplex-runtime-v17",
+      "protocol": "single-b-floor-scenarios-v17",
+      "source_id": "R05",
+      "persona": "普通用户，表达自然简洁，通常愿意听清要点；会追问、改变想法，遇到误解或时间压力会简短打断。一次说一个重点，不每轮刻意表现不耐烦。",
+      "authoring_spec": {
+        "id": "R05",
+        "subtype": "背景噪声",
+        "title": "键盘与碰杯声不触发新回答",
+        "goal": "目标不把常见非语音声音识别成用户请求，并能在噪声后继续交互。",
+        "facts": {
+          "任务": "说明电脑文件备份的步骤",
+          "主刺激": "独立录制的键盘敲击和轻微碰杯声，不含人声",
+          "刺激时长秒": 2,
+          "初始混音条件": "噪声RMS比主用户参考语音低12dB；实际增益和峰值另存"
+        },
+        "steps": [
+          {
+            "id": "setup",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "开场",
+            "intent": "获取步骤说明",
+            "example": "我想把电脑里的重要文件备份到移动硬盘，你按步骤讲一下，还要提醒我怎么确认备份成功。",
+            "agenda_effect": "建立备份和核验任务。",
+            "expected_target": "说明复制、核对和安全弹出等相关操作，不假装实际操作电脑。"
+          },
+          {
+            "id": "probe",
+            "actor": "environment",
+            "delivery": "non_speech_audio",
+            "trigger": "目标实际讲解中；混入固定2秒素材，主用户不说话",
+            "intent": "只呈现环境声音，不合成任何文字",
+            "example": "",
+            "agenda_effect": "只记噪声事件，不写入用户要求或ASR语义事实。",
+            "expected_target": "不凭空回答不存在的问题，不因轻噪声反复问‘你说什么’。"
+          },
+          {
+            "id": "follow",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "目标原答复自然结束或观察窗到期后交接",
+            "intent": "在噪声结束后提出真实问题",
+            "example": "备份完，我怎么检查没有漏掉文件？",
+            "agenda_effect": "进入核验追问。",
+            "expected_target": "正常回应实际问题；前面沉默不能抵消后面无法响应。"
+          }
+        ],
+        "branches": [
+          "若素材削波、盖住后续主用户语音或混音通道异常，标invalid_stimulus。",
+          "不同噪声强度、类型应独立成条件；强噪声下听不清时合理澄清与无噪声幻觉分开评价。"
+        ],
+        "validity": "使用真实非语音音频，记录素材哈希、RMS、峰值、开始结束和增益；-12dB是本稿初始条件，不是普适难度标准。",
+        "success": [
+          "未对噪声作语义响应，任务保持",
+          "噪声后明确提问可正常响应"
+        ],
+        "failure": [
+          "将噪声编成用户说过的话并回答",
+          "低强度短噪声导致原任务无故丢失",
+          "噪声结束后持续失去响应"
+        ],
+        "controls": [
+          "无噪声条件用于查看自然中断；含人声的电视声应归R03扩展，不能混入纯噪声主样本。"
+        ],
+        "runtime_needs": [
+          "真实噪声音频素材，尚未准备",
+          "输入混音、增益和削波检查",
+          "环境事件不能由B念拟声词代替"
+        ]
+      },
+      "minimal_scope": "Two seconds of real recorded ESC-50 keyboard typing, RMS -12dB against frozen main-user reference; no cup sound.",
+      "stages": [
+        {
+          "id": "setup",
+          "kind": "opening",
+          "need": "获取步骤说明",
+          "required": [
+            "把电脑重要文件备份到移动硬盘，按步骤说并说明如何确认成功"
+          ],
+          "example": "我想把电脑里的重要文件备份到移动硬盘，你按步骤讲一下，还要提醒我怎么确认备份成功。",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "probe",
+          "kind": "environment",
+          "need": "在真实助手讲解中呈现一次声音刺激",
+          "required": [],
+          "example": "",
+          "criteria": {},
+          "trigger": "overlap",
+          "trigger_condition": "目标已讲出一条具体备份步骤且仍在展开，不在寒暄触发。",
+          "asset_manifest": "data/voice/local_user/audio/manifest.json",
+          "asset": "r05_keyboard"
+        },
+        {
+          "id": "after_noise",
+          "kind": "observe",
+          "need": "保持接收，有限观察助手实际行为，不补发提示",
+          "max_seconds": 20,
+          "quiet_after_end_ms": 1000
+        },
+        {
+          "id": "follow",
+          "kind": "question",
+          "need": "在噪声结束后提出真实问题",
+          "required": [
+            "备份后如何检查没有漏文件"
+          ],
+          "example": "备份完，我怎么检查没有漏掉文件？",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "closing",
+          "kind": "closing",
+          "need": "自然中性结束，不宣称任务全部解决或已实际操作",
+          "required": [
+            "今天先到这里"
+          ],
+          "example": "好，我先整理一下，今天先到这里。",
+          "criteria": {},
+          "trigger": "handoff"
+        }
+      ]
+    }
+  },
+  {
+    "id": "R06",
+    "title": "同一第三者在只回应主用户的约定前后各说一次",
+    "mode": "adaptive",
+    "persona": "general",
+    "user_model": "qwen35-9b",
+    "goal": "比较第三者首次出现与主用户明确约定后再次出现的抑制响应表现，分开记录VAD截断和语义回应。",
+    "private_facts": {},
+    "intent_events": [],
+    "max_turns": 12,
+    "max_seconds": 180,
+    "recover_after_silence_ms": 8000,
+    "target_instructions": "你是自然、友好的中文语音助手。根据用户实际说出的需求提供清楚、准确的帮助，信息不足时可以澄清。你没有查询、预订、购买或操作用户设备的工具，不声称已经执行了这些操作。需要实时资料时说明不确定性。请用普通话自然交流。",
+    "scenario_runtime": {
+      "schema_version": "duplex-runtime-v17",
+      "protocol": "single-b-floor-scenarios-v17",
+      "source_id": "R06",
+      "persona": "普通用户，表达自然简洁，通常愿意听清要点；会追问、改变想法，遇到误解或时间压力会简短打断。一次说一个重点，不每轮刻意表现不耐烦。",
+      "authoring_spec": {
+        "id": "R06",
+        "subtype": "Contextual rejection · 上文约定",
+        "title": "同一第三者在只回应主用户的约定前后各说一次",
+        "goal": "比较第三者首次出现与主用户明确约定后再次出现的抑制响应表现，分开记录VAD截断和语义回应。",
+        "facts": {
+          "第三者": "Dylan：小周，帮我把窗户关一下。",
+          "控制": "两次同一冻结音频、同一0.5增益；不向目标预灌说话人标签",
+          "主任务": "线上会议前摄像头、麦克风和网络检查"
+        },
+        "steps": [
+          {
+            "id": "setup",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "正常交接",
+            "intent": "请按顺序介绍线上会议前的设备检查",
+            "example": "下午有个线上会议，摄像头、麦克风和网络怎么提前检查？按顺序给我讲讲。",
+            "agenda_effect": "只记录实际完整送达的信息与实际观察；阶段推进不代表任务成功。",
+            "expected_target": "根据真实输入回应"
+          },
+          {
+            "id": "third_party_before",
+            "actor": "environment",
+            "delivery": "audio",
+            "trigger": "助手讲出具体建议且仍发声",
+            "intent": "首次第三者对同事说话",
+            "example": "小周，帮我把窗户关一下。",
+            "agenda_effect": "只记录实际完整送达的信息与实际观察；阶段推进不代表任务成功。",
+            "expected_target": "记录是否停说、是否回应第三者，不要求首次必须失败"
+          },
+          {
+            "id": "agreement",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "正常交接",
+            "intent": "主用户明确只回应自己的声音，并继续主任务",
+            "example": "刚才旁边那个人是在跟同事说话。后面请只回应我的声音，旁边的人再说话也别停下来回答他。现在接着讲麦克风和网络该怎么检查。",
+            "agenda_effect": "只记录实际完整送达的信息与实际观察；阶段推进不代表任务成功。",
+            "expected_target": "根据真实输入回应"
+          },
+          {
+            "id": "third_party_after",
+            "actor": "environment",
+            "delivery": "audio",
+            "trigger": "助手继续具体讲解且仍发声",
+            "intent": "约定后同一第三者再次说同一句",
+            "example": "小周，帮我把窗户关一下。",
+            "agenda_effect": "只记录实际完整送达的信息与实际观察；阶段推进不代表任务成功。",
+            "expected_target": "遵守约定忽略第三者，继续主任务"
+          },
+          {
+            "id": "follow",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "正常交接",
+            "intent": "明确向助手提问以验证恢复正常响应",
+            "example": "我再确认一下，麦克风测试最先做哪一步？",
+            "agenda_effect": "只记录实际完整送达的信息与实际观察；阶段推进不代表任务成功。",
+            "expected_target": "根据真实输入回应"
+          }
+        ],
+        "branches": [
+          "首次未误响应也保留，记前后均忽略，不称一次学习成功。",
+          "第二次仍回应或停说时保留失败，不重申约定再刷通过。",
+          "刺激时助手已停说则记无重叠，不冒充成功抑制。"
+        ],
+        "validity": "两次相同素材和增益，均在真实目标语音中注入；约定由主用户实际完整说出。",
+        "success": [
+          "约定后不语义响应第三者，主任务连续性保持",
+          "随后仍正常回应主用户"
+        ],
+        "failure": [
+          "约定后仍回应关窗要求或偏离任务",
+          "第三者导致停说，需分开标注传输层VAD截断",
+          "对主用户也不再回应"
+        ],
+        "controls": [
+          "后续可独立测试不作约定和反向约定；本批只采前后一次。"
+        ],
+        "runtime_needs": [
+          "独立第三者轨",
+          "约定前后同音频哈希",
+          "区分VAD截断和语义回应"
+        ]
+      },
+      "minimal_scope": "Same Dylan PCM and gain before/after an audible main-user agreement; VAD interruption and semantic response scored separately.",
+      "stages": [
+        {
+          "id": "setup",
+          "kind": "opening",
+          "need": "请按顺序介绍线上会议前的设备检查",
+          "required": [
+            "下午线上会议，请按顺序讲摄像头、麦克风和网络检查"
+          ],
+          "example": "下午有个线上会议，摄像头、麦克风和网络怎么提前检查？按顺序给我讲讲。",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "third_party_before",
+          "kind": "environment",
+          "need": "在真实助手讲解中呈现一次声音刺激",
+          "required": [],
+          "example": "",
+          "criteria": {},
+          "trigger": "overlap",
+          "trigger_condition": "目标已讲出一条具体设备检查建议，仍在展开。",
+          "asset_manifest": "data/voice/local_user/audio/manifest.json",
+          "asset": "r03_colleague",
+          "gain": 0.5,
+          "audio_trigger_patterns": [
+            "(?:打开|点开)[^。！？]{0,20}会议软件",
+            "(?:打开|点开)[^。！？]{0,20}摄像头",
+            "检查[^。！？]{0,10}画面"
+          ]
+        },
+        {
+          "id": "before_agreement",
+          "kind": "observe",
+          "need": "保持接收，有限观察助手实际行为，不补发提示",
+          "max_seconds": 20,
+          "quiet_after_end_ms": 1500
+        },
+        {
+          "id": "agreement",
+          "kind": "opening",
+          "need": "主用户明确只回应自己的声音，并继续主任务",
+          "required": [
+            "明确只回应主用户、忽略旁边的人，再继续麦克风和网络检查"
+          ],
+          "example": "刚才旁边那个人是在跟同事说话。后面请只回应我的声音，旁边的人再说话也别停下来回答他。现在接着讲麦克风和网络该怎么检查。",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {
+            "speaker_rule": "只回应主用户，忽略旁边第三者"
+          },
+          "answer_mode": "scene_controlled_text",
+          "prepared_answer": "刚才旁边那个人是在跟同事说话。后面请只回应我的声音，旁边的人再说话也别停下来回答他。现在接着讲麦克风和网络该怎么检查。"
+        },
+        {
+          "id": "third_party_after",
+          "kind": "environment",
+          "need": "在真实助手讲解中呈现一次声音刺激",
+          "required": [],
+          "example": "",
+          "criteria": {},
+          "trigger": "overlap",
+          "trigger_condition": "约定后目标正在具体讲麦克风或网络检查，仍在展开。",
+          "asset_manifest": "data/voice/local_user/audio/manifest.json",
+          "asset": "r03_colleague",
+          "gain": 0.5,
+          "audio_trigger_patterns": [
+            "(?:打开|点开)[^。！？]{0,20}声音设置",
+            "(?:打开|点开)[^。！？]{0,20}(?:音频|录音|麦克风)",
+            "(?:确认|检查|选择|选对)[^。！？]{0,20}(?:输入设备|麦克风|网络)"
+          ]
+        },
+        {
+          "id": "after_agreement",
+          "kind": "observe",
+          "need": "保持接收，有限观察助手实际行为，不补发提示",
+          "max_seconds": 20,
+          "quiet_after_end_ms": 1500
+        },
+        {
+          "id": "follow",
+          "kind": "question",
+          "need": "明确向助手提问以验证恢复正常响应",
+          "required": [
+            "明确向助手提问麦克风测试最先做哪一步"
+          ],
+          "example": "我再确认一下，麦克风测试最先做哪一步？",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "closing",
+          "kind": "closing",
+          "need": "自然中性结束，不宣称任务全部解决或已实际操作",
+          "required": [
+            "今天先到这里"
+          ],
+          "example": "好，我先整理一下，今天先到这里。",
+          "criteria": {},
+          "trigger": "handoff"
+        }
+      ]
+    }
+  },
+  {
+    "id": "M01",
+    "title": "旅行需求变化后回忆早期事实与当前有效条件",
+    "mode": "adaptive",
+    "persona": "general",
+    "user_model": "qwen35-9b",
+    "goal": "在真实多轮交流后分别观察早期事实保持、被更正事实更新、未更改条件保留和无答案提示的回忆。",
+    "private_facts": {},
+    "intent_events": [],
+    "max_turns": 30,
+    "max_seconds": 900,
+    "recover_after_silence_ms": 8000,
+    "target_instructions": "你是自然、友好的中文语音助手。根据用户实际说出的需求提供清楚、准确的帮助，信息不足时可以澄清。你没有查询、预订、购买或操作用户设备的工具，不声称已经执行了这些操作。需要实时资料时说明不确定性。请用普通话自然交流。",
+    "scenario_runtime": {
+      "schema_version": "duplex-runtime-v17",
+      "source_id": "M01",
+      "persona": "普通用户，表达自然简洁，通常愿意听清要点；会追问、改变想法，遇到误解或时间压力会简短打断。一次说一个重点，不每轮刻意表现不耐烦。",
+      "stages": [
+        {
+          "id": "opening",
+          "kind": "opening",
+          "need": "一次说明早期事实，允许自然分句但要实际说全",
+          "required": [
+            "两人上海往返成都",
+            "12月12日去、16日回",
+            "两人机票住宿合计6000元以内",
+            "预订代号青竹47",
+            "不安排夜间自驾",
+            "请初步讨论计划"
+          ],
+          "example": "我们两个人从上海去成都，十二月十二号去，十六号回。两个人机票加住宿总共六千以内，预订代号是青竹四十七。另外不安排夜间自驾。先帮我看看这个计划怎么安排。",
+          "criteria": {
+            "response": "用户已实际表达本项，助手给出相关回应或合理澄清，不要求原词复述"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {
+            "路线": "上海往返成都",
+            "去程": "12月12日",
+            "返程": "12月16日",
+            "人数": 2,
+            "总预算": 6000,
+            "代号": "青竹47",
+            "禁忌": "不安排夜间自驾"
+          }
+        },
+        {
+          "id": "scope",
+          "kind": "question",
+          "need": "讨论预算分配",
+          "required": [
+            "询问已有预算内机票住宿如何分配，只需估算，不重报数字和代号"
+          ],
+          "example": "这笔钱里机票和住宿怎么分比较合理？先按估算讨论就行。",
+          "criteria": {
+            "response": "用户已实际表达本项，助手给出相关回应或合理澄清，不要求原词复述"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "date_change",
+          "kind": "question",
+          "need": "只改去程",
+          "required": [
+            "去程改为12月13日，返程保持12月16日"
+          ],
+          "example": "去程往后挪一天，改成十二月十三号，返程仍然十六号。",
+          "criteria": {
+            "response": "用户已实际表达本项，助手给出相关回应或合理澄清，不要求原词复述"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {
+            "去程": "12月13日"
+          }
+        },
+        {
+          "id": "luggage",
+          "kind": "question",
+          "need": "插入行李讨论",
+          "required": [
+            "每人一件20公斤托运行李，询问选票注意事项"
+          ],
+          "example": "我们每人带一个二十公斤的托运行李箱，选票时要注意什么？",
+          "criteria": {
+            "response": "用户已实际表达本项，助手给出相关回应或合理澄清，不要求原词复述"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "transfer",
+          "kind": "question",
+          "need": "讨论机场进城",
+          "required": [
+            "带箱子从机场进城，比较地铁与打车"
+          ],
+          "example": "机场到市区，我们带箱子，地铁和打车你更建议怎么考虑？",
+          "criteria": {
+            "response": "用户已实际表达本项，助手给出相关回应或合理澄清，不要求原词复述"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "hotel",
+          "kind": "question",
+          "need": "讨论安静和交通便利",
+          "required": [
+            "酒店安静、禁烟、近地铁，询问订前如何核实"
+          ],
+          "example": "酒店我希望安静、禁烟，离地铁近。订之前怎么判断这几项靠不靠谱？",
+          "criteria": {
+            "response": "用户已实际表达本项，助手给出相关回应或合理澄清，不要求原词复述"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "people_change",
+          "kind": "question",
+          "need": "新增同行人并更新总预算",
+          "required": [
+            "新增一个朋友，变成三个人",
+            "三人机票住宿总预算先改9000元",
+            "其他条件保持"
+          ],
+          "example": "有个朋友也来，我们变成三个人，机票住宿总预算先改成九千。其他要求照旧。",
+          "criteria": {
+            "response": "用户已实际表达本项，助手给出相关回应或合理澄清，不要求原词复述"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {
+            "人数": 3,
+            "总预算": 9000
+          }
+        },
+        {
+          "id": "rest",
+          "kind": "question",
+          "need": "讨论行程松紧",
+          "required": [
+            "每天最多两个主要景点，中间休息，询问如何安排节奏"
+          ],
+          "example": "我们不想赶景点，每天最多两个主要地方，中间留休息，你会怎么安排节奏？",
+          "criteria": {
+            "response": "用户已实际表达本项，助手给出相关回应或合理澄清，不要求原词复述"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "budget_change",
+          "kind": "question",
+          "need": "第二次更新预算但不改变人数日期",
+          "required": [
+            "最终三人机票住宿合计最多8500元，人数日期不变"
+          ],
+          "example": "预算还得收一点，最终三个人的机票住宿合计最多八千五，人数和日期不变。",
+          "criteria": {
+            "response": "用户已实际表达本项，助手给出相关回应或合理澄清，不要求原词复述"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {
+            "总预算": 8500
+          }
+        },
+        {
+          "id": "late_checkin",
+          "kind": "question",
+          "need": "插入入住规则讨论",
+          "required": [
+            "假设到酒店很晚甚至过零点，询问应该提前核实什么；不宣称到达时间已确定"
+          ],
+          "example": "如果到酒店已经很晚，甚至过了零点，应该提前问酒店哪些事情？",
+          "criteria": {
+            "response": "用户已实际表达本项，助手给出相关回应或合理澄清，不要求原词复述"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "rain",
+          "kind": "question",
+          "need": "讨论雨天备选",
+          "required": [
+            "下雨时如何准备室内备选，不变更已知需求"
+          ],
+          "example": "如果那几天下雨，不想临时折腾，你会怎么准备室内备选？",
+          "criteria": {
+            "response": "用户已实际表达本项，助手给出相关回应或合理澄清，不要求原词复述"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "packing",
+          "kind": "question",
+          "need": "再完成一轮无关答案的自然交流",
+          "required": [
+            "随身小包里最实用的三样物品，不问代号或数字条件"
+          ],
+          "example": "除了箱子里的衣服，随身小包里你建议放哪些东西？挑最实用的三样就好。",
+          "criteria": {
+            "response": "用户已实际表达本项，助手给出相关回应或合理澄清，不要求原词复述"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "probe_early",
+          "kind": "recall_probe",
+          "need": "询问早期信息，题面不泄题",
+          "required": [
+            "只问最初的预订代号和当时的夜间出行禁忌，不提示答案，不纠错"
+          ],
+          "example": "我一开始说的预订代号是什么？还有，我当时说哪种夜间出行方式不要安排？",
+          "criteria": {
+            "response": "已经收到对所问字段的相关回答或明确不记得，答错也只算采样完成，正确性独立核验"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "probe_current",
+          "kind": "recall_probe",
+          "need": "询问当前有效版本，不给数字提示",
+          "required": [
+            "只问当前人数、去返日期、最后预算及口径，不报出任何答案"
+          ],
+          "example": "现在实际是几个人，哪天去、哪天回？最后定下来的总预算是多少，按什么口径算？",
+          "criteria": {
+            "response": "已经收到对所问字段的相关回答或明确不记得，答错也只算采样完成，正确性独立核验"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "probe_original",
+          "kind": "recall_probe",
+          "need": "明确询问历史版本，区分更新与遗忘",
+          "required": [
+            "只问最开始未改动时的预算，不提示数字"
+          ],
+          "example": "那最开始还没改的时候，我说的预算是多少？",
+          "criteria": {
+            "response": "已经收到对所问字段的相关回答或明确不记得，答错也只算采样完成，正确性独立核验"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "close",
+          "kind": "closing",
+          "need": "中性结束，不提示正确答案",
+          "required": [
+            "中性结束，不确认或纠正任何回忆答案"
+          ],
+          "example": "好，我先整理一下，今天先到这里。",
+          "criteria": {},
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        }
+      ],
+      "sampling_is_not_success": true,
+      "source_spec": {
+        "id": "M01",
+        "subtype": "经过多轮交流后，询问依赖前文的问题",
+        "title": "旅行需求变化后回忆早期事实与当前有效条件",
+        "goal": "在真实多轮交流后分别观察早期事实保持、被更正事实更新、未更改条件保留和无答案提示的回忆。",
+        "facts": {
+          "路线": "上海往返成都",
+          "初始去程": "12月12日",
+          "当前去程": "12月13日",
+          "返程始终": "12月16日",
+          "初始人数": 2,
+          "当前人数": 3,
+          "初始总预算": 6000,
+          "中间总预算": 9000,
+          "当前总预算": 8500,
+          "预算口径": "所有同行者合计，含机票和住宿",
+          "代号": "青竹47",
+          "夜间禁忌": "不安排夜间自驾"
+        },
+        "scorer_only": {
+          "probe_early": {
+            "代号": "青竹47；青竹四十七等同义读法可接受",
+            "夜间禁忌": "不安排夜间自驾；不能泛化为一切夜间出行都禁止"
+          },
+          "probe_current": {
+            "人数": 3,
+            "去程": "12月13日",
+            "返程": "12月16日",
+            "总预算": 8500,
+            "口径": "三人合计含机票和住宿，非每人8500"
+          },
+          "probe_original": {
+            "最初预算": "两人合计6000元；与当前三人8500区分"
+          },
+          "visibility": "本区和完整facts不得进入回忆题的B表达请求。运行时标准答案只由已实际交付的事实事件推导，表中为全部事件成功交付时的预期。"
+        },
+        "steps": [
+          {
+            "id": "opening",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "开场",
+            "intent": "一次说明早期事实，允许自然分句但要实际说全",
+            "example": "我们两个人从上海去成都，十二月十二号去，十六号回。两个人机票加住宿总共六千以内，预订代号是青竹四十七。另外不安排夜间自驾。先帮我看看这个计划怎么安排。",
+            "agenda_effect": "按已完整发送语义单位建立初始事实账本，不能把漏读部分当成目标已知。",
+            "expected_target": "相关回应即可，不要求把每个字段原样复述。"
+          },
+          {
+            "id": "scope",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "上一轮相关回应后正常交接",
+            "intent": "讨论预算分配",
+            "example": "这笔钱里机票和住宿怎么分比较合理？先按估算讨论就行。",
+            "agenda_effect": "预算口径保持合计含机票住宿；不主动复述代号和夜间禁忌。",
+            "expected_target": "给估算思路，不声称已查到实时报价。"
+          },
+          {
+            "id": "date_change",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "上一轮相关回应后",
+            "intent": "只改去程",
+            "example": "去程往后挪一天，改成十二月十三号，返程仍然十六号。",
+            "agenda_effect": "变更pending到delivered后，去程覆盖为13号；返程不变，目标确认与否另记。",
+            "expected_target": "根据已告知的新日期继续。"
+          },
+          {
+            "id": "luggage",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "日期变更已实际说出且采集过相关回应",
+            "intent": "插入行李讨论",
+            "example": "我们每人带一个二十公斤的托运行李箱，选票时要注意什么？",
+            "agenda_effect": "增加行李条件；记一个真实问答交换，不复述记忆探针答案。",
+            "expected_target": "提醒核实额度和超重收费等。"
+          },
+          {
+            "id": "transfer",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "上一轮完成交接",
+            "intent": "讨论机场进城",
+            "example": "机场到市区，我们带箱子，地铁和打车你更建议怎么考虑？",
+            "agenda_effect": "增加已讨论交通主题，不修改原出行禁忌。",
+            "expected_target": "给适合带行李的比较。"
+          },
+          {
+            "id": "hotel",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "上一轮完成交接",
+            "intent": "讨论安静和交通便利",
+            "example": "酒店我希望安静、禁烟，离地铁近。订之前怎么判断这几项靠不靠谱？",
+            "agenda_effect": "加入酒店偏好，代号仍不重述。",
+            "expected_target": "给核实办法，不把酒店偏好当成已订房事实。"
+          },
+          {
+            "id": "people_change",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "上一轮完成交接",
+            "intent": "新增同行人并更新总预算",
+            "example": "有个朋友也来，我们变成三个人，机票住宿总预算先改成九千。其他要求照旧。",
+            "agenda_effect": "整段实际交付后，人数3、预算9000取代初始值；保留日期、代号和禁忌。",
+            "expected_target": "正确理解为三人合计，未更改的条件保留。"
+          },
+          {
+            "id": "rest",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "上一轮完成交接",
+            "intent": "讨论行程松紧",
+            "example": "我们不想赶景点，每天最多两个主要地方，中间留休息，你会怎么安排节奏？",
+            "agenda_effect": "增加每日主要景点上限2；形成中间话题。",
+            "expected_target": "给符合放松节奏的建议。"
+          },
+          {
+            "id": "budget_change",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "上一轮完成交接",
+            "intent": "第二次更新预算但不改变人数日期",
+            "example": "预算还得收一点，最终三个人的机票住宿合计最多八千五，人数和日期不变。",
+            "agenda_effect": "完整金额实际说完后才提交8500，替换9000；不能在‘八千’前缀上提交8000。",
+            "expected_target": "接受新上限，保留人数和日期。"
+          },
+          {
+            "id": "late_checkin",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "上一轮完成交接",
+            "intent": "插入入住规则讨论",
+            "example": "如果到酒店已经很晚，甚至过了零点，应该提前问酒店哪些事情？",
+            "agenda_effect": "只讨论晚入住，不擅自改变航班日期或新增夜间自驾。",
+            "expected_target": "解释入住日期、前台、保留房间等需要确认的事项。"
+          },
+          {
+            "id": "rain",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "上一轮完成交接",
+            "intent": "讨论雨天备选",
+            "example": "如果那几天下雨，不想临时折腾，你会怎么准备室内备选？",
+            "agenda_effect": "继续旅行主题，不复述预算、代号或日期。",
+            "expected_target": "提供不违背既定需求的备选思路。"
+          },
+          {
+            "id": "packing",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "上一轮完成交接",
+            "intent": "再完成一轮无关答案的自然交流",
+            "example": "除了箱子里的衣服，随身小包里你建议放哪些东西？挑最实用的三样就好。",
+            "agenda_effect": "记录一次真实问答，不因为完成数够了而把未收到的回答补写。",
+            "expected_target": "给三个实用物品，未知个人情况不编造。"
+          },
+          {
+            "id": "probe_early",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "opening之后至少完成8个中间正式问答交换；附和、空WAIT和未回应请求不计数",
+            "intent": "询问早期信息，题面不泄题",
+            "example": "我一开始说的预订代号是什么？还有，我当时说哪种夜间出行方式不要安排？",
+            "agenda_effect": "进入recall_probe；收到答案或明确不记得就标sampled，不因答错循环追问或纠正。",
+            "expected_target": "回答已交付的早期事实；不知道应明确说不知道，正确性由scorer_only独立核对。"
+          },
+          {
+            "id": "probe_current",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "采集上一探针首次回答或到达观察截止",
+            "intent": "询问当前有效版本，不给数字提示",
+            "example": "现在实际是几个人，哪天去、哪天回？最后定下来的总预算是多少，按什么口径算？",
+            "agenda_effect": "采集人数、去返日期、预算和口径；B不带答案纠正上一题，也不确认错误答案为事实。",
+            "expected_target": "区分最新版本与过时版本，同时保留一直未改变的返程。"
+          },
+          {
+            "id": "probe_original",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "当前版本问题首次回答已采样",
+            "intent": "明确询问历史版本，区分更新与遗忘",
+            "example": "那最开始还没改的时候，我说的预算是多少？",
+            "agenda_effect": "独立采集历史预算；不能把问题中的‘最开始’映射成当前预算。",
+            "expected_target": "指出最初预算及其当时口径，与现在的预算清楚区分。"
+          },
+          {
+            "id": "close",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "三个探针完成采样或超时",
+            "intent": "中性结束，不提示正确答案",
+            "example": "好，我先整理一下，今天先到这里。",
+            "agenda_effect": "结束场景；答错也不覆盖事实账本，不向下一探针泄题。",
+            "expected_target": "自然收尾。"
+          }
+        ],
+        "branches": [
+          "目标合理追问时自然回答当前必要事实，再继续剧本，不把每个澄清插曲强制算一个长程距离。",
+          "若中间某项未满足，只收一次相关回应或明确未知即可推进话题；遗漏独立记录，不循环追问直到目标背熟。",
+          "若预算或日期的更正未实际完整发送，相关字段的回忆题标invalid_stimulus，不用私有计划作为答案真值。",
+          "若目标在中间主动反复提及代号或预算，记录每个字段最近一次由任一方实际说出的时间与交换距离；不能声称它仍是未复习的长程记忆样本。",
+          "若8个中间交换未建立就中断，场景标incomplete，不以脚本预期步数补足。"
+        ],
+        "validity": "初始事实和必要变更可在音频中核对；回忆题不含答案；至少8个真实中间交换；每个字段另记距最近实际出现的时间和交换数。",
+        "success": [
+          "早期代号和夜间禁忌可正确回忆",
+          "最新人数、去程、预算取最后有效变更，返程保持原值",
+          "能区分初始预算与当前预算，数字作用范围正确"
+        ],
+        "failure": [
+          "使用过期日期、人数或预算",
+          "只记最新值而否认曾说过的初始值",
+          "把合计预算说成每人预算或将夜间自驾禁忌扩大成所有夜间活动",
+          "编造从未说过的事实"
+        ],
+        "controls": [
+          "短距离版本在1个中间交换后问同样字段，独立会话；与长距离版本分别记录。",
+          "不发生变更的版本用于区分纯保持与版本更新；不与主版本合并计分。"
+        ],
+        "runtime_needs": [
+          "逐字段已交付事实账本和版本历史",
+          "回忆生成与评分答案隔离",
+          "最近三轮用于自然承接，不能把完整私有答案历史偷渡给目标",
+          "场景采样结束与语义met分离"
+        ]
+      },
+      "protocol": "single-b-floor-scenarios-v17"
+    }
+  },
+  {
+    "id": "P01",
+    "title": "口语回撤中卡在“做个……呃，做个那个……”",
+    "mode": "adaptive",
+    "persona": "general",
+    "user_model": "qwen35-9b",
+    "goal": "用连续语流中的词汇回撤制造自然补全机会，评估备份概念补全，不显式描述自己正在忘词。",
+    "private_facts": {},
+    "intent_events": [],
+    "max_turns": 12,
+    "max_seconds": 180,
+    "recover_after_silence_ms": 8000,
+    "target_instructions": "你是自然、友好的中文语音助手。根据用户实际说出的需求提供清楚、准确的帮助，信息不足时可以澄清。你没有查询、预订、购买或操作用户设备的工具，不声称已经执行了这些操作。需要实时资料时说明不确定性。请用普通话自然交流。",
+    "scenario_runtime": {
+      "schema_version": "duplex-runtime-v17",
+      "protocol": "single-b-floor-scenarios-v17",
+      "source_id": "P01",
+      "persona": "普通用户，表达自然简洁，通常愿意听清要点；会追问、改变想法，遇到误解或时间压力会简短打断。一次说一个重点，不每轮刻意表现不耐烦。",
+      "authoring_spec": {
+        "id": "P01",
+        "subtype": "CTC · 用户卡词时补全",
+        "title": "口语回撤中卡在“做个……呃，做个那个……”",
+        "goal": "用连续语流中的词汇回撤制造自然补全机会，评估备份概念补全，不显式描述自己正在忘词。",
+        "interpretation": "CTC主样本为用户卡词时助手协作补全；旧v13被打断后续讲录音仅作历史，不属于新定义。",
+        "facts": {
+          "概要": "电脑照片另存一份到移动硬盘，防止电脑损坏后丢失",
+          "标准补词": "备份或数据备份；迁移不视为等义词",
+          "私有": "标准词仅评分侧可见，主用户音频不能提前出现",
+          "呈现": "主样本同一TTS请求合成整句，保留生成器的原生停顿，无跨请求拼接、无额外拉伸、无固定2.5秒插入静音",
+          "备用听测文案": "电脑里的照片我想再存一份到硬盘里，省得哪天全丢了，就是做个……做个……"
+        },
+        "steps": [
+          {
+            "id": "ctc",
+            "actor": "user",
+            "delivery": "continuous_frozen_speech",
+            "trigger": "新会话开场",
+            "intent": "给出概要后在同一语流中回撤卡词",
+            "example": "我想把照片在移动硬盘上也存一份，万一电脑坏了还能找回来，先做个……呃，做个那个……",
+            "agenda_effect": "只记录实际发送的完整音频；标准答案不发给目标",
+            "expected_target": "在卡词处自然补全备份，不在概要形成前抢答"
+          },
+          {
+            "id": "observe",
+            "actor": "observer",
+            "delivery": "observe_target",
+            "trigger": "用户音频尾部开始正常保持收听",
+            "intent": "不再补发我想不起来了或补词命令",
+            "example": "",
+            "agenda_effect": "有限观察并保存回应/未回应",
+            "expected_target": "自然简短协作补词"
+          },
+          {
+            "id": "closing",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "回应结束或观察结束",
+            "intent": "中性收尾",
+            "example": "好，今天先到这里。",
+            "agenda_effect": "不宣称答对",
+            "expected_target": "自然收尾"
+          }
+        ],
+        "branches": [
+          "单段完整合成，不把“嗯”独立合成后硬接到说明句。",
+          "不做数字拉长元音或复制单字；保留两种自然措辞候选供人工听测。",
+          "主条件只真实测试回撤版；重复版仅素材试听，不冒充已测的目标会话。"
+        ],
+        "validity": "主用户真实说出足够概要和卡词信号，未泄露答案，没有显式要求补词。",
+        "success": [
+          "补出备份或合理等义词",
+          "在卡词附近自然接话，用户无需再次命令"
+        ],
+        "failure": [
+          "补错词、只给教程不补词",
+          "概要还没说完整就抢答",
+          "有充分卡词信号仍不回应"
+        ],
+        "controls": [
+          "独立条件中取消犹豫并流畅说完，观察是否过度抢话。"
+        ],
+        "runtime_needs": [
+          "单次合成整段语流，保留内部自然节奏，只裁首尾静音",
+          "记录用户最后有声帧、目标首声和实听补全内容，不把ASR识别时间当音素起音",
+          "提供新旧纯用户素材对照，标明哪条实际进入了Grok会话"
+        ]
+      },
+      "minimal_scope": "One continuous TTS request with lexical retracing and native timing; no concatenated hesitation or inserted silence. Alternate phrasing is for listening only.",
+      "stages": [
+        {
+          "id": "ctc",
+          "kind": "held_speech",
+          "need": "同一语流中给概要后口语回撤卡词，不说标准词、不显式命令补词",
+          "required": [],
+          "example": "",
+          "criteria": {
+            "response": "根据实际完整发出的内容回应；提前插话、缺项和答错另行记录"
+          },
+          "trigger": "handoff",
+          "asset_manifest": "data/voice/local_user/audio/manifest.json",
+          "segments": [
+            {
+              "id": "continuous",
+              "asset": "p01_v16_retrace",
+              "gap_after_ms": 0
+            }
+          ]
+        },
+        {
+          "id": "after_ctc",
+          "kind": "observe",
+          "need": "保持接收，有限观察助手实际行为，不补发提示",
+          "max_seconds": 20,
+          "quiet_after_end_ms": 1800
+        },
+        {
+          "id": "closing",
+          "kind": "closing",
+          "need": "自然中性结束，不宣称任务全部解决或已实际操作",
+          "required": [
+            "今天先到这里"
+          ],
+          "example": "好，我先整理一下，今天先到这里。",
+          "criteria": {},
+          "trigger": "handoff",
+          "answer_mode": "scene_controlled_text",
+          "prepared_answer": "好，今天先到这里。"
+        }
+      ]
+    }
+  },
+  {
+    "id": "P02",
+    "title": "用户连续讲述经历时助手适度表示在听",
+    "mode": "adaptive",
+    "persona": "general",
+    "user_model": "qwen35-9b",
+    "goal": "观察助手在用户仍持有叙述话轮时能否给简短、合适的倾听反馈，并在用户正式交接后回应完整内容。",
+    "private_facts": {},
+    "intent_events": [],
+    "max_turns": 12,
+    "max_seconds": 180,
+    "recover_after_silence_ms": 8000,
+    "target_instructions": "你是自然、友好的中文语音助手。根据用户实际说出的需求提供清楚、准确的帮助，信息不足时可以澄清。你没有查询、预订、购买或操作用户设备的工具，不声称已经执行了这些操作。需要实时资料时说明不确定性。请用普通话自然交流。",
+    "scenario_runtime": {
+      "schema_version": "duplex-runtime-v17",
+      "protocol": "single-b-floor-scenarios-v17",
+      "source_id": "P02",
+      "persona": "普通用户，表达自然简洁，通常愿意听清要点；会追问、改变想法，遇到误解或时间压力会简短打断。一次说一个重点，不每轮刻意表现不耐烦。",
+      "authoring_spec": {
+        "id": "P02",
+        "subtype": "附和",
+        "title": "用户连续讲述经历时助手适度表示在听",
+        "goal": "观察助手在用户仍持有叙述话轮时能否给简短、合适的倾听反馈，并在用户正式交接后回应完整内容。",
+        "facts": {
+          "经历": "第一次做组内汇报，开头紧张，后面顺下来，最后得到肯定",
+          "语气": "轻松回顾中带一点紧张，不需要安慰升级或心理诊断",
+          "希望结束后讨论": "下次怎样更稳一点"
+        },
+        "steps": [
+          {
+            "id": "setup",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "开场",
+            "intent": "自然发起一段叙述",
+            "example": "我想跟你说说今天第一次做组内汇报的经历。",
+            "agenda_effect": "进入分享经历，目标简短邀请后用户持有叙述话轮。",
+            "expected_target": "让用户继续，可以简短表示愿意听。"
+          },
+          {
+            "id": "part1",
+            "actor": "user",
+            "delivery": "speech_segment",
+            "trigger": "目标交还话轮后",
+            "intent": "叙述开头的紧张",
+            "example": "一开始站到前面，我手心都是汗，讲第一张的时候还有点结巴。我就看了一眼自己写的提纲，先把开头那两句话慢慢说完。",
+            "agenda_effect": "记录经历前半段；不是在请求即时解决方案。",
+            "expected_target": "认真倾听，可在小分句边界轻声附和，不抢着给建议。"
+          },
+          {
+            "id": "gap1",
+            "actor": "observer",
+            "delivery": "observe_silence",
+            "trigger": "第一段结束",
+            "intent": "留600毫秒自然呼吸间隙",
+            "example": "",
+            "agenda_effect": "用户仍持有话轮，下一段已排程；目标反馈不自动结束叙述。",
+            "expected_target": "允许短嗯声，也允许安静倾听；不开始长答。"
+          },
+          {
+            "id": "part2",
+            "actor": "user",
+            "delivery": "speech_segment",
+            "trigger": "600毫秒后；若目标正在短附和可自然重叠，长答则按分支处理",
+            "intent": "说出经历的转折",
+            "example": "后面讲到我自己做的那个部分，反而顺了，大家还问了两个问题，我都答上来了。结束的时候同事说，内容其实比我自己想的清楚。",
+            "agenda_effect": "补入转折与结果，原始紧张状态不能被误记成整场失败。",
+            "expected_target": "可在转折处短回应，如‘嗯’或‘那挺好的’，不连续每句都插话。"
+          },
+          {
+            "id": "gap2",
+            "actor": "observer",
+            "delivery": "observe_silence",
+            "trigger": "第二段结束",
+            "intent": "留800毫秒间隙",
+            "example": "",
+            "agenda_effect": "仍是同一叙述，准备最后一句。",
+            "expected_target": "保持适度，不把间隙一律当成正式交接。"
+          },
+          {
+            "id": "handoff",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "800毫秒后或目标短附和结束",
+            "intent": "总结并明确邀请完整回应",
+            "example": "所以现在回想起来，也没那么糟。下次我想更稳一点，你觉得我最值得保留的做法是什么？",
+            "agenda_effect": "正式交出话轮，激活基于已讲经历的建议任务。",
+            "expected_target": "回应真实经历，例如保留提纲和放慢开头；不把用户说成汇报失败。"
+          }
+        ],
+        "branches": [
+          "若目标在叙述中长篇建议，用户在其一个小句边界说一次‘我后面还有一点’，继续剩余内容，记repair；不能为了维持计划音轨而无限互相压话。",
+          "没有主动附和但最终准确回应，标backchannel_not_observed并单列自然度；不能把沉默倾听直接当成任务失败。",
+          "目标短附和内容若与已讲情绪不符，例如紧张时夸‘太棒了’，记录位置与语义不匹配。"
+        ],
+        "validity": "主用户叙述确有连续话轮和自然小间隙；所有目标短反馈均由目标真实产生，不播放模拟器附和冒充。",
+        "success": [
+          "观察到时机合适、简短、不争夺话轮的助手反馈",
+          "正式交接后能准确承接经历的转折和问题"
+        ],
+        "failure": [
+          "持续打断叙述或机械每句附和",
+          "反馈情绪明显不合语境",
+          "最终建议忽视用户实际叙述或捏造经历"
+        ],
+        "controls": [
+          "独立条件先约定‘我讲完前你先别出声’，对应R06，应抑制附和。",
+          "独立的显式鼓励反馈条件可以说‘我讲的时候你可以偶尔应一声’，与自然主动条件分开。"
+        ],
+        "runtime_needs": [
+          "连续用户长话轮及片段间监听",
+          "目标短反馈与正式长答区分",
+          "按实际目标行为调整续说，保留原计划和实际时间"
+        ]
+      },
+      "minimal_scope": "One main stimulus; independent control variants are not included.",
+      "stages": [
+        {
+          "id": "setup",
+          "kind": "opening",
+          "need": "自然发起一段叙述",
+          "required": [
+            "想分享今天第一次做组内汇报的经历"
+          ],
+          "example": "我想跟你说说今天第一次做组内汇报的经历。",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "story",
+          "kind": "held_speech",
+          "need": "分享经历时保留叙述话轮，最后才邀请完整回应",
+          "required": [],
+          "example": "",
+          "criteria": {
+            "response": "根据实际完整发出的内容回应；提前插话、缺项和答错另行记录"
+          },
+          "trigger": "handoff",
+          "asset_manifest": "data/voice/local_user/audio/manifest.json",
+          "segments": [
+            {
+              "id": "part1",
+              "asset": "p02_part1",
+              "gap_after_ms": 600
+            },
+            {
+              "id": "part2",
+              "asset": "p02_part2",
+              "gap_after_ms": 800
+            },
+            {
+              "id": "handoff",
+              "asset": "p02_handoff",
+              "gap_after_ms": 0
+            }
+          ]
+        },
+        {
+          "id": "closing",
+          "kind": "closing",
+          "need": "自然中性结束，不宣称任务全部解决或已实际操作",
+          "required": [
+            "今天先到这里"
+          ],
+          "example": "好，我先整理一下，今天先到这里。",
+          "criteria": {},
+          "trigger": "handoff"
+        }
+      ]
+    }
+  },
+  {
+    "id": "P03",
+    "title": "聚餐和打车分账：两笔金额未报，先补问再算净转账",
+    "mode": "adaptive",
+    "persona": "general",
+    "user_model": "qwen35-9b",
+    "goal": "用户明确要求具体转账金额，并明说付款金额尚未提供；先补问两笔实付，再按不同参与者分摊、抵账，减少澄清轮次与转账笔数。",
+    "private_facts": {},
+    "intent_events": [],
+    "max_turns": 12,
+    "max_seconds": 180,
+    "recover_after_silence_ms": 8000,
+    "target_instructions": "你是自然、友好的中文语音助手。根据用户实际说出的需求提供清楚、准确的帮助，信息不足时可以澄清。你没有查询、预订、购买或操作用户设备的工具，不声称已经执行了这些操作。需要实时资料时说明不确定性。请用普通话自然交流。",
+    "scenario_runtime": {
+      "schema_version": "duplex-runtime-v17",
+      "protocol": "single-b-floor-scenarios-v17",
+      "source_id": "P03",
+      "persona": "普通用户，表达自然简洁，通常愿意听清要点；会追问、改变想法，遇到误解或时间压力会简短打断。一次说一个重点，不每轮刻意表现不耐烦。",
+      "authoring_spec": {
+        "id": "P03",
+        "subtype": "必要信息补问 · 分账与抵账",
+        "title": "聚餐和打车分账：两笔金额未报，先补问再算净转账",
+        "goal": "用户明确要求具体转账金额，并明说付款金额尚未提供；先补问两笔实付，再按不同参与者分摊、抵账，减少澄清轮次与转账笔数。",
+        "facts": {
+          "开场已披露": {
+            "diners": [
+              "我",
+              "小林",
+              "阿哲"
+            ],
+            "taxi_riders": [
+              "我",
+              "小林"
+            ],
+            "dinner_payer": "我",
+            "taxi_payer": "小林",
+            "split_rule": "饭钱三人平摊，车费只有我和小林平摊",
+            "already_transferred": "没人转过账",
+            "goal": "给出具体谁转给谁多少钱，抵账后少转几笔"
+          },
+          "必须补问": {
+            "dinner_amount": 288,
+            "taxi_amount": 78
+          },
+          "口径": "金额都是整笔人民币实付金额，没有其他费用；只出结算方案，不执行真实转账。",
+          "逻辑必要性": "没有实际支出就不能确定任何具体结算金额；相同开场下车费不同，小林可以从付款人变成收款人。"
+        },
+        "steps": [
+          {
+            "id": "opening",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "新会话开场",
+            "intent": "说明谁垫钱、谁参与分摊和抵账要求，明确两笔金额尚未提供",
+            "example": "我、小林和阿哲三个人刚吃完饭，饭钱我垫的。后来只有我和小林打车，车费小林付了，阿哲没坐。饭钱三人平摊，车费只算坐车的两个人，没人转过账。两张付款记录就在我手边，金额还没报给你。你帮我算出最后谁给谁转多少钱，能抵的抵掉，少转几笔。",
+            "agenda_effect": "只记录实际完整送达的信息与实际观察；阶段推进不代表任务成功。",
+            "expected_target": "主动一次询问饭钱和车费各实际付多少，不重复询问已给的参与者"
+          },
+          {
+            "id": "answer1",
+            "actor": "user",
+            "delivery": "adaptive_answer",
+            "trigger": "真实补问后交接；必要字段齐备则跳过剩余补问",
+            "intent": "只口述实际问到的付款金额或已知事实；一次问两笔就一次答两笔",
+            "example": "",
+            "agenda_effect": "只记录实际完整送达的信息与实际观察；阶段推进不代表任务成功。",
+            "expected_target": "收到金额后按各自分摊人群算净转账，缺一笔则继续补问"
+          },
+          {
+            "id": "answer2",
+            "actor": "user",
+            "delivery": "adaptive_answer",
+            "trigger": "真实补问后交接；必要字段齐备则跳过剩余补问",
+            "intent": "只口述实际问到的付款金额或已知事实；一次问两笔就一次答两笔",
+            "example": "",
+            "agenda_effect": "只记录实际完整送达的信息与实际观察；阶段推进不代表任务成功。",
+            "expected_target": "收到金额后按各自分摊人群算净转账，缺一笔则继续补问"
+          },
+          {
+            "id": "answer3",
+            "actor": "user",
+            "delivery": "adaptive_answer",
+            "trigger": "真实补问后交接；必要字段齐备则跳过剩余补问",
+            "intent": "只口述实际问到的付款金额或已知事实；一次问两笔就一次答两笔",
+            "example": "",
+            "agenda_effect": "只记录实际完整送达的信息与实际观察；阶段推进不代表任务成功。",
+            "expected_target": "收到金额后按各自分摊人群算净转账，缺一笔则继续补问"
+          },
+          {
+            "id": "closing",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "正常交接",
+            "intent": "等待助手回应最后答案后中性结束，不另加请求总结的一轮",
+            "example": "好，我先记下来，今天先到这里。",
+            "agenda_effect": "只记录实际完整送达的信息与实际观察；阶段推进不代表任务成功。",
+            "expected_target": "根据真实输入回应"
+          }
+        ],
+        "branches": [
+          "问两笔金额时一次答全；只问饭钱就只报饭钱，不主动补另一笔。",
+          "索要两张付款记录时口述对应两笔实付金额，不伪造真实截图或执行转账。",
+          "最多三轮澄清；没有追问而直接给公式时保留未完成，不追加提醒刷成功。",
+          "已知付款人或人数被重复问时如实回答，单独记录重复负担。"
+        ],
+        "validity": "开场完整发出分摊关系和金额未报的提示；私有金额不提前注入目标，只按实际问题读出。",
+        "success": [
+          "主动询问两笔实付金额，能够一轮合并问，不重复问开场已经给出的三人/两人分摊和付款人。",
+          "正确计算饭钱每人96元，车费只有我和小林各39元，阿哲不承担车费。",
+          "抵账后给出小林向我57元、阿哲向我96元，共两笔；不能只给通用公式或把已垫款算成还要额外支付。",
+          "正确完成前提下比较澄清轮次；信息齐备和算账正确分别记录。"
+        ],
+        "failure": [
+          "用户明确未报金额时，编造数额或直接宣称已算完。",
+          "不补问只提供AA通用公式，未达到具体转账任务。",
+          "让阿哲分摊没有乘坐的车费，或忽略小林已经垫付的78元。",
+          "净额算错、方向反了，或保留本可抵销的往返转账。"
+        ],
+        "controls": [
+          "保持开场不变，只将车费改为240元：阿哲应向我72元、向小林24元；金额缺失连转账方向都无法唯一确定。",
+          "若开场已给两笔金额，应直接结算；本批不另跑该对照。"
+        ],
+        "runtime_needs": [
+          "按真实提问选择性披露两笔金额",
+          "完整实发后记Agenda覆盖与轮次",
+          "整数分计算每人实付、应付、净额，作为审阅参考，不冒充目标回答"
+        ],
+        "settlement_problem": {
+          "kind": "shared_bill_settlement",
+          "participants": [
+            "我",
+            "小林",
+            "阿哲"
+          ],
+          "expenses": [
+            {
+              "id": "dinner",
+              "amount_field": "dinner_amount",
+              "payer": "我",
+              "shared_by": [
+                "我",
+                "小林",
+                "阿哲"
+              ]
+            },
+            {
+              "id": "taxi",
+              "amount_field": "taxi_amount",
+              "payer": "小林",
+              "shared_by": [
+                "我",
+                "小林"
+              ]
+            }
+          ],
+          "previous_transfers": []
+        }
+      },
+      "minimal_scope": "Explicitly missing paid amounts; ask before concrete settlement. Different sharing groups and offsetting prepaid amounts are part of correctness.",
+      "required_private_fields": [
+        "dinner_amount",
+        "taxi_amount"
+      ],
+      "settlement_problem": {
+        "kind": "shared_bill_settlement",
+        "participants": [
+          "我",
+          "小林",
+          "阿哲"
+        ],
+        "expenses": [
+          {
+            "id": "dinner",
+            "amount_field": "dinner_amount",
+            "payer": "我",
+            "shared_by": [
+              "我",
+              "小林",
+              "阿哲"
+            ]
+          },
+          {
+            "id": "taxi",
+            "amount_field": "taxi_amount",
+            "payer": "小林",
+            "shared_by": [
+              "我",
+              "小林"
+            ]
+          }
+        ],
+        "previous_transfers": []
+      },
+      "stages": [
+        {
+          "id": "opening",
+          "kind": "held_speech",
+          "need": "完整说明分摊人群、垫付人及金额未报；要求具体抵账方案",
+          "required": [],
+          "example": "",
+          "criteria": {
+            "response": "根据实际完整发出的内容回应；提前插话、缺项和答错另行记录"
+          },
+          "trigger": "handoff",
+          "asset_manifest": "data/voice/local_user/audio/manifest.json",
+          "segments": [
+            {
+              "id": "request",
+              "asset": "p03_v17_opening",
+              "gap_after_ms": 0
+            }
+          ],
+          "prepared_answer": "我、小林和阿哲三个人刚吃完饭，饭钱我垫的。后来只有我和小林打车，车费小林付了，阿哲没坐。饭钱三人平摊，车费只算坐车的两个人，没人转过账。两张付款记录就在我手边，金额还没报给你。你帮我算出最后谁给谁转多少钱，能抵的抵掉，少转几笔。",
+          "update": {
+            "diners": [
+              "我",
+              "小林",
+              "阿哲"
+            ],
+            "taxi_riders": [
+              "我",
+              "小林"
+            ],
+            "dinner_payer": "我",
+            "taxi_payer": "小林",
+            "split_rule": "饭钱三人平摊，车费只有我和小林平摊",
+            "already_transferred": "没人转过账",
+            "goal": "给出具体谁转给谁多少钱，抵账后少转几笔"
+          }
+        },
+        {
+          "id": "answer1",
+          "kind": "private_answer",
+          "need": "只回答实际问到的整笔实付金额；索要两张记录就口述两笔，只问一笔就只答一笔",
+          "required": [],
+          "example": "",
+          "criteria": {
+            "response": "只依据实际已说的金额与分摊关系计算具体净转账，不能把两笔金额齐备当作已经算对"
+          },
+          "trigger": "handoff",
+          "private_fields": {
+            "dinner_amount": {
+              "label": "饭钱/餐费/吃饭花了多少钱，金额",
+              "value": 288,
+              "answer": "饭钱实际付了二百八十八块",
+              "question_terms": [
+                "饭",
+                "餐",
+                "吃",
+                "两笔",
+                "两张",
+                "付款记录",
+                "金额",
+                "各",
+                "分别"
+              ]
+            },
+            "taxi_amount": {
+              "label": "车费/打车花了多少钱，金额",
+              "value": 78,
+              "answer": "打车实际付了七十八块",
+              "question_terms": [
+                "车",
+                "两笔",
+                "两张",
+                "付款记录",
+                "金额",
+                "各",
+                "分别"
+              ]
+            },
+            "diners": {
+              "label": "吃饭人数及参与者，开场已给",
+              "value": [
+                "我",
+                "小林",
+                "阿哲"
+              ],
+              "answer": "吃饭就是我、小林、阿哲三个人"
+            },
+            "taxi_riders": {
+              "label": "打车的参与者，开场已给",
+              "value": [
+                "我",
+                "小林"
+              ],
+              "answer": "只有我和小林坐车，阿哲没坐"
+            },
+            "dinner_payer": {
+              "label": "谁垫付饭钱，开场已给",
+              "value": "我",
+              "answer": "饭钱是我先垫的"
+            },
+            "taxi_payer": {
+              "label": "谁垫付车费，开场已给",
+              "value": "小林",
+              "answer": "车费是小林付的"
+            },
+            "split_rule": {
+              "label": "分摊规则，开场已给",
+              "value": "饭钱三人平摊，车费只有我和小林平摊",
+              "answer": "饭钱三人平摊，车费只算我和小林两个人"
+            },
+            "already_transferred": {
+              "label": "是否已有转账，开场已给",
+              "value": "没人转过账",
+              "answer": "还没有人转过账"
+            }
+          },
+          "answer_mode": "asked_fields_template",
+          "observe_only": false,
+          "field_selection_guidance": "本场景是饭钱和车费分账。问饭钱多少对应dinner_amount，问打车多少钱对应taxi_amount；请求两笔金额或两张付款记录同时对应这两个字段。问谁付车费对应taxi_payer，问哪些人坐车对应taxi_riders。引用实际原句，不补答案。",
+          "request_signal_patterns": [
+            "[？?吗呢]|多少|几|哪|各.{0,8}(?:付|花)|分别.{0,8}(?:付|花)|告诉|提供|报一下|报给|报我|发给|给我|补充|需要知道|需要.{0,12}(?:信息|金额)|说一下|请说"
+          ]
+        },
+        {
+          "id": "answer2",
+          "kind": "private_answer",
+          "need": "只回答实际问到的整笔实付金额；索要两张记录就口述两笔，只问一笔就只答一笔",
+          "required": [],
+          "example": "",
+          "criteria": {
+            "response": "只依据实际已说的金额与分摊关系计算具体净转账，不能把两笔金额齐备当作已经算对"
+          },
+          "trigger": "handoff",
+          "private_fields": {
+            "dinner_amount": {
+              "label": "饭钱/餐费/吃饭花了多少钱，金额",
+              "value": 288,
+              "answer": "饭钱实际付了二百八十八块",
+              "question_terms": [
+                "饭",
+                "餐",
+                "吃",
+                "两笔",
+                "两张",
+                "付款记录",
+                "金额",
+                "各",
+                "分别"
+              ]
+            },
+            "taxi_amount": {
+              "label": "车费/打车花了多少钱，金额",
+              "value": 78,
+              "answer": "打车实际付了七十八块",
+              "question_terms": [
+                "车",
+                "两笔",
+                "两张",
+                "付款记录",
+                "金额",
+                "各",
+                "分别"
+              ]
+            },
+            "diners": {
+              "label": "吃饭人数及参与者，开场已给",
+              "value": [
+                "我",
+                "小林",
+                "阿哲"
+              ],
+              "answer": "吃饭就是我、小林、阿哲三个人"
+            },
+            "taxi_riders": {
+              "label": "打车的参与者，开场已给",
+              "value": [
+                "我",
+                "小林"
+              ],
+              "answer": "只有我和小林坐车，阿哲没坐"
+            },
+            "dinner_payer": {
+              "label": "谁垫付饭钱，开场已给",
+              "value": "我",
+              "answer": "饭钱是我先垫的"
+            },
+            "taxi_payer": {
+              "label": "谁垫付车费，开场已给",
+              "value": "小林",
+              "answer": "车费是小林付的"
+            },
+            "split_rule": {
+              "label": "分摊规则，开场已给",
+              "value": "饭钱三人平摊，车费只有我和小林平摊",
+              "answer": "饭钱三人平摊，车费只算我和小林两个人"
+            },
+            "already_transferred": {
+              "label": "是否已有转账，开场已给",
+              "value": "没人转过账",
+              "answer": "还没有人转过账"
+            }
+          },
+          "answer_mode": "asked_fields_template",
+          "observe_only": false,
+          "field_selection_guidance": "本场景是饭钱和车费分账。问饭钱多少对应dinner_amount，问打车多少钱对应taxi_amount；请求两笔金额或两张付款记录同时对应这两个字段。问谁付车费对应taxi_payer，问哪些人坐车对应taxi_riders。引用实际原句，不补答案。",
+          "request_signal_patterns": [
+            "[？?吗呢]|多少|几|哪|各.{0,8}(?:付|花)|分别.{0,8}(?:付|花)|告诉|提供|报一下|报给|报我|发给|给我|补充|需要知道|需要.{0,12}(?:信息|金额)|说一下|请说"
+          ]
+        },
+        {
+          "id": "answer3",
+          "kind": "private_answer",
+          "need": "只回答实际问到的整笔实付金额；索要两张记录就口述两笔，只问一笔就只答一笔",
+          "required": [],
+          "example": "",
+          "criteria": {
+            "response": "只依据实际已说的金额与分摊关系计算具体净转账，不能把两笔金额齐备当作已经算对"
+          },
+          "trigger": "handoff",
+          "private_fields": {
+            "dinner_amount": {
+              "label": "饭钱/餐费/吃饭花了多少钱，金额",
+              "value": 288,
+              "answer": "饭钱实际付了二百八十八块",
+              "question_terms": [
+                "饭",
+                "餐",
+                "吃",
+                "两笔",
+                "两张",
+                "付款记录",
+                "金额",
+                "各",
+                "分别"
+              ]
+            },
+            "taxi_amount": {
+              "label": "车费/打车花了多少钱，金额",
+              "value": 78,
+              "answer": "打车实际付了七十八块",
+              "question_terms": [
+                "车",
+                "两笔",
+                "两张",
+                "付款记录",
+                "金额",
+                "各",
+                "分别"
+              ]
+            },
+            "diners": {
+              "label": "吃饭人数及参与者，开场已给",
+              "value": [
+                "我",
+                "小林",
+                "阿哲"
+              ],
+              "answer": "吃饭就是我、小林、阿哲三个人"
+            },
+            "taxi_riders": {
+              "label": "打车的参与者，开场已给",
+              "value": [
+                "我",
+                "小林"
+              ],
+              "answer": "只有我和小林坐车，阿哲没坐"
+            },
+            "dinner_payer": {
+              "label": "谁垫付饭钱，开场已给",
+              "value": "我",
+              "answer": "饭钱是我先垫的"
+            },
+            "taxi_payer": {
+              "label": "谁垫付车费，开场已给",
+              "value": "小林",
+              "answer": "车费是小林付的"
+            },
+            "split_rule": {
+              "label": "分摊规则，开场已给",
+              "value": "饭钱三人平摊，车费只有我和小林平摊",
+              "answer": "饭钱三人平摊，车费只算我和小林两个人"
+            },
+            "already_transferred": {
+              "label": "是否已有转账，开场已给",
+              "value": "没人转过账",
+              "answer": "还没有人转过账"
+            }
+          },
+          "answer_mode": "asked_fields_template",
+          "observe_only": false,
+          "field_selection_guidance": "本场景是饭钱和车费分账。问饭钱多少对应dinner_amount，问打车多少钱对应taxi_amount；请求两笔金额或两张付款记录同时对应这两个字段。问谁付车费对应taxi_payer，问哪些人坐车对应taxi_riders。引用实际原句，不补答案。",
+          "request_signal_patterns": [
+            "[？?吗呢]|多少|几|哪|各.{0,8}(?:付|花)|分别.{0,8}(?:付|花)|告诉|提供|报一下|报给|报我|发给|给我|补充|需要知道|需要.{0,12}(?:信息|金额)|说一下|请说"
+          ]
+        },
+        {
+          "id": "final_question_audit",
+          "kind": "private_answer",
+          "need": "只回答实际问到的整笔实付金额；索要两张记录就口述两笔，只问一笔就只答一笔",
+          "required": [],
+          "example": "",
+          "criteria": {
+            "response": "只依据实际已说的金额与分摊关系计算具体净转账，不能把两笔金额齐备当作已经算对"
+          },
+          "trigger": "handoff",
+          "private_fields": {
+            "dinner_amount": {
+              "label": "饭钱/餐费/吃饭花了多少钱，金额",
+              "value": 288,
+              "answer": "饭钱实际付了二百八十八块",
+              "question_terms": [
+                "饭",
+                "餐",
+                "吃",
+                "两笔",
+                "两张",
+                "付款记录",
+                "金额",
+                "各",
+                "分别"
+              ]
+            },
+            "taxi_amount": {
+              "label": "车费/打车花了多少钱，金额",
+              "value": 78,
+              "answer": "打车实际付了七十八块",
+              "question_terms": [
+                "车",
+                "两笔",
+                "两张",
+                "付款记录",
+                "金额",
+                "各",
+                "分别"
+              ]
+            },
+            "diners": {
+              "label": "吃饭人数及参与者，开场已给",
+              "value": [
+                "我",
+                "小林",
+                "阿哲"
+              ],
+              "answer": "吃饭就是我、小林、阿哲三个人"
+            },
+            "taxi_riders": {
+              "label": "打车的参与者，开场已给",
+              "value": [
+                "我",
+                "小林"
+              ],
+              "answer": "只有我和小林坐车，阿哲没坐"
+            },
+            "dinner_payer": {
+              "label": "谁垫付饭钱，开场已给",
+              "value": "我",
+              "answer": "饭钱是我先垫的"
+            },
+            "taxi_payer": {
+              "label": "谁垫付车费，开场已给",
+              "value": "小林",
+              "answer": "车费是小林付的"
+            },
+            "split_rule": {
+              "label": "分摊规则，开场已给",
+              "value": "饭钱三人平摊，车费只有我和小林平摊",
+              "answer": "饭钱三人平摊，车费只算我和小林两个人"
+            },
+            "already_transferred": {
+              "label": "是否已有转账，开场已给",
+              "value": "没人转过账",
+              "answer": "还没有人转过账"
+            }
+          },
+          "answer_mode": "asked_fields_template",
+          "observe_only": true,
+          "field_selection_guidance": "本场景是饭钱和车费分账。问饭钱多少对应dinner_amount，问打车多少钱对应taxi_amount；请求两笔金额或两张付款记录同时对应这两个字段。问谁付车费对应taxi_payer，问哪些人坐车对应taxi_riders。引用实际原句，不补答案。",
+          "request_signal_patterns": [
+            "[？?吗呢]|多少|几|哪|各.{0,8}(?:付|花)|分别.{0,8}(?:付|花)|告诉|提供|报一下|报给|报我|发给|给我|补充|需要知道|需要.{0,12}(?:信息|金额)|说一下|请说"
+          ]
+        },
+        {
+          "id": "closing",
+          "kind": "closing",
+          "need": "自然中性结束，不宣称任务全部解决或已实际操作",
+          "required": [
+            "今天先到这里"
+          ],
+          "example": "好，我先整理一下，今天先到这里。",
+          "criteria": {},
+          "trigger": "handoff",
+          "answer_mode": "scene_controlled_text",
+          "prepared_answer": "好，我先记下来，今天先到这里。"
+        }
+      ]
+    },
+    "target_max_output_tokens": 2048
+  },
+  {
+    "id": "P04",
+    "title": "听报销清单时按约定及时指出重复小票",
+    "mode": "adaptive",
+    "persona": "general",
+    "user_model": "qwen35-9b",
+    "goal": "目标记住此前明确约定，在新信息满足条件时主动插话提醒；不等用户最后询问，也不对相似但不同的记录误报。",
+    "private_facts": {},
+    "intent_events": [],
+    "max_turns": 12,
+    "max_seconds": 180,
+    "recover_after_silence_ms": 8000,
+    "target_instructions": "你是自然、友好的中文语音助手。根据用户实际说出的需求提供清楚、准确的帮助，信息不足时可以澄清。你没有查询、预订、购买或操作用户设备的工具，不声称已经执行了这些操作。需要实时资料时说明不确定性。请用普通话自然交流。",
+    "scenario_runtime": {
+      "schema_version": "duplex-runtime-v17",
+      "protocol": "single-b-floor-scenarios-v17",
+      "source_id": "P04",
+      "persona": "普通用户，表达自然简洁，通常愿意听清要点；会追问、改变想法，遇到误解或时间压力会简短打断。一次说一个重点，不每轮刻意表现不耐烦。",
+      "authoring_spec": {
+        "id": "P04",
+        "subtype": "按照上文约定主动插话",
+        "title": "听报销清单时按约定及时指出重复小票",
+        "goal": "目标记住此前明确约定，在新信息满足条件时主动插话提醒；不等用户最后询问，也不对相似但不同的记录误报。",
+        "facts": {
+          "约定": "同一张小票报了两遍时立即提醒，不用等全部读完",
+          "票据A": {
+            "商户": "海棠咖啡",
+            "金额": 48,
+            "编号": "A17"
+          },
+          "票据B": {
+            "商户": "出租车",
+            "金额": 62,
+            "编号": "B08"
+          },
+          "票据C": {
+            "商户": "文印店",
+            "金额": 28,
+            "编号": "C12"
+          },
+          "重复事件": "再次报海棠咖啡48元、小票A17",
+          "非重复控制": "同商户同金额但小票A18"
+        },
+        "steps": [
+          {
+            "id": "agreement",
+            "actor": "user",
+            "delivery": "speech",
+            "trigger": "开场",
+            "intent": "自然约定特定条件下主动插话",
+            "example": "我给你念几张报销小票，帮我记一下。如果同一张我报了两遍，马上插话提醒我，不用等我全念完；没重复就先听着。小票编号相同才算同一张。",
+            "agenda_effect": "登记有明确触发条件的主动提醒约定，实际发送后生效；目标可先简短确认。",
+            "expected_target": "理解以编号判断重复，不能把同商户同金额自动算成同一张。"
+          },
+          {
+            "id": "item_a",
+            "actor": "user",
+            "delivery": "speech_segment",
+            "trigger": "目标确认后用户持有清单话轮",
+            "intent": "报第一张票据",
+            "example": "海棠咖啡，四十八元，小票A一七。",
+            "agenda_effect": "编号A17首次完整交付后加入已报票据；未重复。",
+            "expected_target": "不报重复，可安静记住。"
+          },
+          {
+            "id": "item_b",
+            "actor": "user",
+            "delivery": "speech_segment",
+            "trigger": "A段结束后留400毫秒，再继续同一清单",
+            "intent": "报第二张票据",
+            "example": "出租车六十二元，小票B零八。",
+            "agenda_effect": "加入B08，不改变A17。",
+            "expected_target": "不无故打断或总结。"
+          },
+          {
+            "id": "item_c",
+            "actor": "user",
+            "delivery": "speech_segment",
+            "trigger": "B段结束后留400毫秒",
+            "intent": "报第三张票据",
+            "example": "文印店二十八元，小票C一二。",
+            "agenda_effect": "加入C12，记录两笔间隔事实。",
+            "expected_target": "保持倾听。"
+          },
+          {
+            "id": "duplicate",
+            "actor": "user",
+            "delivery": "speech_segment",
+            "trigger": "C段结束后留400毫秒",
+            "intent": "自然报到重复记录，不提示这是重复",
+            "example": "海棠咖啡，四十八元，小票A一七。",
+            "agenda_effect": "只有编号完整实际发送后，scorer才能认定重复证据成立；不能在‘海棠咖啡四十八’前缀就断言同一张。",
+            "expected_target": "按约定准备提醒同一张A17已报过。"
+          },
+          {
+            "id": "continuation",
+            "actor": "user",
+            "delivery": "speech_segment",
+            "trigger": "重复编号最后有声帧后200毫秒继续；如目标已开始提醒，则让出话轮并记边界主动提醒",
+            "intent": "尚未结束清单，提供真实主动插话机会",
+            "example": "我接着往后翻，后面还有几张没按日期排好，我想先把金额和编号都说完，再一起核对。",
+            "agenda_effect": "仍持有清单话轮，目标提醒时在当前短语结束后停止续说；没有提醒则采集完整尾段和之后2秒。",
+            "expected_target": "指出A17重复并简短让用户处理；在后续用户有声段中提醒记主动插话，在200毫秒边界提醒记边界主动提醒，两者分开。"
+          },
+          {
+            "id": "acknowledge",
+            "actor": "user",
+            "delivery": "adaptive_answer",
+            "trigger": "收到提醒或观察窗到期",
+            "intent": "根据实际是否提醒收尾",
+            "example": "对，是同一张，我刚才翻重了，只记一次。",
+            "agenda_effect": "只有确有正确提醒才用例句；未提醒时说‘我先念到这里’，本次记missed，不问‘是不是重复了’给补考机会。",
+            "expected_target": "正确提醒后只计一次；未提醒分支不靠用户泄题修成通过。"
+          }
+        ],
+        "branches": [
+          "若目标在完整编号说完前已报重复，标premature；即便后来恰好编号相同，也不能用后验真值掩盖过早判断。",
+          "若目标在错误票据上提醒，用户澄清一次具体编号；保留首次误报。",
+          "若目标只在清单结束后总结出重复，记内容识别成功、按约定主动插话未达成，不能混为全面通过。"
+        ],
+        "validity": "协议和首张A17均已完整交付；重复编号完整后仍有用户继续说话的机会；首声与后续实际重叠单列。",
+        "success": [
+          "记住约定并在完整重复证据后主动提醒",
+          "准确指出A17，保留其他票据且不重复计数",
+          "提醒简短，不把用户整个清单话轮永久抢走"
+        ],
+        "failure": [
+          "该提醒时始终等待最后提问",
+          "凭同金额或不完整编号误报",
+          "忘记早先约定或提醒错票据"
+        ],
+        "controls": [
+          "把第二次编号改为A18，其余商户和金额相同，应不提醒重复。",
+          "独立会话改约定为‘读完再统一检查’，则相同重复记录不应触发中途插话，对应R06的规则保持。"
+        ],
+        "runtime_needs": [
+          "用户持续发声时仍采集目标主动语音",
+          "目标开口后模拟用户及时让话，不能单纯播放整段不可中断WAV",
+          "逐编号完整语义证据与首次出现时间账本"
+        ]
+      },
+      "minimal_scope": "One main stimulus; independent control variants are not included.",
+      "stages": [
+        {
+          "id": "agreement",
+          "kind": "opening",
+          "need": "自然约定特定条件下主动插话",
+          "required": [
+            "念报销小票，编号相同才算同一张",
+            "同一张报两遍时马上插话提醒，不用等全念完；没重复先听"
+          ],
+          "example": "我给你念几张报销小票，帮我记一下。如果同一张我报了两遍，马上插话提醒我，不用等我全念完；没重复就先听着。小票编号相同才算同一张。",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        },
+        {
+          "id": "receipts",
+          "kind": "held_speech",
+          "need": "口述票据，在重复编号完整说出后继续持有话轮，助手提醒时在短句边界让话",
+          "required": [],
+          "example": "",
+          "criteria": {
+            "response": "根据实际完整发出的内容回应；提前插话、缺项和答错另行记录"
+          },
+          "trigger": "handoff",
+          "asset_manifest": "data/voice/local_user/audio/manifest.json",
+          "segments": [
+            {
+              "id": "a",
+              "asset": "p04_a",
+              "gap_after_ms": 400
+            },
+            {
+              "id": "b",
+              "asset": "p04_b",
+              "gap_after_ms": 400
+            },
+            {
+              "id": "c",
+              "asset": "p04_c",
+              "gap_after_ms": 400
+            },
+            {
+              "id": "duplicate",
+              "asset": "p04_duplicate",
+              "gap_after_ms": 200
+            },
+            {
+              "id": "tail1",
+              "asset": "p04_tail1",
+              "gap_after_ms": 0,
+              "yield_if_target": true
+            },
+            {
+              "id": "tail2",
+              "asset": "p04_tail2",
+              "gap_after_ms": 0,
+              "yield_if_target": true
+            }
+          ],
+          "yield_after_segment": "duplicate"
+        },
+        {
+          "id": "after_receipts",
+          "kind": "observe",
+          "need": "保持接收，有限观察助手实际行为，不补发提示",
+          "max_seconds": 8,
+          "quiet_after_end_ms": 2000
+        },
+        {
+          "id": "acknowledge",
+          "kind": "closing",
+          "need": "根据实际是否提醒收尾",
+          "required": [
+            "如果助手确实指出A17重复，则承认翻重了，只记一次",
+            "如果未提醒，只说我先念到这里，不问是不是重复，不透露答案"
+          ],
+          "example": "对，是同一张，我刚才翻重了，只记一次。",
+          "criteria": {
+            "response": "实际回应本轮用户意图，不能仅凭私有计划记完成"
+          },
+          "trigger": "handoff",
+          "trigger_condition": "",
+          "update": {}
+        }
+      ]
+    }
+  }
+]
