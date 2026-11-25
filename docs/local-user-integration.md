@@ -80,3 +80,17 @@ python -m experiments.tau_voice.duplex_bench local \
 
 可加 `--scenes P03` 做单例验证；省略则逐条运行19例。拒绝覆盖已有目录。
 这是受控场景接入，不会悄悄替换原有动态用户构建器或领域任务评分。
+
+生成便携听测页（可在测试过程中对已结束样例反复更新）：
+
+```bash
+python -m experiments.tau_voice.local_user_report data/simulations/local-user-review
+python -m http.server 8796 --directory data/simulations/local-user-review
+```
+
+页面默认播放外置 `mix.flac`，同时提供用户/助手分声道、时间戳对齐录音、
+原始事件、请求输入输出、token数及各阶段p50/p95。页面数据直接嵌入HTML，
+音频使用相对链接和 `preload=none`，整目录下载后也可直接打开。
+语义结论默认待人工审阅；不会把正常结束、B的met或agenda推进算成成功。
+
+阶段4报告入口已在真实P03产物验证；全量19例运行与最后审阅记录待补。
