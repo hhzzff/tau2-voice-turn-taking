@@ -83,7 +83,7 @@ experiments = [
     "scikit-learn>=1.6.1",
 ]
 all = [
-    "tau2[voice,knowledge,gym,dev,experiments]",
+    "tau2[voice,local-user,knowledge,gym,dev,experiments]",
 ]
 [project.urls]
 Homepage = "https://taubench.com/"
