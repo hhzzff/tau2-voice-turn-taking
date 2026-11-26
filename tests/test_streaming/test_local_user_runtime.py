@@ -9,13 +9,13 @@ import pytest
 
 pytest.importorskip("soundfile", reason="requires the local-user extra")
 
-from tau2.user.local.config import LocalUserConfig
-from tau2.user.local.local_asr import XASR
-from tau2.user.local.observation import HeardItem
-from tau2.user.local.recording import Recorder, Track, now
-from tau2.user.local.scenario import ScenarioRuntime
-from tau2.user.local.scenarios import load_scenes
-from tau2.user.local.streaming import SpeechStream
+from experiments.tau_voice.local_user.config import LocalUserConfig
+from experiments.tau_voice.local_user.local_asr import XASR
+from experiments.tau_voice.local_user.observation import HeardItem
+from experiments.tau_voice.local_user.recording import Recorder, Track, now
+from experiments.tau_voice.local_user.scenario import ScenarioRuntime
+from experiments.tau_voice.local_user.scenarios import load_scenes
+from experiments.tau_voice.local_user.streaming import SpeechStream
 
 
 def config():

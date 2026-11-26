@@ -13,15 +13,15 @@ pytest.importorskip("soxr", reason="requires the local-user extra")
 
 from websockets.protocol import State
 
-from tau2.orchestrator.continuous_voice import ContinuousVoiceDriver
-from tau2.user.local.config import LocalUserConfig
-from tau2.user.local.observation import HeardItem
-from tau2.user.local.recording import Recorder, now
-from tau2.user.local.scenario import ScenarioRuntime
-from tau2.user.local.scenarios import load_scenes
-from tau2.user.local_streaming_user import LocalStreamingUser
+from experiments.tau_voice.local_user.config import LocalUserConfig
+from experiments.tau_voice.local_user.driver import ContinuousVoiceDriver
+from experiments.tau_voice.local_user.observation import HeardItem
+from experiments.tau_voice.local_user.participant import LocalStreamingUser
+from experiments.tau_voice.local_user.recording import Recorder, now
+from experiments.tau_voice.local_user.scenario import ScenarioRuntime
+from experiments.tau_voice.local_user.scenarios import load_scenes
+from experiments.tau_voice.local_user.target import ContinuousOpenAITarget
 from tau2.voice.audio_native.audio_converter import StreamingPCMConverter
-from tau2.voice.audio_native.openai.continuous import ContinuousOpenAITarget
 from tau2.voice.audio_native.openai.provider import (
     OpenAIRealtimeProvider,
     OpenAIVADConfig,

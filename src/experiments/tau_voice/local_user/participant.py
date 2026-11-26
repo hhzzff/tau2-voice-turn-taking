@@ -7,6 +7,19 @@ from tau2.user.user_simulator_base import FullDuplexUser, UserState
 LOCAL_PCM = AudioFormat(encoding=AudioEncoding.PCM_S16LE, sample_rate=16000)
 
 
+def register_local_user() -> type["LocalStreamingUser"]:
+    """Register the experiment on demand without importing it from core tau2."""
+    from tau2.registry import registry
+
+    name = "local_streaming_user"
+    if name not in registry.get_info().users:
+        registry.register_user(LocalStreamingUser, name)
+    registered = registry.get_user_constructor(name)
+    if registered is not LocalStreamingUser:
+        raise ValueError(f"User name {name} is already owned by another component")
+    return registered
+
+
 class LocalStreamingUser(FullDuplexUser):
     """Nonblocking chunk API; explicitly started by the continuous driver.
 

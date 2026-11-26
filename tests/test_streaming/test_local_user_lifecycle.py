@@ -9,7 +9,7 @@ import pytest
 pytest.importorskip("soundfile", reason="requires the local-user extra")
 
 from experiments.tau_voice import local_user_bench as bench
-from tau2.user.local.recording import Recorder, Track
+from experiments.tau_voice.local_user.recording import Recorder, Track
 
 
 @pytest.fixture
@@ -173,9 +173,9 @@ async def test_all_cleanup_errors_are_recorded_without_hiding_first_failure(tria
 
 @pytest.mark.asyncio
 async def test_journal_error_during_observation_drain_still_stops_runtime(tmp_path):
-    from tau2.user.local.config import LocalUserConfig
-    from tau2.user.local.runtime import UserRuntime
-    from tau2.user.local.scenarios import load_scenes
+    from experiments.tau_voice.local_user.config import LocalUserConfig
+    from experiments.tau_voice.local_user.runtime import UserRuntime
+    from experiments.tau_voice.local_user.scenarios import load_scenes
 
     closed = []
 

@@ -282,9 +282,6 @@ try:
     # User implementations
     registry.register_user(UserSimulator, "user_simulator")
     registry.register_user(DummyUser, "dummy_user")
-    from tau2.user.local_streaming_user import LocalStreamingUser
-
-    registry.register_user(LocalStreamingUser, "local_streaming_user")
     try:
         from tau2.user.duplex_scenario_user import DuplexUserSimulator
         from tau2.user.open_model_scenarios import OpenModelScenarioUser

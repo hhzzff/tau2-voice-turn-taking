@@ -4,13 +4,13 @@ import base64
 import hashlib
 from dataclasses import dataclass, field
 
+from experiments.tau_voice.local_user.audio import first_effective
+from experiments.tau_voice.local_user.observation import HeardItem
+from experiments.tau_voice.local_user.participant import LOCAL_PCM
+from experiments.tau_voice.local_user.recording import now
 from tau2.config import DEFAULT_LOCAL_USER_TARGET_OUTPUT_TOKENS
 from tau2.data_model.audio import AudioEncoding, AudioFormat, audio_bytes_to_string
 from tau2.data_model.message import AssistantMessage
-from tau2.user.local.audio import first_effective
-from tau2.user.local.observation import HeardItem
-from tau2.user.local.recording import now
-from tau2.user.local_streaming_user import LOCAL_PCM
 from tau2.voice.audio_native.audio_converter import StreamingPCMConverter
 from tau2.voice.audio_native.openai.provider import OpenAIVADConfig, OpenAIVADMode
 

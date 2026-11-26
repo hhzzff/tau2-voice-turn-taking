@@ -14,14 +14,19 @@ import numpy as np
 import soundfile as sf
 from dotenv import load_dotenv
 
+from experiments.tau_voice.local_user.config import LocalUserConfig
+from experiments.tau_voice.local_user.driver import ContinuousVoiceDriver
+from experiments.tau_voice.local_user.participant import LocalStreamingUser
+from experiments.tau_voice.local_user.recording import Recorder, now
+from experiments.tau_voice.local_user.scenario import ScenarioRuntime
+from experiments.tau_voice.local_user.scenarios import (
+    SCENE_DIR,
+    SCENE_EVENTS,
+    load_clip,
+    load_scenes,
+)
+from experiments.tau_voice.local_user.target import ContinuousOpenAITarget
 from tau2.config import DEFAULT_LOCAL_USER_TARGET_OUTPUT_TOKENS
-from tau2.orchestrator.continuous_voice import ContinuousVoiceDriver
-from tau2.user.local.config import LocalUserConfig
-from tau2.user.local.recording import Recorder, now
-from tau2.user.local.scenario import ScenarioRuntime
-from tau2.user.local.scenarios import SCENE_DIR, SCENE_EVENTS, load_clip, load_scenes
-from tau2.user.local_streaming_user import LocalStreamingUser
-from tau2.voice.audio_native.openai.continuous import ContinuousOpenAITarget
 from tau2.voice.audio_native.openai.provider import OpenAIRealtimeProvider
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -50,8 +55,8 @@ def provenance(cfg, case, model):
     """Capture actual imported source and reproducible trial inputs, no secrets."""
     import importlib.metadata
 
-    import tau2.user.local.llm as prompts
-    import tau2.user.local.runtime as runtime
+    import experiments.tau_voice.local_user.llm as prompts
+    import experiments.tau_voice.local_user.runtime as runtime
 
     return {
         "commit": git_output("rev-parse", "HEAD"),
@@ -256,6 +261,9 @@ async def run_case(cfg, case, output, model):
 
 async def run_suite(args):
     """Sequential trials avoid contention between B/TTS latency measurements."""
+    from experiments.tau_voice.local_user.participant import register_local_user
+
+    register_local_user()
     load_dotenv(args.env_file)
     cfg = LocalUserConfig(asr={"model_path": args.asr_model_path})
     selected = set(args.scenes.split(",")) if args.scenes else set(SCENE_EVENTS)

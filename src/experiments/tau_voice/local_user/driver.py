@@ -2,7 +2,7 @@
 
 import asyncio
 
-from tau2.user.local.recording import now
+from experiments.tau_voice.local_user.recording import now
 
 
 class ContinuousVoiceDriver:

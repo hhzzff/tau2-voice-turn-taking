@@ -6,9 +6,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from tau2.user.local.config import LocalUserConfig
-from tau2.user.local.local_asr import XASR
-from tau2.user.local.recording import Frame
+from experiments.tau_voice.local_user.config import LocalUserConfig
+from experiments.tau_voice.local_user.local_asr import XASR
+from experiments.tau_voice.local_user.recording import Frame
 
 
 @pytest.mark.asyncio

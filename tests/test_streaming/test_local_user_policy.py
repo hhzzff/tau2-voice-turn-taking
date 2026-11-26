@@ -5,9 +5,17 @@ from types import SimpleNamespace
 
 import pytest
 
-from tau2.user.local.agenda import ScenarioAgenda, settlement_reference
-from tau2.user.local.policy import FloorController, FloorState, effective_action
-from tau2.user.local.scenarios import SCENE_EVENTS, load_clip, load_scenes
+from experiments.tau_voice.local_user.agenda import ScenarioAgenda, settlement_reference
+from experiments.tau_voice.local_user.policy import (
+    FloorController,
+    FloorState,
+    effective_action,
+)
+from experiments.tau_voice.local_user.scenarios import (
+    SCENE_EVENTS,
+    load_clip,
+    load_scenes,
+)
 
 
 def test_scene_catalog_matches_the_tau_event_ids():

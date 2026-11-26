@@ -30,3 +30,31 @@ runpy.run_module('experiments.tau_voice.duplex_bench', run_name='__main__')
     )
     assert result.returncode == 0, result.stderr
     assert result.stdout
+
+
+def test_core_registry_is_independent_and_experiment_registration_is_explicit():
+    script = """
+import importlib.abc
+import sys
+
+class NoExperiments(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname == 'experiments' or fullname.startswith('experiments.'):
+            raise AssertionError('core registry imported an experiment')
+
+blocker = NoExperiments()
+sys.meta_path.insert(0, blocker)
+from tau2.registry import registry
+assert 'local_streaming_user' not in registry.get_users()
+sys.meta_path.remove(blocker)
+from experiments.tau_voice.local_user.participant import register_local_user
+from tau2.user.user_simulator_base import FullDuplexUser
+first = register_local_user()
+assert issubclass(first, FullDuplexUser)
+assert register_local_user() is first
+assert registry.get_user_constructor('local_streaming_user') is first
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", script], capture_output=True, text=True, timeout=30
+    )
+    assert result.returncode == 0, result.stderr
