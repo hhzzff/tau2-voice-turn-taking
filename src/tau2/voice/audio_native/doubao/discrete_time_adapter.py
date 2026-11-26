@@ -234,6 +234,7 @@ class DiscreteTimeDoubaoAdapter(DiscreteTimeAdapter):
     def _process_event(self, result, event):
         kind = event.get("type", "unknown")
         result.events.append(SimpleNamespace(**event))
+        self.record_control_signal("doubao_s2s", event, result)
         if kind == "response.output_audio.delta":
             pcm = base64.b64decode(event.get("delta", ""))
             audio = self._converter.convert_output(pcm)
@@ -248,15 +249,7 @@ class DiscreteTimeDoubaoAdapter(DiscreteTimeAdapter):
         elif kind == "conversation.item.input_audio_transcription.started":
             result.vad_events.append("speech_started")
             # The official client clears queued playback at this server event.
-            result.truncated_audio_bytes += sum(
-                len(x[0]) for x in result.agent_audio_chunks
-            )
-            result.truncated_audio_bytes += sum(
-                len(x[0]) for x in self._buffered_agent_audio
-            )
-            result.agent_audio_chunks.clear()
-            self._buffered_agent_audio.clear()
-            result.was_truncated = True
+            self.cancel_pending_playback(result)
             self._current_output_item = None
         elif kind == "conversation.item.input_audio_transcription.completed":
             result.vad_events.append("speech_stopped")

@@ -25,9 +25,11 @@ class PlayedAudioPerception:
     def __init__(
         self,
         language: str,
+        config: TranscriptionConfig | None = None,
+        *,
         model: TranscriptionModel = DEFAULT_DUPLEX_TRANSCRIPTION_MODEL,
     ):
-        self.config = TranscriptionConfig(
+        self.config = config or TranscriptionConfig(
             model=model,
             language="zh" if language == "Chinese" else "en",
         )

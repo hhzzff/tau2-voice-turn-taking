@@ -427,6 +427,9 @@ class LiveKitCascadedAdapter(DiscreteTimeAdapter):
             cumulative_user_audio_at_tick_start_ms=cumulative_at_tick_start,
         )
 
+        for event in events:
+            self.record_control_signal("livekit", event, result)
+
         # Ensure tick takes at least tick_duration_ms wall-clock time
         elapsed = asyncio.get_running_loop().time() - tick_start
         remaining_time = (self.tick_duration_ms / 1000) - elapsed

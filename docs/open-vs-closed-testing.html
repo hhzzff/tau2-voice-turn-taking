@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>开源与闭源语音模型：当前测试实现对照</title>
+<style>
+:root{--bg:#f5f6f8;--paper:#fff;--ink:#192837;--muted:#596a78;--line:#dce3e8;--open:#08695c;--open-bg:#e9f5f1;--api:#345aa2;--api-bg:#edf2fc;--warn:#865111;--warn-bg:#fff5e3;--code:#eef1f4;--shadow:0 12px 40px #172b3c08}
+@media(prefers-color-scheme:dark){:root{--bg:#131b23;--paper:#1b2631;--ink:#e6edf4;--muted:#aabac9;--line:#354454;--open:#8bd9c2;--open-bg:#193c36;--api:#a8c3ff;--api-bg:#23354d;--warn:#f0c783;--warn-bg:#3b3021;--code:#263542;--shadow:none}}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:24px}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.85 system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}main{max-width:1160px;margin:auto;padding:56px 36px 70px}a{color:var(--api);text-underline-offset:3px}a:hover{text-decoration-thickness:2px}p{margin:12px 0}h1,h2,h3{line-height:1.4}h1{font-size:clamp(30px,4vw,46px);letter-spacing:-1.2px;margin:16px 0 20px;max-width:920px}h2{font-size:26px;margin:0 0 20px}h3{font-size:18px;margin:0 0 10px}.eyebrow{color:var(--open);font-size:13px;letter-spacing:2px;font-weight:750}.lead{font-size:20px;max-width:930px}.meta,.small{font-size:13px;color:var(--muted)}.meta{margin-top:22px}.scope{border-left:3px solid var(--open);padding:2px 0 2px 18px;margin:24px 0;color:var(--muted)}nav{display:flex;flex-wrap:wrap;gap:8px 20px;padding:20px 0 28px;border-bottom:1px solid var(--line);margin-bottom:34px}nav a{font-size:14px;text-decoration:none}section{margin:34px 0;padding:30px;background:var(--paper);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}.num{font-size:13px;color:var(--open);letter-spacing:1px;display:block;margin-bottom:8px}.columns{display:grid;grid-template-columns:1fr 1fr;gap:22px}.lane{border-top:4px solid var(--open);padding:18px 0 0}.lane.api{border-color:var(--api)}.tag{font-size:12px;font-weight:700;padding:3px 9px;display:inline-block;border-radius:5px;background:var(--open-bg);color:var(--open);margin-bottom:9px}.tag.api{background:var(--api-bg);color:var(--api)}.flow{display:grid;gap:6px;margin:16px 0}.flow .node{border:1px solid var(--line);padding:12px 15px;border-radius:7px;overflow-wrap:anywhere;line-height:1.6}.flow .arrow{color:var(--muted);text-align:center;font-size:14px;line-height:1.3}.note{padding:15px 18px;border-left:3px solid var(--warn);background:var(--warn-bg);color:var(--ink);margin:20px 0 4px}.note strong{color:var(--warn)}.good{border-left-color:var(--open);background:var(--open-bg)}.good strong{color:var(--open)}code{font:0.86em/1.65 ui-monospace,SFMono-Regular,Consolas,monospace;background:var(--code);padding:2px 5px;border-radius:4px;overflow-wrap:anywhere}pre{background:var(--code);padding:18px;border-radius:8px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7;font-size:13px}pre code{padding:0;background:transparent}table{border-collapse:collapse;width:100%;font-size:14px;line-height:1.75;table-layout:fixed}th,td{text-align:left;vertical-align:top;border-bottom:1px solid var(--line);padding:13px 12px;overflow-wrap:anywhere}th{font-size:13px;color:var(--muted);font-weight:650;background:var(--code)}td:first-child{font-weight:650}tr:last-child td{border-bottom:0}.comparison th:first-child{width:17%}.comparison th:nth-child(2){width:41.5%}.table-wrap{overflow-x:auto}.sub{color:var(--muted);font-size:14px}.facts{margin:18px 0;padding-left:24px}.facts li{margin:8px 0}.formula{font:15px/1.9 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--open);padding:14px 18px;background:var(--open-bg);border-radius:7px;overflow-wrap:anywhere}.controls{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:end;margin:20px 0}.controls label{display:flex;flex-direction:column;font-size:13px;color:var(--muted);gap:5px}select,input,button{font:inherit;color:var(--ink);border:1px solid var(--line);border-radius:6px;background:var(--paper);padding:9px 12px}input{width:130px}button{cursor:pointer;min-height:44px}button:hover{border-color:var(--open)}:focus-visible{outline:3px solid var(--api);outline-offset:3px}.clock-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}.clock{padding:14px 0;border-top:1px solid var(--line)}.clock output{font:700 28px/1.5 ui-monospace,SFMono-Regular,monospace;display:block}.clock .label{font-size:13px;color:var(--muted)}.bar{height:9px;background:var(--code);border-radius:5px;margin:12px 0}.bar span{height:100%;display:block;background:var(--open);border-radius:5px;width:25%}.clock.wall .bar span{background:var(--api)}details{margin-top:16px}summary{cursor:pointer;font-weight:650;padding:8px 0}.refs{font-size:13px;padding-left:24px}.refs li{margin:9px 0;overflow-wrap:anywhere}.refs a{font-weight:600}.footer{font-size:13px;color:var(--muted);padding:10px 0}.sources-inline{font-size:12px;color:var(--muted);margin-top:16px}.pill-row{display:flex;flex-wrap:wrap;gap:8px}.pill-row span{font-size:12px;background:var(--code);padding:5px 9px;border-radius:5px}.history{border-left:2px solid var(--line);padding-left:20px}.history p{margin:18px 0}.history b{display:block}svg{display:block;max-width:100%;height:auto}.timing-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:18px 0}.timing-grid div{border-bottom:1px solid var(--line);padding-bottom:12px}.timing-grid b{display:block;font-size:22px;color:var(--open)}
+@media(max-width:740px){main{padding:28px 16px 40px}section{padding:22px 18px;border-radius:10px}.columns{grid-template-columns:1fr}.comparison{min-width:690px}.policy-table{min-width:740px}h2{font-size:22px}.lead{font-size:18px}.clock-grid{gap:12px}th,td{padding:11px 9px}.sources-inline{line-height:1.8}}
+@media print{body{background:white;color:black}main{padding:0;max-width:none}section{box-shadow:none;break-inside:avoid}nav,.controls{display:none}details{display:block}details>*{display:block}.comparison,.policy-table{min-width:0}a{color:inherit}h1{font-size:30px}}
+</style>
+</head>
+<body>
+<main>
+<header>
+<div class="eyebrow">τ-VOICE · IMPLEMENTATION NOTES</div>
+<h1>开源模型与闭源模型，<br>目前究竟是怎么测的？</h1>
+<p class="lead"><strong>共用双工编排和音频切片，但还不是同一套完整测试协议。</strong>开源部分主要验证原生模型的因果音频交互与调度；闭源动态事件 bench 已接入事件触发、时序判定和语义评审。两边的时间推进、用户话轮策略与语音服务配置也不同。</p>
+<p class="meta">核对日期：2026-11-02 · 仓库 HEAD：<code>3d56cb88ee51</code> · 包含当前未提交实现 · 静态源码与已有产物核查</p>
+<div class="scope">这里的“开源”指 SALMONN-Omni / MiniCPM-o 的原生 worker 测试；“闭源”指通过实时 API 接入的语音模型。闭源侧还要区分<strong>标准 τ-voice 用户路径</strong>与<strong>动态事件 bench</strong>，两者的用户策略并不相同。“开源”描述被测模型，不表示用户模拟器、TTS 和 ASR 全部在本地运行。</div>
+</header>
+<nav aria-label="内容导航">
+<a href="#architecture">接入架构</a><a href="#comparison">差异总表</a><a href="#clock">时间与音频交付</a><a href="#policy">用户会不会让话</a><a href="#evaluation">观察与评分</a><a href="#evidence">已有测试说明什么</a><a href="#alignment">怎样才可公平比较</a><a href="#sources">源码依据</a>
+</nav>
+
+<section id="architecture">
+<span class="num">01 / 接入架构</span><h2>外层编排相同，模型执行边界不同</h2>
+<p>两条动态交互路径都使用 <code>FullDuplexOrchestrator</code>：用户和助手各自持有状态，每个 tick 交付一小段音频。模型 adapter 复用 <code>DiscreteTimeAdapter</code> 的输入输出、剩余音频缓冲和统计框架。</p>
+<div class="columns">
+<div class="lane"><span class="tag">开源 / Native</span><h3>控制器等待原生模型完成一次 step</h3>
+<div class="flow"><div class="node">场景用户 <code>OpenModelScenarioUser</code><br><span class="sub">生成文本 → 豆包 TTS → 队列切片</span></div><div class="arrow">↓ 上一 tick 用户音频</div><div class="node"><code>OpenModelAdapter</code><br><span class="sub">音频转换 → 子进程 JSONL 或共享目录 mailbox</span></div><div class="arrow">↓ connect / step / disconnect</div><div class="node">独立、持久的 GPU worker<br><span class="sub">SALMONN：逐 80 ms 因果处理<br>MiniCPM：逐 1 s prefill → generate → finalize</span></div><div class="arrow">↓ 模型音频与原生诊断事件</div><div class="node">adapter 播放一 tick；剩余音频留到后续 tick</div></div>
+<p class="sub">控制器管理对话；worker 持有模型权重、KV / 声学状态与播放状态。mailbox 用会话 ID 和递增序号匹配请求、回复。</p></div>
+<div class="lane api"><span class="tag api">闭源 / Realtime API</span><h3>控制器发送音频并收集远端异步事件</h3>
+<div class="flow"><div class="node">标准用户或 <code>DuplexUserSimulator</code><br><span class="sub">动态事件 bench：Terra 决策 → OpenAI TTS → 队列切片</span></div><div class="arrow">↓ 上一 tick 用户音频</div><div class="node">各 provider 的离散时间 adapter<br><span class="sub">如 DiscreteTimeOpenAIAdapter</span></div><div class="arrow">↓ WebSocket / provider 会话协议</div><div class="node">远端语音模型服务<br><span class="sub">返回音频、转录、VAD、回复完成等事件；事件类型因服务而异</span></div><div class="arrow">↓ 事件解析与本地播放缓冲</div><div class="node">adapter 播放一 tick；剩余音频留到后续 tick</div></div>
+<p class="sub">以 OpenAI 路径为例，后台事件循环维持连接；服务端语音开始事件还可触发播放取消和已播位置截断。其他 provider 按各自协议处理。</p></div>
+</div>
+<p class="sources-inline">依据：<a href="../src/tau2/orchestrator/full_duplex_orchestrator.py">orchestrator</a> · <a href="../src/tau2/voice/audio_native/adapter.py">共享 adapter</a> · <a href="../src/tau2/voice/audio_native/open_model/adapter.py">开源 adapter</a> · <a href="../src/tau2/voice/audio_native/openai/discrete_time_adapter.py">OpenAI adapter</a></p>
+</section>
+
+<section id="comparison">
+<span class="num">02 / 差异总表</span><h2>目前不能只把模型名称换掉就直接比较</h2>
+<div class="table-wrap"><table class="comparison"><thead><tr><th scope="col">维度</th><th scope="col">开源原生测试</th><th scope="col">闭源动态事件 bench</th></tr></thead><tbody>
+<tr><td>主入口</td><td><code>python -m tau2.scripts.open_model_demo</code></td><td><code>python -m experiments.tau_voice.duplex_bench run</code></td></tr>
+<tr><td>被测对象</td><td>SALMONN-Omni 指定 0519 / Llama 3.1 checkpoint-44000；MiniCPM-o-4.5 指定基础权重</td><td>入口支持 <code>openai / gemini / nova / xai / qwen</code>；具体模型可选。这里是代码接入范围，不是本次实测清单。</td></tr>
+<tr><td>运行依赖</td><td>需要模型权重、原生 Python / CUDA 环境、GPU 和隔离 worker；远端演示使用共享 mailbox</td><td>需要 provider 凭据与远端服务；本地负责音频转换、会话和事件处理</td></tr>
+<tr><td>时间模式</td><td><code>pacing="frozen"</code>：一次 step 做完才前进一步模拟音频时间</td><td>默认 <code>realtime</code>：adapter 至少等待一 tick 的墙钟时间；远端服务不会随用户 LLM/TTS 一起冻结</td></tr>
+<tr><td>tick 粒度</td><td>SALMONN 固定 80 ms；MiniCPM 固定 1000 ms；不匹配的显式配置会被拒绝</td><td><code>AudioNativeConfig</code> 当前默认 200 ms；tick 不是网络包，也不是整句回复</td></tr>
+<tr><td>场景 / 主题</td><td>6 个场景 ID，围绕北京旅行；包括 4 个基础场景、顺序长对话和动态长对话</td><td>19 类事件定义，分打断、拒绝响应、话轮、主动行为 4 类；Terra 生成 Topic，再动态选择时机与话语</td></tr>
+<tr><td>用户生成模型</td><td>demo 默认 <code>codex/gpt-5.6-luna</code></td><td>默认 <code>gpt-6.1-terra</code>；可覆盖</td></tr>
+<tr><td>用户语音配置</td><td>豆包 TTS；豆包 ASR 观察已交付的助手音频；demo 要求英语</td><td>OpenAI TTS，主声线默认 nova、背景声线 onyx；默认用 <code>whisper-1</code> 做已播放音频观察；支持中文 / 英文</td></tr>
+<tr><td>用户策略</td><td>按 scenario 选择覆盖策略；基础 / ordered 优先播完队列，long_conversation 复用通用策略</td><td><code>DuplexUserSimulator</code> 自己决定事件、观察窗口和队列播放；并非直接使用标准用户的全部让话策略</td></tr>
+<tr><td>工具调用</td><td>当前 MVP 明确拒绝 tools</td><td>本动态事件 bench 也禁用领域工具；标准 τ-bench API 任务另有领域与工具评估</td></tr>
+<tr><td>最终评审</td><td>导出交付、活动、重叠与触发证据；demo 的 <code>semantic_outcome="not_assessed"</code></td><td>对话结束后先 <code>assess_report</code> 做时序判定，再由 <code>judge_report</code> 做语义评审；记忆事件有专门评审</td></tr>
+<tr><td>典型产物</td><td><code>conversation.wav</code>、<code>ticks.jsonl</code>、<code>summary.json</code>、原生事件、播放 HTML；另有独立 replay 产物</td><td><code>scenario.json</code>、配置、trajectory / ticks、音频、<code>events.json</code>、<code>perception.json</code>、<code>assessment.json</code>、LLM 请求日志和 TTS 留档</td></tr>
+</tbody></table></div>
+<p class="sources-inline">依据：<a href="../src/tau2/scripts/open_model_demo.py">开源入口</a> · <a href="../src/experiments/tau_voice/duplex_bench.py">事件 bench 入口</a> · <a href="../src/tau2/config.py">当前默认值</a> · <a href="../src/tau2/user/duplex_events.py">事件与 Topic</a></p>
+</section>
+
+<section id="clock">
+<span class="num">03 / 时间与交付</span><h2>同样 180 秒录音，可能代表不同的运行过程</h2>
+<h3>共同规则：双方接收对方上一 tick 的音频</h3>
+<div class="formula">U[n] = User(A[n−1], user_state)<br>A[n] = Agent(U[n−1], agent_state)<br>t[n+1] = t[n] + Δ</div>
+<p><code>U[n]</code>、<code>A[n]</code> 是这一 tick 的输出。实际 Python 执行先处理用户、再处理助手，但两份输入在处理前已取好；助手这一 tick 听到的仍是 <code>U[n−1]</code>。所以“在同一音频时间段双方都发声”不等于两个函数并行计算。</p>
+<div class="columns"><div><h3>开源：模拟时钟等待计算</h3><p>例如 MiniCPM 的 1 秒音频计算了 3 秒，音频时间仍只前进 1 秒。用户同步做 LLM / TTS / ASR 时，原生 worker 不会额外自行 step；完成后按顺序交付音频，不因此跳过输入。</p></div><div><h3>闭源：远端服务有自己的时钟</h3><p>adapter 以实时节奏发送并接收。用户生成仍是同步操作，但远端服务和后台连接可能继续推进、积累事件。<strong>默认 realtime 只是实现模式，不保证整个闭环每 200 ms 准点完成。</strong></p></div></div>
+<details open><summary>用一个小例子看“冻结模拟时间”</summary>
+<p class="sub">下面仅演示连续 10 个原生 step。计算耗时为手动假设，不是模型实测；不含启动、用户 LLM/TTS/ASR、传输和调度开销。</p>
+<div class="controls"><label for="tick">每步音频时长 Δ<select id="tick"><option value="80">80 ms · SALMONN</option><option value="1000" selected>1000 ms · MiniCPM</option></select></label><label for="compute">假设每步计算耗时 / ms<input id="compute" type="number" min="1" max="10000" step="1" value="3000"></label><button id="advance" type="button">推进一步</button><button id="reset" type="button">重置</button></div>
+<div id="clock-result" aria-live="polite"><div class="clock-grid"><div class="clock"><span class="label">模拟音频时间</span><output id="sim-time">1.00 s</output><div class="bar"><span id="sim-bar"></span></div></div><div class="clock wall"><span class="label">累计原生计算时间</span><output id="compute-time">3.00 s</output><div class="bar"><span id="compute-bar"></span></div></div></div><p class="sub" id="clock-description">第 1 / 10 步。两条进度使用同一个秒数尺度。</p></div>
+</details>
+<div class="note"><strong>粒度会影响交互机会。</strong>开源 MiniCPM 的新输入按 1 秒边界交换，无法把这个 demo 的动作起点当成毫秒级的原生打断延迟。一次输出可覆盖多个 tick，adapter 每次只播放一个 tick、缓存剩余音频；网络包、模型原生块和编排 tick 是三个层次。</div>
+<p class="sources-inline">依据：<a href="../src/tau2/orchestrator/full_duplex_orchestrator.py">step()</a> · <a href="../src/tau2/voice/audio_native/adapter.py">_async_run_tick()</a> · <a href="adr/0001-frozen-simulation-time-for-open-model-mvp.md">冻结模拟时间 ADR</a></p>
+</section>
+
+<section id="policy">
+<span class="num">04 / 最容易误读的行为差异</span><h2>用户说话时，模型插话能不能让用户停下来？</h2>
+<p>这取决于<strong>用户策略入口</strong>，不能仅按“开源 / 闭源”二分。共同的基础执行器已经会处理 <code>stop_talking</code>：取消还没播放的用户音频，并在当前间隔输出非语音；这里取消的是播放队列，完整文本与 TTS 往往已经同步生成好了。</p>
+<div class="table-wrap"><table class="policy-table"><thead><tr><th scope="col" style="width:23%">路径</th><th scope="col" style="width:38%">队列里还有用户语音时</th><th scope="col">意味着什么</th></tr></thead><tbody>
+<tr><td>标准 API 用户<br><code>VoiceStreamingUserSimulator</code></td><td>进入 <code>basic_turn_taking_policy</code>；结合重叠发起方、持续发声与阈值，可能选择 <code>stop_talking</code></td><td>具备按阈值让话的机制；短 backchannel 受保护。仍需考虑共享状态缺陷。</td></tr>
+<tr><td>闭源动态事件 bench<br><code>DuplexUserSimulator</code></td><td>通常直接 <code>keep_talking</code>；特定 <code>proactive.contextual_interruption</code> 有提前清队列分支。事件观察中通常等待。</td><td>用户事件话语与观察窗口受到保护；不能认为它完全继承标准 API 用户的让话行为。</td></tr>
+<tr><td>开源基础 4 场景<br><code>qa / correction / user_backchannel / model_backchannel</code></td><td>有队列就 <code>keep_talking</code>，优先把这次用户话语播完</td><td>方便稳定提供待测刺激，但普通用户长句也可能不会因模型插话而取消。</td></tr>
+<tr><td>开源<br><code>ordered_conversation</code></td><td>函数最前面检查队列，非空就继续播放；这个检查也先于后续 free_dialogue 分支</td><td>阶段顺序受控，后续普通回复仍受这个覆盖影响；不能把“后来进入自由对话”理解为恢复全部让话策略。</td></tr>
+<tr><td>开源<br><code>long_conversation</code></td><td>普通播放委托给通用用户策略；另外根据已听音频与场景约束限制打断 / 附和机会</td><td>更接近标准用户的动态交互；与 ordered 的行为不同。</td></tr>
+<tr><td>最新 SALMONN 固定回放<br><code>run_phase.py</code></td><td>直接逐包送入既有用户录音；没有在线用户生成与让话决策</td><td>用户不会根据本轮 SALMONN 的新回复停说、重述或改变后续话语。</td></tr>
+</tbody></table></div>
+<div class="note"><strong>具体例子：</strong>用户正在讲旅行偏好，模型开始插话。标准用户达到适用阈值后可能清空余下音频；开源基础 / ordered 场景通常继续播完。因此更长的重叠可能来自用户策略，不能直接判为“这个模型更不会打断”或“更不会让话”。闭源动态事件 bench 的队列保护也要单独检查。</div>
+<h3 style="margin-top:24px">1 秒阈值，在两种原生 tick 下并不等长</h3>
+<p>开源 demo 将秒数向上换算成 tick，再对让话阈值执行 <code>max(2, ticks)</code>。默认“用户被模型打断”的目标阈值是 1 秒：</p>
+<div class="timing-grid"><div><span class="sub">SALMONN · ceil(1 / 0.08)</span><b>13 ticks = 1.04 秒</b></div><div><span class="sub">MiniCPM · max(2, ceil(1 / 1))</span><b>2 ticks = 2 秒</b></div></div>
+<p class="sub">这是会进入基础让话策略时的名义阈值；不包含上一 tick 交付与其他策略影响，也不保证在上面强制 keep_talking 的分支生效。用户主动抢话后坚持发言的默认阈值则是 5 秒。</p>
+<details><summary>当前还存在的共享状态问题</summary><p>单个 chunk 的 backchannel 取出后，执行器仍无条件设 <code>is_backchanneling=True</code>；如果队列已空，标志不会在这一分支清除。后续普通回复可能继承“附和不可打断”状态。该问题在共享执行器中，API 与原生路径都可能受影响，1 秒 tick 更容易把短附和装进一个 chunk。</p><p>另外，ordered 在话语实际播完前已推进阶段；如果未来恢复取消播放，队列变空不能直接代表纠正内容已完整送达。现有审计提出了修正方向，但本页不把这些建议写成已修复功能。</p></details>
+<p class="sources-inline">依据：<a href="../src/tau2/agent/base/streaming.py">基础话轮策略</a> · <a href="../src/tau2/user/user_simulator_streaming.py">动作执行器</a> · <a href="../src/tau2/user/open_model_scenarios.py">开源场景策略</a> · <a href="../src/tau2/user/duplex_scenario_user.py">闭源事件用户</a> · <a href="open-model-user-policy-audit-20261102.md">2026-11-02 用户策略审计</a></p>
+</section>
+
+<section id="evaluation">
+<span class="num">05 / 观察与评分</span><h2>“模型确实发声”与“通过行为评测”是不同结论</h2>
+<div class="columns"><div><h3>开源 demo：先保留交互证据</h3><p>场景用户去掉原生文本和脚本元数据，再识别<strong>已经交付</strong>的模型音频。豆包 ASR 使用最近最多 20 秒的窗口，发声中通常最多每模拟秒刷新一次，并在转入静音时补刷新；滚动识别会修订，不能当作逐词对齐。</p><p>导出器分别记录“请求了触发”与“实际观察到触发”。纠正 / 用户附和可用真实重叠证明刺激出现，但<strong>不据此判断纠正被理解或模型附和自然</strong>。语义结果默认保留为 <code>not_assessed</code>。</p></div><div><h3>闭源事件 bench：再进入事件评审</h3><p>默认 <code>played_audio</code> 模式用已播放助手音频的 ASR 前缀给 Terra 决策，保留音频段与识别快照；也可显式选 <code>proportional</code> 近似文本。默认模式是同步检查点 ASR，会增加墙钟等待。</p><p>对话结束后，<code>assess_report</code> 计算时序证据，再由 <code>judge_report</code> 对已观察事件做语义判断；失败、证据不足与未观察事件保留相应状态。跨话轮记忆另用事实级评审，不把及时发声当作记忆正确。</p></div></div>
+<div class="note good"><strong>共同的证据边界：</strong>用户计划文本不保证 TTS 全部读出；助手解码文本不等于实际说出的音频。闭源 bench 已保存原始 TTS、脚本、时长与哈希，但标准运行仍未自动对用户侧 TTS 做完整 ASR 核验。重叠率、阶段请求数、退出码或绿色单测都不能替代语义和听音验收。</div>
+<h3 style="margin-top:24px">测试“种类数”也不能等同于覆盖</h3><p>开源 6 个 scenario ID 都围绕北京旅行，不能算成 6 个不同主题。闭源的 19 类事件是<strong>可选测试定义</strong>；Topic 由模型生成，目前也不能仅凭生成了不同字符串，就认定有充分的主题分类、去重或 Topic × 事件覆盖。</p>
+<p class="sources-inline">依据：<a href="../src/tau2/scripts/open_model_demo.py">export_demo()</a> · <a href="../src/tau2/user/duplex_perception.py">PlayedAudioPerception</a> · <a href="../src/tau2/user/duplex_evaluation.py">事件评审</a> · <a href="../src/experiments/tau_voice/DUPLEX_BENCH.md">bench 证据说明</a> · <a href="duplex-evaluation-report.html">既有评估范围报告</a></p>
+</section>
+
+<section id="evidence">
+<span class="num">06 / 当前已有证据</span><h2>最新开源验证里，有动态对话，也有固定音频回放</h2>
+<div class="history"><p><b>11 月 1 日 · 旧 checkpoint 的交互记录</b>MiniCPM 的 180 秒录音请求了全部五个用户阶段；旧 SALMONN 录音在问候和用户纠正后没有继续完成后续阶段。这是历史配置下的行为记录，不能直接套到 11 月 2 日新选 checkpoint。</p><p><b>11 月 2 日 · 当前 SALMONN checkpoint 与原生执行验证</b>默认已切到指定 0519 / Llama 3.1 checkpoint-44000，并按它自己的训练配置加载。MiniCPM 的原生 SDK 对照验证了 75 步输入及返回 flags / text / PCM 一致性；这是接口对照证据。</p><p><b>11 月 2 日 · 最终代码 180 秒 SALMONN replay</b>使用既有 MiniCPM 用户轨道的 179 秒，加 1 秒明确静音，重切成 2,250 个 80 ms 输入包。实际 GPU 是 NVIDIA A100-SXM4-80GB；输入和输出哈希、样本总量及因果特征检查通过。模型出现多次重新发声与 listening transition，但这次没有在线用户模拟器。</p></div>
+<div class="table-wrap"><table><thead><tr><th scope="col">最新 SALMONN replay 指标</th><th scope="col">记录值</th><th scope="col">解释</th></tr></thead><tbody>
+<tr><td>输入音频 / 原生步数</td><td>180 秒 / 2,250 步</td><td>按 80 ms 重切的受控输入</td></tr>
+<tr><td>每步计算 median / p95</td><td>56.8 ms / 89.7 ms</td><td>保留全部原生 step；非去掉前 5 步的 warm 子集</td></tr>
+<tr><td>超过 80 ms 的步数</td><td>147 / 2,250 = 6.53%</td><td>单步 deadline miss；不能代替累计吞吐</td></tr>
+<tr><td>原生计算总时长 / RTF</td><td>242.55 秒 / 1.35</td><td>RTF = 242.55 / 180；该次执行未达到持续实时吞吐</td></tr>
+<tr><td>启动加载时间</td><td>120.08 秒</td><td>单列；未混入上述原生逐步计算</td></tr>
+</tbody></table></div>
+<p class="sub">数据来自已有 <a href="../data/simulations/open-model-contract/20261102-selected-long/salmonn-final/summary.json">summary.json</a> 与 <a href="../data/simulations/open-model-contract/20261102-selected-long/salmonn-final/audit.json">audit.json</a>，本次读取核对。计算时间不含 mailbox、转换、编排与外部用户 LLM/TTS/ASR；不据此推算完整系统延迟。</p>
+<div class="note"><strong>这轮验证确认了哪些内容：</strong>最终原生代码能够因果接收这些输入包并产生可审计输出。它没有确认新 checkpoint 与动态用户完成自然长对话，也没有证明理解纠正、自然附和或端到端实时性。本次说明没有新启动模型、调用付费语音服务或重跑评测。</div>
+<details><summary>SALMONN 自身音频反馈也已随当前配置变化</summary><p>worker 的实现是“当前用户输入 + 上一实际播放的 80 ms 模型音频 × echo_ratio”，不会读排队中的未来音频。但<strong>当前选定 checkpoint 的训练配置使 echo_ratio = 0</strong>。因此不能沿用旧版本“默认 1.0，所以模型一定听见自己”的说法。另一个 30 秒参数是声学 encoder 分块，和 80 ms 调度 tick 不同。</p></details>
+<p class="sources-inline">依据：<a href="open-model-inference-20261101.md">11 月 1 日历史交互</a> · <a href="open-model-contract-20261102.md">11 月 2 日配置与验证</a> · <a href="../scripts/open_model_workers/salmonn_session.py">SALMONN 原生实现</a></p>
+</section>
+
+<section id="alignment">
+<span class="num">07 / 对结果的实际影响</span><h2>现在适合分别看工程接入与行为证据；横向排名还缺协议对齐</h2>
+<p>如果目标是比较“同样情况下谁更会打断、谁能理解纠正”，只统一音频时长还不够。至少需要把下面几项固定下来：</p>
+<ol class="facts"><li><strong>同一用户播放 / 让话规则。</strong>普通发言、附和与取消播放的处理一致；被截断阶段不能当成已经完整交付。</li><li><strong>同一任务和可听信息。</strong>固定待测事件、约束与观察方式，记录模型实际收到哪些内容；同时控制用户 LLM、TTS、ASR、语言和声线。</li><li><strong>区分行为时间与运行时间。</strong>保留各模型原生 tick，但说明物理阈值换算和边界误差；冻结时间结果与墙钟实时性能分开报告。</li><li><strong>接入同一评审和分母。</strong>用实际录音与交付证据评审，分别统计有效触发、未触发、无效 / 不完整轨迹、语义成功及不确定结果。</li></ol>
+<p>固定回放适合隔离 worker / checkpoint 改动，动态用户适合测试“模型回应改变用户下一步”的闭环。两者各有用途，结果应注明实验类型。以上是对齐建议，尚未表示仓库已完成这些改动。</p>
+</section>
+
+<section id="sources">
+<span class="num">08 / 源码与产物依据</span><h2>这份解释对应当前工作区</h2>
+<p class="sub">下面链接相对于本 HTML；保留仓库目录结构可直接追溯。下载本文件后正文、样式和交互仍可离线使用，源码链接需要相应仓库文件。源码快照的路径、定位行与 SHA-256 单列在 <a href="open-vs-closed-testing.evidence.json">evidence.json</a>。</p>
+<details><summary>展开 25 项源码 / 产物定位</summary><ol class="refs"><li><a href="../src/tau2/orchestrator/full_duplex_orchestrator.py">共同编排与 previous-tick 交付</a><br><code>src/tau2/orchestrator/full_duplex_orchestrator.py</code> · L281</li>
+<li><a href="../src/tau2/voice/audio_native/adapter.py">共享 adapter 与 frozen / realtime 节奏</a><br><code>src/tau2/voice/audio_native/adapter.py</code> · L187</li>
+<li><a href="../src/tau2/config.py">当前 tick、用户模型、checkpoint 默认值</a><br><code>src/tau2/config.py</code> · L108</li>
+<li><a href="../src/tau2/data_model/simulation.py">原生 tick 配置校验</a><br><code>src/tau2/data_model/simulation.py</code> · L68</li>
+<li><a href="../src/tau2/scripts/open_model_demo.py">开源 demo 构造与导出</a><br><code>src/tau2/scripts/open_model_demo.py</code> · L314</li>
+<li><a href="../src/tau2/user/open_model_scenarios.py">开源场景与队列优先策略</a><br><code>src/tau2/user/open_model_scenarios.py</code> · L280</li>
+<li><a href="../src/tau2/voice/audio_native/open_model/adapter.py">开源 adapter 与音频格式转换</a><br><code>src/tau2/voice/audio_native/open_model/adapter.py</code> · L34</li>
+<li><a href="../src/tau2/voice/audio_native/open_model/transport.py">原生进程与共享 mailbox 传输</a><br><code>src/tau2/voice/audio_native/open_model/transport.py</code> · L74</li>
+<li><a href="../scripts/open_model_workers/minicpm_worker.py">MiniCPM 原生 SDK 调用</a><br><code>scripts/open_model_workers/minicpm_worker.py</code> · L67</li>
+<li><a href="../scripts/open_model_workers/salmonn_session.py">SALMONN 因果输入与 echo_ratio</a><br><code>scripts/open_model_workers/salmonn_session.py</code> · L268</li>
+<li><a href="../src/experiments/tau_voice/duplex_bench.py">闭源事件 bench 主入口</a><br><code>src/experiments/tau_voice/duplex_bench.py</code> · L136</li>
+<li><a href="../src/tau2/user/duplex_events.py">闭源事件目录与 Topic 生成</a><br><code>src/tau2/user/duplex_events.py</code> · L43</li>
+<li><a href="../src/tau2/user/duplex_scenario_user.py">闭源事件用户的播放与观察策略</a><br><code>src/tau2/user/duplex_scenario_user.py</code> · L409</li>
+<li><a href="../src/tau2/user/duplex_perception.py">已播放助手音频 ASR</a><br><code>src/tau2/user/duplex_perception.py</code> · L16</li>
+<li><a href="../src/tau2/user/duplex_evaluation.py">事件时序与语义评审</a><br><code>src/tau2/user/duplex_evaluation.py</code> · L194</li>
+<li><a href="../src/tau2/runner/build.py">标准 API 用户构造</a><br><code>src/tau2/runner/build.py</code> · L327</li>
+<li><a href="../src/tau2/agent/base/streaming.py">基础让话策略</a><br><code>src/tau2/agent/base/streaming.py</code> · L2343</li>
+<li><a href="../src/tau2/user/user_simulator_streaming.py">共享动作执行器</a><br><code>src/tau2/user/user_simulator_streaming.py</code> · L1467</li>
+<li><a href="../src/tau2/voice/audio_native/openai/discrete_time_adapter.py">OpenAI 远端事件与播放截断</a><br><code>src/tau2/voice/audio_native/openai/discrete_time_adapter.py</code> · L266</li>
+<li><a href="../docs/open-model-contract-20261102.md">最新配置与原生验证说明</a><br><code>docs/open-model-contract-20261102.md</code> · L1</li>
+<li><a href="../docs/open-model-user-policy-audit-20261102.md">用户策略分歧审计</a><br><code>docs/open-model-user-policy-audit-20261102.md</code> · L1</li>
+<li><a href="../docs/open-model-inference-20261101.md">历史交互测试的范围</a><br><code>docs/open-model-inference-20261101.md</code> · L1</li>
+<li><a href="../data/simulations/open-model-contract/20261102-selected-long/run_phase.py">当前 SALMONN 固定音频回放入口</a><br><code>data/simulations/open-model-contract/20261102-selected-long/run_phase.py</code> · L26</li>
+<li><a href="../data/simulations/open-model-contract/20261102-selected-long/salmonn-final/summary.json">当前 SALMONN replay 硬件与耗时</a><br><code>data/simulations/open-model-contract/20261102-selected-long/salmonn-final/summary.json</code> · L4</li>
+<li><a href="../data/simulations/open-model-contract/20261102-selected-long/salmonn-final/audit.json">当前 SALMONN replay 交付与计时审计</a><br><code>data/simulations/open-model-contract/20261102-selected-long/salmonn-final/audit.json</code> · L2</li></ol></details>
+<p class="small">核查方式：读取生产入口、adapter、编排器、用户策略、评审代码和明确列出的既有验证产物。未将代码接入列表或单元测试通过数当成本次模型效果；旧记录与当前 checkpoint 分开表述。</p>
+</section>
+<footer class="footer">τ-voice implementation comparison · 2026-11-02 · 中文实现说明 · 所有交互均在本页本地执行</footer>
+</main>
+<script>
+(() => {
+  const tick = document.getElementById('tick');
+  const compute = document.getElementById('compute');
+  const advance = document.getElementById('advance');
+  let steps = 1;
+  const render = () => {
+    const dt = Number(tick.value);
+    const cost = Number(compute.value);
+    if (!Number.isFinite(cost) || cost < 1 || cost > 10000) {
+      compute.setAttribute('aria-invalid', 'true');
+      document.getElementById('clock-description').textContent = '请输入 1–10000 ms 的每步计算耗时。';
+      return;
+    }
+    compute.removeAttribute('aria-invalid');
+    const ceiling = 10 * Math.max(dt, cost);
+    document.getElementById('sim-time').textContent = (steps * dt / 1000).toFixed(2) + ' s';
+    document.getElementById('compute-time').textContent = (steps * cost / 1000).toFixed(2) + ' s';
+    document.getElementById('sim-bar').style.width = (steps * dt / ceiling * 100) + '%';
+    document.getElementById('compute-bar').style.width = (steps * cost / ceiling * 100) + '%';
+    document.getElementById('clock-description').textContent = '第 ' + steps + ' / 10 步。累计计算 / 音频时间 = ' + (cost / dt).toFixed(2) + '；两条进度使用同一个秒数尺度。示例未计其他系统开销。';
+    advance.disabled = steps >= 10;
+  };
+  tick.addEventListener('change', render);
+  compute.addEventListener('input', render);
+  advance.addEventListener('click', () => { steps = Math.min(10, steps + 1); render(); });
+  document.getElementById('reset').addEventListener('click', () => { steps = 0; render(); });
+  render();
+})();
+</script>
+</body>
+</html>

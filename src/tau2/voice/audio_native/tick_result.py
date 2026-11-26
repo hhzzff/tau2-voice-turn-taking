@@ -79,6 +79,10 @@ class TickResult(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
+    computation_duration_seconds: float = Field(
+        default=0.0, description="Tick computation time before optional realtime pacing"
+    )
+
     # --- Tick identification ---
     tick_number: int = Field(description="1-indexed tick number")
 
@@ -99,6 +103,11 @@ class TickResult(BaseModel):
         default_factory=list,
         description="All API events received during this tick (provider-specific types)",
         exclude=True,  # Exclude from serialization (may contain bytes)
+    )
+
+    serializable_events: List[dict] = Field(
+        default_factory=list,
+        description="JSON-safe provider diagnostics retained in trajectories",
     )
 
     # --- VAD events (provider-agnostic) ---
@@ -136,10 +145,15 @@ class TickResult(BaseModel):
 
     # --- Interruption tracking ---
     was_truncated: bool = Field(
-        default=False, description="True if agent was interrupted this tick"
+        default=False, description="True if unheard agent audio was truncated this tick"
+    )
+    pending_playback_cancelled: bool = Field(
+        default=False,
+        description="Old queued audio was removed; replacement audio may still buffer",
     )
     truncated_audio_bytes: int = Field(
-        default=0, description="Bytes of agent audio discarded due to interruption"
+        default=0,
+        description="Bytes of unheard agent audio discarded by playback control",
     )
     skip_item_id: Optional[str] = Field(
         default=None,
@@ -367,7 +381,7 @@ class TickResult(BaseModel):
         if self.was_truncated:
             truncated_ms = (self.truncated_audio_bytes / self.bytes_per_second) * 1000
             parts.append(
-                f"  ⚡ INTERRUPTED: {self.truncated_audio_bytes} bytes ({truncated_ms:.0f}ms) discarded"
+                f"  ⚡ AUDIO TRUNCATED: {self.truncated_audio_bytes} bytes ({truncated_ms:.0f}ms) discarded"
             )
         # Show proportional transcript text for this tick's audio
         if self.proportional_transcript:
@@ -402,11 +416,12 @@ def buffer_excess_audio(
     ``result.agent_audio_chunks``) and an "excess" portion that is returned
     for the caller to buffer until the next tick.
 
-    When ``result.was_truncated`` is True the excess is discarded instead
-    (byte count added to ``result.truncated_audio_bytes``) and an empty list
-    is returned.
+    Timestamped truncation discards excess and adds its byte count to
+    ``result.truncated_audio_bytes``. If old playback was already removed by
+    explicit cancellation, remaining chunks belong to the replacement response
+    and their excess buffers normally.
     """
-    if result.was_truncated:
+    if result.was_truncated and not result.pending_playback_cancelled:
         total_bytes = 0
         keep_chunks: List[Tuple[bytes, Optional[str]]] = []
         discarded_bytes = 0

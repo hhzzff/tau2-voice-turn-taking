@@ -15,7 +15,12 @@ from tau2.data_model.simulation import SimulationRun
 from tau2.orchestrator.modes import CommunicationMode
 from tau2.voice.utils.audio_activity import is_audible_chunk
 from tau2.voice.utils.audio_io import load_wav_file, save_wav_file
-from tau2.voice.utils.audio_preprocessing import convert_to_stereo, merge_audio_datas
+from tau2.voice.utils.audio_preprocessing import (
+    convert_to_pcm16,
+    convert_to_stereo,
+    merge_audio_datas,
+    resample_audio,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -618,6 +623,17 @@ def _generate_full_duplex_audio(
     if len(audio_datas["user"]) == 0 and len(audio_datas["assistant"]) == 0:
         logger.warning("No audio data found in ticks")
         return merged_audio_datas
+
+    # A clean acoustic user stream may be 16k PCM while the native agent is
+    # 8k telephony. Normalize each exported piece before concatenation, including
+    # terminal silence; comparing sample counts across rates changes duration.
+    export_rate = max(
+        item.format.sample_rate for pieces in audio_datas.values() for item in pieces
+    )
+    audio_datas = {
+        role: [resample_audio(convert_to_pcm16(item), export_rate) for item in pieces]
+        for role, pieces in audio_datas.items()
+    }
 
     # Merge each role's audio (no silence between chunks for continuous stream)
     if len(audio_datas["assistant"]) > 0:

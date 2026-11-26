@@ -1,4 +1,5 @@
 import json
+import math
 from collections.abc import Iterator
 from copy import deepcopy
 from enum import Enum
@@ -48,6 +49,8 @@ from tau2.config import (
     DEFAULT_WAIT_TO_RESPOND_THRESHOLD_SELF_SECONDS,
     DEFAULT_YIELD_THRESHOLD_WHEN_INTERRUPTED_SECONDS,
     DEFAULT_YIELD_THRESHOLD_WHEN_INTERRUPTING_SECONDS,
+    OPEN_MODEL_IDENTITIES,
+    OPEN_MODEL_SCHEDULER_TICK_MS,
 )
 from tau2.data_model.audio_effects import EffectTimeline
 from tau2.data_model.message import Message, Tick
@@ -60,6 +63,34 @@ from tau2.orchestrator.modes import CommunicationMode
 from tau2.utils.utils import get_now
 
 SIMULATIONS_DIR = "simulations"
+
+
+class OpenModelConfig(BaseModel):
+    """Configure a native open model on the fixed 100 ms scheduler."""
+
+    model: Literal["salmonn", "minicpm"]
+    tick_duration_seconds: float = OPEN_MODEL_SCHEDULER_TICK_MS / 1000
+    pacing: Literal["realtime"] = "realtime"
+
+    @model_validator(mode="after")
+    def validate_scheduler_tick(self):
+        """Reject widths other than the supported scheduler window."""
+        if self.tick_duration_seconds != OPEN_MODEL_SCHEDULER_TICK_MS / 1000:
+            raise ValueError(
+                f"{self.model} requires scheduler tick "
+                f"{OPEN_MODEL_SCHEDULER_TICK_MS / 1000}s"
+            )
+        return self
+
+    @property
+    def tick_duration_ms(self) -> int:
+        """Scheduler window in milliseconds."""
+        return round(self.tick_duration_seconds * 1000)
+
+    @property
+    def model_identity(self) -> str:
+        """Exact supported model variant, for run provenance."""
+        return OPEN_MODEL_IDENTITIES[self.model]
 
 
 class AudioNativeConfig(BaseModel):
@@ -168,6 +199,14 @@ class AudioNativeConfig(BaseModel):
         description="If True, send all audio at once per tick. If False (default), stream audio in 20ms chunks at real-time rate.",
     )
 
+    round_thresholds_up: bool = Field(
+        default=False,
+        description="Round positive user timing thresholds up for coarse native ticks. Existing API runs retain truncation by default.",
+    )
+
+    def _round_threshold(self, ticks: float) -> int:
+        return math.ceil(ticks) if self.round_thresholds_up else int(ticks)
+
     # Derived properties (computed from seconds and tick_duration)
     @property
     def tick_duration_ms(self) -> float:
@@ -182,35 +221,35 @@ class AudioNativeConfig(BaseModel):
     @property
     def wait_to_respond_threshold_other_ticks(self) -> int:
         """Wait to respond threshold (other) in ticks."""
-        return int(
+        return self._round_threshold(
             self.wait_to_respond_threshold_other_seconds / self.tick_duration_seconds
         )
 
     @property
     def wait_to_respond_threshold_self_ticks(self) -> int:
         """Wait to respond threshold (self) in ticks."""
-        return int(
+        return self._round_threshold(
             self.wait_to_respond_threshold_self_seconds / self.tick_duration_seconds
         )
 
     @property
     def yield_threshold_when_interrupted_ticks(self) -> int:
         """Yield threshold when interrupted (agent interrupts user) in ticks."""
-        return int(
+        return self._round_threshold(
             self.yield_threshold_when_interrupted_seconds / self.tick_duration_seconds
         )
 
     @property
     def yield_threshold_when_interrupting_ticks(self) -> int:
         """Yield threshold when interrupting (user interrupts agent) in ticks."""
-        return int(
+        return self._round_threshold(
             self.yield_threshold_when_interrupting_seconds / self.tick_duration_seconds
         )
 
     @property
     def interruption_check_interval_ticks(self) -> int:
         """Interruption check interval in ticks."""
-        return int(
+        return self._round_threshold(
             self.interruption_check_interval_seconds / self.tick_duration_seconds
         )
 
@@ -218,13 +257,16 @@ class AudioNativeConfig(BaseModel):
     def integration_ticks(self) -> int:
         """Integration ticks for linearization."""
         return max(
-            1, int(self.integration_duration_seconds / self.tick_duration_seconds)
+            1,
+            self._round_threshold(
+                self.integration_duration_seconds / self.tick_duration_seconds
+            ),
         )
 
     @property
     def silence_annotation_threshold_ticks(self) -> int:
         """Silence annotation threshold in ticks."""
-        return int(
+        return self._round_threshold(
             self.silence_annotation_threshold_seconds / self.tick_duration_seconds
         )
 
@@ -233,14 +275,18 @@ class AudioNativeConfig(BaseModel):
         """Backchannel min threshold in ticks (None if disabled)."""
         if self.backchannel_min_threshold_seconds is None:
             return None
-        return int(self.backchannel_min_threshold_seconds / self.tick_duration_seconds)
+        return self._round_threshold(
+            self.backchannel_min_threshold_seconds / self.tick_duration_seconds
+        )
 
     @property
     def backchannel_max_threshold_ticks(self) -> Optional[int]:
         """Backchannel max threshold in ticks (None if not set)."""
         if self.backchannel_max_threshold_seconds is None:
             return None
-        return int(self.backchannel_max_threshold_seconds / self.tick_duration_seconds)
+        return self._round_threshold(
+            self.backchannel_max_threshold_seconds / self.tick_duration_seconds
+        )
 
     @property
     def max_steps_ticks(self) -> int:

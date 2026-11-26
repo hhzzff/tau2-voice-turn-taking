@@ -10,7 +10,7 @@ create_adapter(): Factory function that validates parameters and constructs
 
 import asyncio
 from abc import ABC, abstractmethod
-from typing import Any, Awaitable, Callable, List, Optional, Tuple
+from typing import Any, Awaitable, Callable, List, Literal, Optional, Tuple
 
 from loguru import logger
 
@@ -67,6 +67,7 @@ class DiscreteTimeAdapter(ABC):
         tick_duration_ms: int,
         audio_format: Optional[AudioFormat] = None,
         send_audio_instant: bool = DEFAULT_SEND_AUDIO_INSTANT,
+        pacing: Literal["realtime", "frozen"] = "realtime",
     ):
         """Initialize the adapter.
 
@@ -77,6 +78,8 @@ class DiscreteTimeAdapter(ABC):
                 if their provider uses a non-telephony external format.
             send_audio_instant: If True, send all audio in one call per tick.
                 If False, send in VoIP-style 20ms chunks with sleeps.
+            pacing: Realtime enforces a minimum wall duration; frozen waits for
+                inference completion without sleeping to match audio time.
 
         Raises:
             ValueError: If tick_duration_ms is <= 0.
@@ -84,6 +87,9 @@ class DiscreteTimeAdapter(ABC):
         if tick_duration_ms <= 0:
             raise ValueError(f"tick_duration_ms must be > 0, got {tick_duration_ms}")
 
+        if pacing not in ("realtime", "frozen"):
+            raise ValueError(f"Unsupported pacing policy: {pacing}")
+        self.pacing = pacing
         self.tick_duration_ms = tick_duration_ms
         self.audio_format = audio_format or TELEPHONY_AUDIO_FORMAT
         self.bytes_per_tick = int(
@@ -174,6 +180,45 @@ class DiscreteTimeAdapter(ABC):
         self._pending_tool_results.clear()
         self._skip_item_id = None
 
+    def cancel_pending_playback(self, result: TickResult) -> int:
+        """Cancel unheard audio, including the tail already moved into this tick.
+
+        Call before appending audio from a replacement response. Transcript history
+        and pending tool results belong to the session and are preserved.
+        """
+        discarded = result.agent_audio_bytes + sum(
+            len(audio) for audio, _ in self._buffered_agent_audio
+        )
+        result.agent_audio_chunks.clear()
+        result.pending_playback_cancelled = True
+        self._buffered_agent_audio.clear()
+        result.truncated_audio_bytes += discarded
+        result.was_truncated = result.was_truncated or discarded > 0
+        return discarded
+
+    def record_control_signal(self, profile, event, result):
+        """Record a provider's declared control contract alongside raw events."""
+        from tau2.voice.audio_native.control_signals import control_event
+
+        signal = (
+            event.get("type", event.get("event_type"))
+            if isinstance(event, dict)
+            else getattr(event, "type", getattr(event, "event_type", None))
+        )
+        runtime_model = (
+            getattr(self, "model", None)
+            or getattr(getattr(self, "_provider", None), "model", None)
+            or DEFAULT_AUDIO_NATIVE_MODELS.get(profile)
+        )
+        normalized = control_event(
+            profile,
+            signal,
+            event if isinstance(event, dict) else vars(event),
+            model_id=runtime_model,
+        )
+        if normalized is not None:
+            result.serializable_events.append(normalized)
+
     # -----------------------------------------------------------------------
     # Tick lifecycle template
     # -----------------------------------------------------------------------
@@ -245,11 +290,16 @@ class DiscreteTimeAdapter(ABC):
         # 11. Enforce minimum tick duration (safety net)
         elapsed = asyncio.get_running_loop().time() - tick_start
         remaining = (self.tick_duration_ms / 1000) - elapsed
-        if remaining > 0:
-            await asyncio.sleep(remaining)
+        result.computation_duration_seconds = elapsed
+        await self._wait_for_tick_end(remaining)
 
         logger.info(f"Tick {tick_number} completed:\n{result.summary()}")
         return result
+
+    async def _wait_for_tick_end(self, remaining: float) -> None:
+        """Apply the default relative wait unless the adapter owns its clock."""
+        if self.pacing == "realtime" and remaining > 0:
+            await asyncio.sleep(remaining)
 
     @abstractmethod
     async def _execute_tick(

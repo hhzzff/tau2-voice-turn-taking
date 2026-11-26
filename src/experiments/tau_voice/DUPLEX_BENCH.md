@@ -1,5 +1,17 @@
 # 动态双工事件 bench（实验版）
 
+## 合并后的语音与声学配置
+
+默认调度 tick 为 100 ms，用户新决策机会默认仍间隔 1 秒；开源模型保持独立的 100 ms 异步入口和原生音频块缓存。
+
+用户 TTS 可用 `--tts-provider volcengine|openai|elevenlabs` 显式选择。普通双工事件默认保留 Volcengine Seed TTS 2.0 及原主用户/背景音色；声学任务默认使用 OpenAI；`--byted-gateway` 使用 ElevenLabs、Scribe 转写及远端原有网关配置。不同提供方的 model/resource ID 和 voice ID 需要匹配；ElevenLabs 的背景人物事件需显式配置另一个可用 voice ID。`run_config.json` 会保存实际 TTS 提供方。
+
+Volcengine 的停顿和 CTC 仍在单次 SSML 请求中插入 750 ms 停顿；显式选择其他 TTS 时使用分段合成与 PCM 静音，并在刺激播放前测量波形中的停顿。两条合成路径不可作为完全相同的输入条件混用比较。
+
+声学任务可独立运行，也可与事件组合。没有普通事件的独立声学任务不自动加入附和或 CTC；已有语义事件默认仍补充这两个机会，并支持 `--no-proactive-opportunities` 关闭。组合场景中的用户可在非记忆事件观察期间回答澄清追问；记忆回答仍保护至播放完成，助手的简短附和不会截断用户长陈述。
+
+ASR 既支持场景的 `transcription_model`（含 Gemini），也支持注入完整 `TranscriptionConfig`；显式完整配置优先。网关继续使用 Scribe，普通路径使用场景模型。关键词标注、实际声学扰动和最终评审证据保持隔离。
+
 ## 三模型同顺序、同剧情比较
 
 场景模板 `scenarios/picnic_matched_three_models.json` 用于 Grok、Gemini Live、Doubao Seeduplex。`event_order` 必须是全部覆盖目标（含附和、CTC）的完整排列；控制器拒绝越序触发。`conversation_outline` 给出共同主题阶段，`event_guidance` 约束各事件的语义目标，台词和插入时机仍由用户 LLM 根据实际已播放音频决定。`prepare_event` 可提前建立记忆事实，不推进事件顺序。背景问话固定为向 Jamie 询问门口钥匙；CTC 使用此前共享的 sesame 过敏事实，不能只凭私有计划判断刺激有效。
@@ -34,6 +46,16 @@ uv run python -m experiments.tau_voice.duplex_bench assess --output data/simulat
 当前统一条件的四模型本地比较批次为 `data/simulations/voice_compare_20261103_003/`。以 `manifest.json` 明确选择样本，使用 `python scripts/render_voice_comparison.py data/simulations/voice_compare_20261103_003` 重建中文 HTML。音轨、事件、ASR、评审与调用证据保留在各样本目录中；生成目录被 Git 忽略。`voice_compare_20261103_002/comparison.html` 也已更新为相同样本集。
 
 运行先保存录音和轨迹，再调用语义评审；也可用 `--no-semantic-judge` 先录制，之后单独 `assess`。网络断连产生的部分录音保留为诊断，未观察完的事件不算模型失败。模拟时间在同步 LLM/TTS/ASR 调用时暂停，远端语音服务仍运行，不能据此比较真实端到端延迟。GPT-Live 的连续静音保留时间位置，但不携带话语 ID，避免记忆回答永不结束。所有剩余事件均要求助手安静时，助手说话期间直接倾听，避免反复调用 LLM 得到相同的等待决策。
+当前评估范围与 Topic 覆盖解释见 [HTML 报告](../../../docs/duplex-evaluation-report.html)。
+报告已接入同一主入口，可以离线重新生成；不会启动对话或付费评审：
+
+```bash
+python -m experiments.tau_voice.duplex_bench report --output docs/duplex-evaluation-report.html
+```
+
+需要统计已有运行时，对每个最终有效清单中的目录显式追加 `--run-dir PATH`。
+默认只做源码审计，不扫描历史／重试目录，也不将交接文档的历史结果当成本次实跑统计。
+同时输出 `.evidence.json`，记录源码哈希、事件目录、明确纳入的运行和 Topic 字符串去重口径。
 
 输入是一组事件类型。默认使用项目里的 `gpt-6.1-terra` 自动生成 Topic，并在实际对话过程中决定何时说话、执行哪个待测事件、具体说什么。没有预写事件台词、固定事件顺序或“说够多少字就打断”的事件时间表。
 

@@ -11,6 +11,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
+from tau2.user.acoustic_clarification import AcousticClarificationConfig
 from tau2.user.duplex_events import (
     EVENT_CATALOG,
     DuplexScenario,
@@ -51,14 +52,26 @@ def _load_scenario(path):
     return DuplexScenario.model_validate(data)
 
 
+def _acoustic_config(args, current=None):
+    """Apply the same acoustic options and validation for prepare and run."""
+    if args.acoustic_clarification:
+        current = AcousticClarificationConfig(mode=args.acoustic_clarification)
+    if args.dns_noise_path:
+        if current is None:
+            raise ValueError("--dns-noise-path requires an acoustic task")
+        current.noise_path = args.dns_noise_path
+    return current
+
+
 def prepare(args):
     """Save event types and options, without event content, ordering or timing."""
     if args.output.exists():
         raise FileExistsError(f"Scenario already exists: {args.output}")
     scenario = DuplexScenario(
         selected_events=[
-            value.strip() for value in args.events.split(",") if value.strip()
+            value.strip() for value in (args.events or "").split(",") if value.strip()
         ],
+        acoustic_clarification=_acoustic_config(args),
         seed=args.seed,
         language=args.language,
         user_model=args.user_model,
@@ -72,7 +85,14 @@ def prepare(args):
 
 
 def build_dynamic_user(
-    scenario, output, config, primary_voice, background_voice, tts_model
+    scenario,
+    output,
+    config,
+    primary_voice,
+    background_voice,
+    tts_model,
+    gateway=False,
+    tts_provider=None,
 ):
     """Disable unrelated random effects for attribution to the selected events."""
     from tau2.data_model.audio_effects import (
@@ -81,20 +101,45 @@ def build_dynamic_user(
         SpeechEffectsConfig,
     )
     from tau2.data_model.voice import (
+        ElevenLabsTTSConfig,
+        OpenAITTSConfig,
         SpeechEnvironment,
         SynthesisConfig,
+        TranscriptionConfig,
         VoiceSettings,
         VolcengineTTSConfig,
     )
     from tau2.user.duplex_scenario_user import DuplexUserSimulator
 
+    tts_provider = tts_provider or (
+        "elevenlabs"
+        if gateway
+        else "openai"
+        if scenario.acoustic_clarification is not None
+        else "volcengine"
+    )
+    if gateway and tts_provider != "elevenlabs":
+        raise ValueError("--byted-gateway requires ElevenLabs TTS")
+    if tts_provider == "elevenlabs":
+        provider_config = ElevenLabsTTSConfig(
+            model_id=tts_model,
+            voice_id=primary_voice,
+            gateway=gateway,
+            seed=scenario.seed,
+        )
+    elif tts_provider == "openai":
+        provider_config = OpenAITTSConfig(model=tts_model, voice=primary_voice)
+    elif tts_provider == "volcengine":
+        provider_config = VolcengineTTSConfig(
+            resource_id=tts_model, speaker=primary_voice
+        )
+    else:
+        raise ValueError(f"Unsupported user TTS provider: {tts_provider}")
     settings = VoiceSettings(
         transcription_config=None,
         synthesis_config=SynthesisConfig(
-            provider="volcengine",
-            provider_config=VolcengineTTSConfig(
-                resource_id=tts_model, speaker=primary_voice
-            ),
+            provider=tts_provider,
+            provider_config=provider_config,
             channel_effects_config=ChannelEffectsConfig(enable_frame_drops=False),
             source_effects_config=SourceEffectsConfig(
                 enable_background_noise=False, enable_burst_noise=False
@@ -107,7 +152,9 @@ def build_dynamic_user(
             ),
         ),
         speech_environment=SpeechEnvironment(
-            complexity="control", use_llm_backchannel=False
+            complexity="control",
+            use_llm_backchannel=False,
+            telephony_enabled=scenario.acoustic_clarification is None,
         ),
     )
     return DuplexUserSimulator(
@@ -116,6 +163,11 @@ def build_dynamic_user(
         primary_voice=primary_voice,
         background_voice=background_voice,
         tts_model=tts_model,
+        perception_config=TranscriptionConfig(
+            model="scribe_v1", language="zh" if scenario.language == "Chinese" else "en"
+        )
+        if gateway
+        else None,
         instructions=scenario.user_context,
         tools=[],
         llm=scenario.user_model,
@@ -143,28 +195,97 @@ def _run(args):
     """Run the runtime user policy and preserve partial evidence on failure."""
     from dotenv import load_dotenv
 
-    from tau2.config import DEFAULT_AUDIO_NATIVE_MODELS
+    from tau2.config import (
+        BYTED_DEFAULT_REALTIME_MODEL,
+        BYTED_DEFAULT_TEXT_MODEL,
+        BYTED_DEFAULT_TTS_MODEL,
+        BYTED_DEFAULT_VOICE,
+        DEFAULT_AUDIO_NATIVE_MODELS,
+        DEFAULT_DUPLEX_BACKGROUND_VOICE,
+        DEFAULT_DUPLEX_USER_MODEL,
+    )
     from tau2.data_model.simulation import AudioNativeConfig
     from tau2.data_model.tasks import Task, UserScenario
+    from tau2.data_model.voice import (
+        ElevenLabsTTSConfig,
+        OpenAITTSConfig,
+        VolcengineTTSConfig,
+    )
     from tau2.orchestrator.full_duplex_orchestrator import FullDuplexOrchestrator
     from tau2.runner.build import build_agent, build_environment
     from tau2.user.duplex_evaluation import (
         assess_report,
         attach_asr_evidence,
+        finalize_acoustic_evidence,
         judge_report,
     )
     from tau2.voice.synthesis.conversation_builder import generate_simulation_audio
 
-    load_dotenv()
+    load_dotenv(args.env_file)
+    if args.byted_gateway:
+        if args.provider != "openai":
+            raise ValueError(
+                "--byted-gateway currently supports the OpenAI native provider"
+            )
+        args.model = args.model or BYTED_DEFAULT_REALTIME_MODEL
+        if not args.model.startswith("byted/"):
+            raise ValueError("Use the explicit byted/ native model prefix")
+        args.user_model = args.user_model or BYTED_DEFAULT_TEXT_MODEL
+        if args.judge_model == DEFAULT_DUPLEX_USER_MODEL:
+            args.judge_model = BYTED_DEFAULT_TEXT_MODEL
     scenario = (
         _load_scenario(args.scenario)
         if args.scenario
         else DuplexScenario(
             selected_events=[
-                value.strip() for value in args.events.split(",") if value.strip()
-            ]
+                value.strip()
+                for value in (args.events or "").split(",")
+                if value.strip()
+            ],
+            acoustic_clarification=_acoustic_config(args),
         )
     )
+    scenario.acoustic_clarification = _acoustic_config(
+        args, scenario.acoustic_clarification
+    )
+    args.tts_provider = args.tts_provider or (
+        "elevenlabs"
+        if args.byted_gateway
+        else "openai"
+        if scenario.acoustic_clarification is not None
+        else "volcengine"
+    )
+    if args.byted_gateway and args.tts_provider != "elevenlabs":
+        raise ValueError("--byted-gateway requires ElevenLabs TTS")
+    if args.tts_provider == "volcengine":
+        defaults = VolcengineTTSConfig()
+        args.primary_voice = args.primary_voice or defaults.speaker
+        args.background_voice = args.background_voice or DEFAULT_DUPLEX_BACKGROUND_VOICE
+        args.tts_model = args.tts_model or defaults.resource_id
+    elif args.tts_provider == "openai":
+        defaults = OpenAITTSConfig()
+        args.primary_voice = args.primary_voice or defaults.voice
+        args.background_voice = args.background_voice or "onyx"
+        args.tts_model = args.tts_model or defaults.model
+    else:
+        args.primary_voice = args.primary_voice or BYTED_DEFAULT_VOICE
+        args.tts_model = args.tts_model or (
+            BYTED_DEFAULT_TTS_MODEL
+            if args.byted_gateway
+            else ElevenLabsTTSConfig().model_id
+        )
+    if (
+        args.tts_provider == "elevenlabs"
+        and (not args.background_voice or args.background_voice == "onyx")
+        and set(scenario.selected_events)
+        & {"rejection.third_party", "rejection.contextual"}
+    ):
+        raise ValueError(
+            "Provide a distinct available ElevenLabs --background-voice ID for background speaker events"
+        )
+    args.background_voice = args.background_voice or "unused-background"
+    if args.seed is not None:
+        scenario.seed = args.seed
     if args.user_model:
         scenario.user_model = args.user_model
     if args.language:
@@ -192,15 +313,19 @@ def _run(args):
                 "primary_voice": args.primary_voice,
                 "background_voice": args.background_voice,
                 "tts_model": args.tts_model,
+                "tts_provider": args.tts_provider,
+                "byted_gateway": args.byted_gateway,
             },
             indent=2,
         ),
         encoding="utf-8",
     )
     user = None
+    agent = None
     orchestrator = None
     simulation = None
     assessment = None
+    run_error = None
     try:
         if not scenario.topic:
             topic = generate_topic(scenario)
@@ -222,11 +347,16 @@ def _run(args):
                 args.primary_voice,
                 args.background_voice,
                 args.tts_model,
+                gateway=args.byted_gateway,
+                tts_provider=args.tts_provider,
             )
             agent = build_agent(
                 "discrete_time_audio_native_agent",
                 environment,
                 audio_native_config=config,
+                audio_taps_dir=args.output / "agent_audio"
+                if scenario.acoustic_clarification is not None
+                else None,
             )
             orchestrator = FullDuplexOrchestrator(
                 domain="mock",
@@ -244,12 +374,15 @@ def _run(args):
             )
             generate_simulation_audio(simulation, args.output / "audio")
     except Exception as exc:
+        run_error = type(exc).__name__
         (args.output / "error.json").write_text(
             json.dumps({"error_type": type(exc).__name__}), encoding="utf-8"
         )
         raise
     finally:
         # Save local evidence before any remote judge call can fail or hang.
+        if orchestrator is not None and simulation is None:
+            orchestrator._cleanup()
         if orchestrator is not None and orchestrator.ticks:
             (args.output / "ticks.json").write_text(
                 json.dumps(
@@ -263,11 +396,41 @@ def _run(args):
 
                 partial = SimpleNamespace(mode="full_duplex", ticks=orchestrator.ticks)
                 generate_simulation_audio(partial, args.output / "audio")
+        if agent is not None and scenario.acoustic_clarification is not None:
+            (args.output / "agent_input_conversion.json").write_text(
+                json.dumps(agent.input_audio_conversions, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
         if user is not None:
-            user.save_report()
-            report = user.controller.report()
+            report = user.save_report()
             if user.perception is not None:
                 report = attach_asr_evidence(report, user.perception.snapshots)
+                (args.output / "events.json").write_text(
+                    json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
+                )
+            if scenario.acoustic_clarification is not None:
+                reason = (
+                    simulation.termination_reason.value
+                    if simulation is not None and run_error is None
+                    else "run_error"
+                )
+                report["conversation"] = {
+                    "status": "complete"
+                    if reason in {"user_stop", "agent_stop"}
+                    else "incomplete",
+                    "termination_reason": reason,
+                }
+                report = finalize_acoustic_evidence(
+                    scenario,
+                    report,
+                    args.output,
+                    config.tick_duration_seconds,
+                    orchestrator.ticks if orchestrator is not None else [],
+                    transcription_config=user.perception.config
+                    if user.perception is not None
+                    else None,
+                    transcribe=bool(args.judge_model),
+                )
                 (args.output / "events.json").write_text(
                     json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
                 )
@@ -280,21 +443,22 @@ def _run(args):
             (args.output / "assessment.json").write_text(
                 json.dumps(assessment, ensure_ascii=False, indent=2), encoding="utf-8"
             )
-        if orchestrator is not None and orchestrator.ticks:
-            # A run can fail before a SimulationRun is returned.
-            (args.output / "ticks.json").write_text(
-                json.dumps(
-                    [tick.model_dump(mode="json") for tick in orchestrator.ticks],
-                    ensure_ascii=False,
-                ),
-                encoding="utf-8",
-            )
-        if orchestrator is not None and simulation is None:
-            orchestrator._cleanup()
     print(f"Saved trajectory, audio, events and assessment: {args.output}")
     return (
         0
-        if assessment and assessment["summary"]["observed"] == len(scenario.event_ids)
+        if assessment
+        and assessment["summary"]["observed"] == len(scenario.event_ids)
+        and (
+            scenario.acoustic_clarification is None
+            or (
+                assessment["acoustic_clarification"]["assessment"]["input_validity"]
+                == "valid"
+                and assessment["acoustic_clarification"]["assessment"][
+                    "conversation_status"
+                ]
+                == "complete"
+            )
+        )
         else 1
     )
 
@@ -333,12 +497,29 @@ def _assess(args):
     if args.judge_model:
         from dotenv import load_dotenv
 
-        load_dotenv()
-        assessment = judge_report(scenario, assessment, args.judge_model)
+        from tau2.utils.llm_utils import llm_log_dir, llm_log_mode
+
+        load_dotenv(args.env_file)
+        directory_token = llm_log_dir.set(args.output / "llm_calls")
+        mode_token = llm_log_mode.set("all")
+        try:
+            assessment = judge_report(scenario, assessment, args.judge_model)
+        finally:
+            llm_log_mode.reset(mode_token)
+            llm_log_dir.reset(directory_token)
     (args.output / "assessment.json").write_text(
         json.dumps(assessment, ensure_ascii=False, indent=2), encoding="utf-8"
     )
     print(json.dumps(assessment["summary"], ensure_ascii=False))
+    return 0
+
+
+def report(args):
+    """Generate a source-backed report without model, ASR or TTS calls."""
+    from experiments.tau_voice.evaluation_report import write_report
+
+    write_report(args.output, args.run_dir)
+    print(f"Saved HTML report and evidence: {args.output}")
     return 0
 
 
@@ -348,6 +529,18 @@ def build_parser():
 
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
+    reporting = commands.add_parser(
+        "report", help="Write an offline HTML explanation and topic coverage audit"
+    )
+    reporting.add_argument("--output", type=Path, required=True)
+    reporting.add_argument(
+        "--run-dir",
+        type=Path,
+        action="append",
+        default=[],
+        help="Explicit final run directory to audit; repeat for each eligible run",
+    )
+    reporting.set_defaults(func=report)
     listing = commands.add_parser("list", help="List supported event IDs")
     listing.set_defaults(
         func=lambda args: print(
@@ -360,8 +553,15 @@ def build_parser():
     )
     planning.add_argument(
         "--events",
-        required=True,
         help="Comma-separated event subset; execution order is chosen at runtime",
+    )
+    planning.add_argument(
+        "--acoustic-clarification",
+        choices=["dropchunk", "dns_noise"],
+        help="Degrade one complete primary user utterance; can run without semantic events",
+    )
+    planning.add_argument(
+        "--dns-noise-path", help="DNS WAV file or directory to preload for dns_noise"
     )
     planning.add_argument("--seed", type=int, default=42)
     planning.add_argument(
@@ -385,11 +585,19 @@ def build_parser():
     execution = commands.add_parser(
         "run", help="Let Terra choose live duplex actions against a voice model"
     )
-    source = execution.add_mutually_exclusive_group(required=True)
+    source = execution.add_mutually_exclusive_group()
     source.add_argument("--scenario", type=Path)
     source.add_argument(
         "--events",
         help="Comma-separated event types; no scripted content or trigger timing",
+    )
+    execution.add_argument(
+        "--acoustic-clarification",
+        choices=["dropchunk", "dns_noise"],
+        help="Enable an acoustic clarification input with optional semantic events",
+    )
+    execution.add_argument(
+        "--dns-noise-path", help="Override DNS preload WAV file or directory"
     )
     execution.add_argument(
         "--output",
@@ -419,9 +627,25 @@ def build_parser():
     execution.add_argument(
         "--model", help="Default: configured model for the chosen provider"
     )
-    execution.add_argument("--primary-voice", default="zh_female_vv_uranus_bigtts")
-    execution.add_argument("--background-voice", default="zh_male_dayi_saturn_bigtts")
-    execution.add_argument("--tts-model", default="seed-tts-2.0")
+    execution.add_argument(
+        "--primary-voice", help="Voice ID for the chosen TTS provider"
+    )
+    execution.add_argument(
+        "--background-voice", help="Distinct background TTS voice ID"
+    )
+    execution.add_argument("--tts-model", help="Model/resource ID for the TTS provider")
+    execution.add_argument(
+        "--tts-provider",
+        choices=["volcengine", "openai", "elevenlabs"],
+        help="Default: Volcengine for semantic events, OpenAI for acoustic tasks, ElevenLabs for --byted-gateway",
+    )
+    execution.add_argument(
+        "--byted-gateway",
+        action="store_true",
+        help="Use TERUMI_BT_AK for text, TTS, Scribe ASR and native voice",
+    )
+    execution.add_argument("--env-file", type=Path, default=Path(".env"))
+    execution.add_argument("--seed", type=int, help="Override scenario random seed")
     execution.add_argument("--max-seconds", type=int)
     execution.add_argument(
         "--proactive-opportunities",
@@ -445,6 +669,7 @@ def build_parser():
     scoring = commands.add_parser("assess", help="Assess an existing run")
     scoring.add_argument("--output", type=Path, required=True)
     scoring.add_argument("--judge-model")
+    scoring.add_argument("--env-file", type=Path, default=Path(".env"))
     scoring.set_defaults(func=assess)
     return parser
 

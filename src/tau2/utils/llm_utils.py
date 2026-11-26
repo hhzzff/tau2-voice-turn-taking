@@ -21,6 +21,7 @@ from tau2.config import (
     DEFAULT_LLM_CACHE_TYPE,
     DEFAULT_MAX_RETRIES,
     LLM_CACHE_ENABLED,
+    OPEN_MODEL_DEMO_USER_LLM,
     REDIS_CACHE_TTL,
     REDIS_CACHE_VERSION,
     REDIS_HOST,
@@ -376,8 +377,17 @@ def generate(
     Returns: A tuple containing the message and the cost.
     """
     validate_message_history(messages)
+    if model == OPEN_MODEL_DEMO_USER_LLM:
+        from tau2.utils.codex_llm import generate_codex
+
+        return generate_codex(
+            messages,
+            tools=tools,
+            timeout=kwargs.get("timeout", 180),
+            call_name=call_name,
+        )
     if kwargs.get("num_retries") is None:
-        kwargs["num_retries"] = DEFAULT_MAX_RETRIES
+        kwargs["num_retries"] = 0 if model.startswith("byted/") else DEFAULT_MAX_RETRIES
 
     # Vertex AI Gemini 3 models require VERTEXAI_LOCATION="global"
     if model.startswith("vertex_ai/gemini-3") and not os.environ.get(
@@ -406,7 +416,13 @@ def generate(
 
     start_time = time.perf_counter()
     try:
-        response = completion(
+        if model.startswith("byted/"):
+            from tau2.utils.byted_modelhub import chat_completion
+
+            completion_function = chat_completion
+        else:
+            completion_function = completion
+        response = completion_function(
             model=model,
             messages=litellm_messages,
             tools=tools_schema,
@@ -417,7 +433,8 @@ def generate(
         logger.error(e)
         raise e
     generation_time_seconds = time.perf_counter() - start_time
-    cost = get_response_cost(response)
+    # Gateway pricing is not represented by the public LiteLLM catalog.
+    cost = None if model.startswith("byted/") else get_response_cost(response)
     usage = get_response_usage(response)
 
     response_choice = response.choices[0]
@@ -455,6 +472,7 @@ def generate(
 
     # Log complete LLM call (request + response)
     response_data = {
+        "model": response.model,
         "timestamp": datetime.now().isoformat(),
         "content": content,
         "tool_calls": [tc.model_dump() for tc in tool_calls] if tool_calls else None,

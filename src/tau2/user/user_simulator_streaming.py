@@ -489,6 +489,8 @@ class UserAudioStreamingState(
 def user_interruption_policy(
     state: UserStreamingState,
     integration_ticks: int = 1,
+    decision_model: Optional[str] = None,
+    decision_context: Optional[str] = None,
 ) -> ListenerReactionDecision:
     """
     Decide whether the user should interrupt the agent while they're speaking.
@@ -641,11 +643,15 @@ just to satisfy the experiment condition.
             interruption_prompt += f"\n\n{type_instruction}\n"
 
     # Create messages for LLM call
+    if decision_context:
+        interruption_prompt += (
+            "\nKnown user facts and listener instructions:\n" + decision_context
+        )
     decision_messages = [UserMessage(role="user", content=interruption_prompt)]
 
     try:
         response = generate(
-            model=VOICE_USER_SIMULATOR_DECISION_MODEL,
+            model=decision_model or VOICE_USER_SIMULATOR_DECISION_MODEL,
             messages=decision_messages,
             call_name="interruption_decision",
         )
@@ -686,6 +692,8 @@ just to satisfy the experiment condition.
 def user_backchannel_policy(
     state: UserStreamingState,
     integration_ticks: int = 1,
+    decision_model: Optional[str] = None,
+    decision_context: Optional[str] = None,
 ) -> ListenerReactionDecision:
     """
     Decide whether the user should backchannel while the agent is speaking.
@@ -725,11 +733,15 @@ def user_backchannel_policy(
     )
 
     # Create messages for LLM call
+    if decision_context:
+        decision_prompt += (
+            "\nKnown user facts and listener instructions:\n" + decision_context
+        )
     decision_messages = [UserMessage(role="user", content=decision_prompt)]
 
     try:
         response = generate(
-            model=VOICE_USER_SIMULATOR_DECISION_MODEL,
+            model=decision_model or VOICE_USER_SIMULATOR_DECISION_MODEL,
             messages=decision_messages,
             call_name="backchannel_decision",
         )
@@ -816,6 +828,7 @@ class VoiceStreamingUserSimulator(
         tick_duration_seconds: float = 0.05,
         persona_config: Optional[PersonaConfig] = None,
         audio_taps_dir: Optional["Path"] = None,
+        decision_model: Optional[str] = None,
     ):
         """
         Initialize the streaming user simulator.
@@ -845,6 +858,7 @@ class VoiceStreamingUserSimulator(
             voice_settings: Voice settings for the user.
             persona_config: Runtime persona configuration for user behavior (e.g., verbosity level, interrupt tendency)
             audio_taps_dir: If set, record audio at each pipeline stage to WAV files in this directory.
+            decision_model: Optional model for semantic listener decisions; defaults to the existing decision model.
         """
         # Initialize mixin and base class
         super().__init__(
@@ -868,6 +882,7 @@ class VoiceStreamingUserSimulator(
         self.backchannel_max_threshold = backchannel_max_threshold
         self.backchannel_poisson_rate = backchannel_poisson_rate
         self.use_llm_backchannel = use_llm_backchannel
+        self.decision_model = decision_model
         self.interruption_check_interval = interruption_check_interval
 
         # Default yield_threshold_when_interrupting to yield_threshold_when_interrupted if not set
@@ -1173,6 +1188,10 @@ Follow this topic plan during the conversation:
         # Check contains_speech flag - defaults to True for backward compatibility if not set
         return chunk.contains_speech if chunk.contains_speech is not None else True
 
+    def _listener_context(self, state):
+        """Provide optional known facts to listener decisions; default is unchanged."""
+        return None
+
     def _next_turn_taking_action(
         self, state: UserAudioStreamingState
     ) -> TurnTakingAction:
@@ -1190,7 +1209,12 @@ Follow this topic plan during the conversation:
             def should_interrupt_callback(
                 s: UserStreamingState,
             ) -> ListenerReactionDecision:
-                return user_interruption_policy(s, integration_ticks=integration_ticks)
+                return user_interruption_policy(
+                    s,
+                    integration_ticks=integration_ticks,
+                    decision_model=self.decision_model,
+                    decision_context=self._listener_context(s),
+                )
 
         # Backchannel callback is tied to the use_llm_backchannel config
         if self.use_llm_backchannel:
@@ -1198,7 +1222,12 @@ Follow this topic plan during the conversation:
             def should_backchannel_callback(
                 s: UserStreamingState,
             ) -> ListenerReactionDecision:
-                return user_backchannel_policy(s, integration_ticks=integration_ticks)
+                return user_backchannel_policy(
+                    s,
+                    integration_ticks=integration_ticks,
+                    decision_model=self.decision_model,
+                    decision_context=self._listener_context(s),
+                )
 
         action, info = basic_turn_taking_policy(
             state,
@@ -1645,7 +1674,9 @@ Follow this topic plan during the conversation:
         )
 
         # Check that last message is a valid user input message
-        if not isinstance(linearized_messages[-1], (ValidUserInputMessage)):
+        if linearized_messages and not isinstance(
+            linearized_messages[-1], (ValidUserInputMessage)
+        ):
             if isinstance(linearized_messages[-1], SystemMessage):
                 # SystemMessage at end is expected (e.g., silence annotations)
                 logger.debug(
@@ -1656,7 +1687,9 @@ Follow this topic plan during the conversation:
                     f"Last message is not a valid user input message: {type(linearized_messages[-1]).__name__}"
                 )
 
-        if isinstance(linearized_messages[-1], (AssistantMessage)):
+        if linearized_messages and isinstance(
+            linearized_messages[-1], (AssistantMessage)
+        ):
             if linearized_messages[-1].content is None:
                 logger.warning(
                     f"Last message is an assistant message with no content: {linearized_messages[-1]}"

@@ -78,10 +78,16 @@ def test_doubao_barge_in_discards_old_playback():
         result, {"type": "conversation.item.input_audio_transcription.started"}
     )
     assert result.was_truncated
+    assert result.pending_playback_cancelled
     assert result.truncated_audio_bytes == 9
     assert result.vad_events == ["speech_started"]
     assert not result.agent_audio_chunks
     assert not adapter._buffered_agent_audio
+    control = next(
+        row for row in result.serializable_events if row["type"] == "playback_control"
+    )
+    assert control["profile"] == "doubao_s2s"
+    assert control["runtime_model"] == adapter.model
 
 
 @run_async

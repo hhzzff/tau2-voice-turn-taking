@@ -58,6 +58,29 @@ def tts_elevenlabs(
     Returns:
         AudioData with the specified output format
     """
+    if config.gateway:
+        from tau2.utils.byted_modelhub import elevenlabs_request
+
+        response = elevenlabs_request(
+            f"/text-to-speech/{config.voice_id}",
+            params={"output_format": config.output_format_name},
+            json={
+                "text": text,
+                "model_id": config.model_id,
+                "model": "elevenlabs",
+                "stream": False,
+                **({"seed": config.seed} if config.seed is not None else {}),
+            },
+        )
+        if (
+            not response.content
+            or len(response.content) % 2
+            or not response.headers.get("content-type", "").startswith("audio/")
+        ):
+            raise ValueError("ModelHub ElevenLabs did not return PCM16 audio")
+        return AudioData(
+            data=response.content, format=deepcopy(config.output_audio_format)
+        )
     api_key = config.api_key or os.getenv("ELEVENLABS_API_KEY")
     if not api_key:
         raise ValueError("ELEVENLABS_API_KEY not found in config or environment")

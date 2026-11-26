@@ -9,6 +9,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from tau2.config import (
+    DEFAULT_ACOUSTIC_KEYWORD_LIMIT,
     DEFAULT_DUPLEX_BACKCHANNEL_MIN_SPEECH_SECONDS,
     DEFAULT_DUPLEX_MEMORY_RESPONSE_TIMEOUT_SECONDS,
     DEFAULT_DUPLEX_PAUSE_SECONDS,
@@ -17,6 +18,10 @@ from tau2.config import (
     DEFAULT_DUPLEX_USER_MODEL,
 )
 from tau2.data_model.voice import TranscriptionModel
+from tau2.user.acoustic_clarification import (
+    AcousticClarificationConfig,
+    KeywordAnnotation,
+)
 
 Family = Literal["interruption", "rejection", "turn_taking", "proactive"]
 Trigger = Literal["assistant_speaking", "assistant_silent", "any"]
@@ -210,7 +215,8 @@ class DuplexScenario(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
     version: Literal[1] = 1
-    selected_events: list[str] = Field(min_length=1)
+    selected_events: list[str] = Field(default_factory=list)
+    acoustic_clarification: AcousticClarificationConfig | None = None
     event_order: list[str] | None = None
     include_proactive_opportunities: bool = True
     backchannel_min_speech_seconds: float = Field(
@@ -236,7 +242,8 @@ class DuplexScenario(BaseModel):
     @model_validator(mode="after")
     def canonical_events(self):
         """Normalize coverage and validate an optional execution order."""
-        self.selected_events = select_events(self.selected_events)
+        if self.selected_events or self.acoustic_clarification is None:
+            self.selected_events = select_events(self.selected_events)
         if set(self.event_guidance) - set(self.event_ids):
             raise ValueError("event_guidance keys must be selected event IDs")
         if self.event_order is not None:
@@ -250,6 +257,8 @@ class DuplexScenario(BaseModel):
     @property
     def supplemental_events(self) -> list[str]:
         """Add listening opportunities without replacing or duplicating the selection."""
+        if self.acoustic_clarification is not None and not self.selected_events:
+            return []
         return [
             key
             for key in SUPPLEMENTAL_PROACTIVE_EVENTS
@@ -289,6 +298,10 @@ class DuplexDecision(BaseModel):
     text: str = ""
     continuation: str = ""
     expected_completion: str = ""
+    keyword: KeywordAnnotation | None = None
+    keywords: list[KeywordAnnotation] = Field(
+        default_factory=list, max_length=DEFAULT_ACOUSTIC_KEYWORD_LIMIT
+    )
     pause_seconds: float = Field(default=0, ge=0, le=10)
     observation_seconds: float = Field(default=6, ge=2, le=20)
     noise: Literal["door_knock", "phone_ring", "rustle"] = "door_knock"
@@ -298,6 +311,8 @@ class DuplexDecision(BaseModel):
     @model_validator(mode="after")
     def valid_action(self):
         """Check executable actions, without imposing when or what to say."""
+        if self.keyword is not None and self.keywords:
+            raise ValueError("Use keywords or the legacy single keyword, not both")
         is_event = self.action in {"prepare_event", "trigger_event"}
         if is_event and self.event_id not in EVENT_CATALOG:
             raise ValueError("Event actions require a known event_id")

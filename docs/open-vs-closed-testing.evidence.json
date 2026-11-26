@@ -1,0 +1,217 @@
+{
+  "generated_at_utc": "2026-11-02T08:40:54.622425+00:00",
+  "repository_head": "3d56cb88ee51b30ff0cac74af8bbcc2ae806d105",
+  "scope": "Current working tree including preexisting uncommitted changes; source audit and selected existing artifacts; no new inference/API calls.",
+  "event_definitions": 19,
+  "open_model_scenarios": [
+    "ordered_conversation",
+    "long_conversation",
+    "qa",
+    "correction",
+    "user_backchannel",
+    "model_backchannel"
+  ],
+  "sources": [
+    {
+      "label": "共同编排与 previous-tick 交付",
+      "path": "src/tau2/orchestrator/full_duplex_orchestrator.py",
+      "line": 281,
+      "sha256": "eafcfdae6456b25632010e0b2260d99948b04710a4b788b451fcc4041af7ff54"
+    },
+    {
+      "label": "共享 adapter 与 frozen / realtime 节奏",
+      "path": "src/tau2/voice/audio_native/adapter.py",
+      "line": 187,
+      "sha256": "30f4c4d78dff731dc03538df44a9dd6c094474c7c2f576cb023b3adedd1cb733"
+    },
+    {
+      "label": "当前 tick、用户模型、checkpoint 默认值",
+      "path": "src/tau2/config.py",
+      "line": 108,
+      "sha256": "a8bb930c1966f260bab8c352260905b2d43a34ac3d96fb6393018f7acc3e098b"
+    },
+    {
+      "label": "原生 tick 配置校验",
+      "path": "src/tau2/data_model/simulation.py",
+      "line": 68,
+      "sha256": "7cd922ad2790b67ebc185d5b61c0f4177e2e29d2a88e5499d098d4f95b5a6a39"
+    },
+    {
+      "label": "开源 demo 构造与导出",
+      "path": "src/tau2/scripts/open_model_demo.py",
+      "line": 314,
+      "sha256": "583063e021e5928585d240221367aba97776658753a708cff75df4923ebdd5c8"
+    },
+    {
+      "label": "开源场景与队列优先策略",
+      "path": "src/tau2/user/open_model_scenarios.py",
+      "line": 280,
+      "sha256": "28d5bdb008adbd7e759d6e741d0f03aff9400ea83b1cc954fa0024cc6e91de9b"
+    },
+    {
+      "label": "开源 adapter 与音频格式转换",
+      "path": "src/tau2/voice/audio_native/open_model/adapter.py",
+      "line": 34,
+      "sha256": "c09065f49c2f7df832b415cfe1c611e1e64f63dcd91b75d35cda4ee04e4e668b"
+    },
+    {
+      "label": "原生进程与共享 mailbox 传输",
+      "path": "src/tau2/voice/audio_native/open_model/transport.py",
+      "line": 74,
+      "sha256": "b7f76cc04a73f953b60aefa3403eb186aa101e4ce2202d38cfe70dd177fc02b0"
+    },
+    {
+      "label": "MiniCPM 原生 SDK 调用",
+      "path": "scripts/open_model_workers/minicpm_worker.py",
+      "line": 67,
+      "sha256": "f4fac33bbe4a519bfce3348cdca7e07fc8fb901ef0ae8ca695f08b7d5cde812f"
+    },
+    {
+      "label": "SALMONN 因果输入与 echo_ratio",
+      "path": "scripts/open_model_workers/salmonn_session.py",
+      "line": 268,
+      "sha256": "2fbd07c70b4db549d64e60c719c2885622dede83aef359ab316e3d52e60c4cfc"
+    },
+    {
+      "label": "闭源事件 bench 主入口",
+      "path": "src/experiments/tau_voice/duplex_bench.py",
+      "line": 136,
+      "sha256": "08b29b96560fd3a0f49bc86864ab6b8b77554a78efa4d3826d691a37a00d69f9"
+    },
+    {
+      "label": "闭源事件目录与 Topic 生成",
+      "path": "src/tau2/user/duplex_events.py",
+      "line": 43,
+      "sha256": "1fdb72b0c4b846f7f53632bc037d3cef96f694d93c1b4bbc1c342e733ae132dd"
+    },
+    {
+      "label": "闭源事件用户的播放与观察策略",
+      "path": "src/tau2/user/duplex_scenario_user.py",
+      "line": 409,
+      "sha256": "121bc4963749f54377d32859a33d6ef3a228da648ac341f154dd572eb35589ba"
+    },
+    {
+      "label": "已播放助手音频 ASR",
+      "path": "src/tau2/user/duplex_perception.py",
+      "line": 16,
+      "sha256": "eb22df99af90225c779d8e2cad7a879dc886935c79139a7443e846652a8f987f"
+    },
+    {
+      "label": "事件时序与语义评审",
+      "path": "src/tau2/user/duplex_evaluation.py",
+      "line": 194,
+      "sha256": "e3293f858c4d292b1fecdcd4b3509537dd58ddbc9de3e4565f005d6ce9637599"
+    },
+    {
+      "label": "标准 API 用户构造",
+      "path": "src/tau2/runner/build.py",
+      "line": 327,
+      "sha256": "cfcb18f7866272d36179592e6813e3d255ee53549597efbb3ae1a6be8a454801"
+    },
+    {
+      "label": "基础让话策略",
+      "path": "src/tau2/agent/base/streaming.py",
+      "line": 2343,
+      "sha256": "2bd6ae56cee0469ecdb88a3d7437f35f19982c5799ea27a942c547e9a67e94c4"
+    },
+    {
+      "label": "共享动作执行器",
+      "path": "src/tau2/user/user_simulator_streaming.py",
+      "line": 1467,
+      "sha256": "a43a2730ddf900a8f168e1d01d8424fcc42e4268cd1985c4d9304618ed783202"
+    },
+    {
+      "label": "OpenAI 远端事件与播放截断",
+      "path": "src/tau2/voice/audio_native/openai/discrete_time_adapter.py",
+      "line": 266,
+      "sha256": "3354a4b6e2c5b5dba9837e407b5ffac631142c5f69ac9fbe22b74da4f526e9f2"
+    },
+    {
+      "label": "最新配置与原生验证说明",
+      "path": "docs/open-model-contract-20261102.md",
+      "line": 1,
+      "sha256": "68821f7046648c30e0a340f0054ecc5155a661ea47fe023985d32f596fa21aeb"
+    },
+    {
+      "label": "用户策略分歧审计",
+      "path": "docs/open-model-user-policy-audit-20261102.md",
+      "line": 1,
+      "sha256": "9cea09f9b34811773e167a09de35903a038802d9d3d01103ca8db60b5daf5908"
+    },
+    {
+      "label": "历史交互测试的范围",
+      "path": "docs/open-model-inference-20261101.md",
+      "line": 1,
+      "sha256": "83a5e2709b130d7f35e2ff5decac01b54c59f67e986d7f2eb47a93a9f9f1024e"
+    },
+    {
+      "label": "当前 SALMONN 固定音频回放入口",
+      "path": "data/simulations/open-model-contract/20261102-selected-long/run_phase.py",
+      "line": 26,
+      "sha256": "c80e565f564803511cc359f50418f258cd58ab77126e0180d4202e5dfbc256ff"
+    },
+    {
+      "label": "当前 SALMONN replay 硬件与耗时",
+      "path": "data/simulations/open-model-contract/20261102-selected-long/salmonn-final/summary.json",
+      "line": 4,
+      "sha256": "e4e555a751e0b6062b5d9e7ac60f58ebe9ac38ecaae11714f153ac787b6d23c0"
+    },
+    {
+      "label": "当前 SALMONN replay 交付与计时审计",
+      "path": "data/simulations/open-model-contract/20261102-selected-long/salmonn-final/audit.json",
+      "line": 2,
+      "sha256": "49e20a673b1c3d00f9eada839af14584572ba57f3bba3878d85519a8f6d9f642"
+    }
+  ],
+  "selected_existing_replay": {
+    "path": "data/simulations/open-model-contract/20261102-selected-long/salmonn-final",
+    "model": "salmonn",
+    "gpu": "NVIDIA A100-SXM4-80GB",
+    "checkpoint": "/mnt/bn/audio-visual-llm-data2/yuwenyi/playground/exp_results/cu12_stage2-0519_fc-180_aes_er0_chunk30_llama31/checkpoint-44000",
+    "mode": "controlled replay: 179s recorded MiniCPM user input plus 1s explicit silence tail, rechunked to SALMONN 80ms; not a fresh dynamic dialogue",
+    "steps": 2250,
+    "input_seconds": 180.0,
+    "compute_median_seconds": 0.0567890265956521,
+    "compute_p95_seconds": 0.08969026133418069,
+    "deadline_misses": 147,
+    "deadline_denominator": 2250,
+    "compute_sum_seconds": 242.5510587412864,
+    "rtf": 1.3475058818960355,
+    "startup_seconds": 120.08404901996255,
+    "echo_ratio": 0.0,
+    "verification": "passed"
+  },
+  "html_sha256": "45f004c7e92715b0b6f91befd2bb8068664e65cd24a4964c15b4318ec16afafa",
+  "page_validation": {
+    "checked_at_utc": "2026-11-02T08:44:17.053452+00:00",
+    "engine": "Chromium via Playwright",
+    "viewports": [
+      {
+        "width": 1440,
+        "theme": "light"
+      },
+      {
+        "width": 390,
+        "theme": "light"
+      },
+      {
+        "width": 320,
+        "theme": "light"
+      },
+      {
+        "width": 390,
+        "theme": "dark"
+      }
+    ],
+    "checks": [
+      "all 60 local and fragment links resolve",
+      "all 25 source snapshot hashes match",
+      "no document horizontal overflow at tested widths",
+      "clock controls: change tick, change compute, advance, reset, 10-step limit and invalid input",
+      "source details expand to 25 references",
+      "no page JavaScript errors",
+      "no external HTTP requests"
+    ],
+    "rendering_limit": "The verification host lacks installed CJK fonts. Browser structure and interaction checks passed; native CJK glyph appearance was not verified on this host. The document uses the reader system font stack with PingFang SC and Microsoft YaHei fallbacks."
+  }
+}

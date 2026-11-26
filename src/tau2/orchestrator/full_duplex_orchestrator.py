@@ -7,7 +7,7 @@ communication between agent and user.
 
 import time
 from copy import deepcopy
-from typing import Any, Optional, TypeVar, Union
+from typing import Any, Literal, Optional, TypeVar, Union
 
 from loguru import logger
 
@@ -73,6 +73,7 @@ class FullDuplexOrchestrator(BaseOrchestrator[StreamingAgentT, StreamingUserT, T
         simulation_id: Optional[str] = None,
         tick_duration_seconds: Optional[float] = None,
         timeout: Optional[float] = None,
+        pacing: Literal["realtime", "frozen"] = "realtime",
     ):
         """
         Initialize FullDuplexOrchestrator.
@@ -89,6 +90,8 @@ class FullDuplexOrchestrator(BaseOrchestrator[StreamingAgentT, StreamingUserT, T
             simulation_id: Optional simulation ID.
             tick_duration_seconds: Duration of each simulation tick in seconds (for timing metadata).
             timeout: Maximum wallclock time in seconds. None means no timeout.
+            pacing: Frozen mode permits ticks faster or slower than audio time.
+                Participant adapters must use the same pacing policy.
         """
         super().__init__(
             domain=domain,
@@ -109,6 +112,13 @@ class FullDuplexOrchestrator(BaseOrchestrator[StreamingAgentT, StreamingUserT, T
         # Full-duplex specific attributes
         self.current_user_chunk: Optional[UserMessage] = None
         self.current_agent_chunk: Optional[AssistantMessage] = None
+        if pacing not in ("realtime", "frozen"):
+            raise ValueError(f"Unsupported pacing policy: {pacing}")
+        if pacing == "frozen" and (
+            tick_duration_seconds is None or tick_duration_seconds <= 0
+        ):
+            raise ValueError("Frozen pacing requires a positive tick duration")
+        self.pacing = pacing
         self.tick_duration_seconds = tick_duration_seconds
 
         # Pending tool results: executed this tick, delivered to participant next tick.
@@ -369,7 +379,8 @@ class FullDuplexOrchestrator(BaseOrchestrator[StreamingAgentT, StreamingUserT, T
             f"{tick.wall_clock_duration_seconds:.3f}s"
         )
         if (
-            self.tick_duration_seconds is not None
+            self.pacing == "realtime"
+            and self.tick_duration_seconds is not None
             and tick.wall_clock_duration_seconds < self.tick_duration_seconds
         ):
             logger.warning(

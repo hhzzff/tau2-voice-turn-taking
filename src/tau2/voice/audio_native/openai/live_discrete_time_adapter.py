@@ -233,6 +233,7 @@ class DiscreteTimeOpenAILiveAdapter(DiscreteTimeAdapter):
     def _process_event(self, result: TickResult, event: dict) -> None:
         event_type = event.get("type", "unknown")
         result.events.append(SimpleNamespace(**event))
+        self.record_control_signal("openai_live", event, result)
 
         if event_type == "session.output_audio.delta":
             decoded = base64.b64decode(event.get("delta", ""))

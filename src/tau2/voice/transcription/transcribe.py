@@ -37,6 +37,12 @@ def transcribe_audio(
         if conversion_error:
             return TranscriptionResult(transcript="", error=conversion_error)
 
+        if config.model == "scribe_v1":
+            return transcribe_scribe(pcm_audio_data, config)
+
+        if config.model == "doubao-asr":
+            return transcribe_doubao(audio_data, config)
+
         if config.model in ["nova-2", "nova-3"]:
             return transcribe_deepgram(pcm_audio_data, config)
 
@@ -337,4 +343,89 @@ async def transcribe_gpt4o_realtime(
     except Exception as e:
         return TranscriptionResult(
             transcript="", error=f"OpenAI Realtime transcription failed: {str(e)}"
+        )
+
+
+def transcribe_doubao(
+    audio_data: AudioData, config: TranscriptionConfig
+) -> TranscriptionResult:
+    """Recognize delivered audio with Doubao's documented flash file API.
+
+    Official protocol: docs.volcengine.com/docs/DoubaoVoice/recording-file-recognition-lite-http
+    Status 20000000 is recognition success; 20000003 is a normal no-speech result.
+    See docs.volcengine.com/docs/DoubaoVoice/error-code-query for status meanings.
+    """
+    from uuid import uuid4
+
+    from tau2.config import DOUBAO_ASR_RESOURCE_ID, DOUBAO_ASR_URL
+
+    key = os.environ.get("VOLCENGINE_ASR_API_KEY")
+    if not key:
+        return TranscriptionResult(
+            transcript="", error="VOLCENGINE_ASR_API_KEY is required"
+        )
+    pcm = resample_audio(convert_to_mono(convert_to_pcm16(audio_data)), 16000)
+    buffer = io.BytesIO()
+    with wave.open(buffer, "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(16000)
+        wav.writeframes(pcm.data)
+    response = requests.post(
+        DOUBAO_ASR_URL,
+        headers={
+            "X-Api-Key": key,
+            "X-Api-Resource-Id": DOUBAO_ASR_RESOURCE_ID,
+            "X-Api-Request-Id": str(uuid4()),
+            "X-Api-Sequence": "-1",
+        },
+        json={
+            "user": {"uid": "tau-voice-demo"},
+            "audio": {"data": base64.b64encode(buffer.getvalue()).decode()},
+            "request": {"model_name": "bigmodel"},
+        },
+        timeout=60,
+    )
+    response.raise_for_status()
+    status = response.headers.get("X-Api-Status-Code")
+    if status == "20000003":
+        return TranscriptionResult(transcript="", provider_status=status)
+    if status != "20000000":
+        return TranscriptionResult(transcript="", error=f"Doubao ASR status {status}")
+    result = response.json().get("result", {})
+    if not isinstance(result.get("text"), str):
+        return TranscriptionResult(
+            transcript="", error="Doubao ASR response has no text"
+        )
+    return TranscriptionResult(transcript=result["text"], provider_status=status)
+
+
+def transcribe_scribe(
+    audio_data: AudioData, config: TranscriptionConfig
+) -> TranscriptionResult:
+    """Recognize delivered WAV audio with the documented ModelHub Scribe route."""
+    from tau2.utils.byted_modelhub import elevenlabs_request
+
+    output = io.BytesIO()
+    with wave.open(output, "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(audio_data.format.sample_rate)
+        wav.writeframes(audio_data.data)
+    data = {"model_id": "scribe_v1"}
+    if config.language:
+        data["language_code"] = config.language.split("-")[0].lower()
+    try:
+        response = elevenlabs_request(
+            "/speech-to-text",
+            files={"file": ("delivered.wav", output.getvalue(), "audio/wav")},
+            data=data,
+        ).json()
+        text = response.get("text")
+        if not isinstance(text, str):
+            raise ValueError("Missing Scribe transcript")
+        return TranscriptionResult(transcript=text, provider_status="200")
+    except Exception as exc:
+        return TranscriptionResult(
+            transcript="", error=f"Scribe transcription failed: {type(exc).__name__}"
         )

@@ -279,6 +279,7 @@ class DiscreteTimeXAIAdapter(DiscreteTimeAdapter):
     def _process_event(self, result: TickResult, event: Any) -> None:
         """Process an xAI event."""
         result.events.append(event)
+        self.record_control_signal("xai", event, result)
 
         if isinstance(event, XAIAudioDeltaEvent):
             item_id = event.item_id or self._current_item_id
