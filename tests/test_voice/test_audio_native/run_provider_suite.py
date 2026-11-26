@@ -65,11 +65,14 @@ def run_and_summarize() -> int:
         order = TEST_ORDER.get(test_base, 9)
 
         failure = tc.find("failure")
+        error = tc.find("error")
         skip = tc.find("skipped")
         if skip is not None:
             status, detail = "⏭️ SKIP", skip.get("message", "")
         elif failure is not None:
             status, detail = "❌ FAIL", failure.get("message", "")
+        elif error is not None:
+            status, detail = "❌ ERROR", error.get("message", "")
         else:
             status, detail = "✅ PASS", ""
 
@@ -99,7 +102,9 @@ def run_and_summarize() -> int:
             current = provider
         lines.append(f"  {status}  {short}")
 
-    fail_details = [(s, d) for _, _, st, s, d, _ in results if "FAIL" in st]
+    fail_details = [
+        (s, d) for _, _, st, s, d, _ in results if "FAIL" in st or "ERROR" in st
+    ]
     if fail_details:
         lines.append("")
         lines.append("Failure details:")

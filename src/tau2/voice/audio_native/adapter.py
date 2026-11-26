@@ -363,12 +363,19 @@ class DiscreteTimeAdapter(ABC):
         if self.send_audio_instant:
             await send_fn(audio)
         else:
+            loop = asyncio.get_running_loop()
+            next_deadline = loop.time()
             offset = 0
             while offset < len(audio):
                 chunk = audio[offset : offset + chunk_size]
                 await send_fn(chunk)
                 offset += len(chunk)
-                await asyncio.sleep(self._voip_interval_ms / 1000)
+                # Pace against the original schedule: relative sleeps would
+                # accumulate send latency and coarse timer rounding per packet.
+                next_deadline += self._voip_interval_ms / 1000
+                remaining = next_deadline - loop.time()
+                if remaining > 0:
+                    await asyncio.sleep(remaining)
 
 
 # ---------------------------------------------------------------------------
