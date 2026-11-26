@@ -12,7 +12,6 @@ from dotenv import load_dotenv
 from tau2.config import (
     DEFAULT_OPENAI_OUTPUT_SAMPLE_RATE,
     DEFAULT_OPENAI_REALTIME_BASE_URL,
-    DEFAULT_WHISPER_MODEL,
 )
 from tau2.data_model.audio import AudioData, AudioEncoding, AudioFormat
 from tau2.data_model.voice import TranscriptionConfig, TranscriptionResult
@@ -37,6 +36,16 @@ def transcribe_audio(
         if conversion_error:
             return TranscriptionResult(transcript="", error=conversion_error)
 
+        # Digital silence cannot contain speech. Do not ask an ASR model to
+        # invent text for empty input or silent initialization placeholders.
+        if config.model in {
+            "whisper-1",
+            "gpt-4o-mini-transcribe",
+            "gpt-4o-transcribe",
+            "gemini-3.8-flash",
+        } and not pcm_audio_data.data.strip(b"\x00"):
+            return TranscriptionResult(transcript="")
+
         if config.model == "scribe_v1":
             return transcribe_scribe(pcm_audio_data, config)
 
@@ -53,7 +62,7 @@ def transcribe_audio(
             return transcribe_gemini(pcm_audio_data, config)
 
         elif config.model in ["gpt-4o-transcribe", "gpt-4o-mini-transcribe"]:
-            return asyncio.run(transcribe_gpt4o_realtime(pcm_audio_data, config))
+            return transcribe_openai_file(pcm_audio_data, config)
 
         else:
             return TranscriptionResult(
@@ -225,6 +234,14 @@ def transcribe_gemini(
 def transcribe_whisper(
     audio_data: AudioData, config: TranscriptionConfig
 ) -> TranscriptionResult:
+    """Transcribe a complete audio prefix with the legacy Whisper model."""
+    return transcribe_openai_file(audio_data, config)
+
+
+def transcribe_openai_file(
+    audio_data: AudioData, config: TranscriptionConfig
+) -> TranscriptionResult:
+    """Send only the supplied WAV to the configured dedicated OpenAI ASR."""
     try:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
@@ -248,7 +265,7 @@ def transcribe_whisper(
         url = "https://api.openai.com/v1/audio/transcriptions"
         headers = {"Authorization": f"Bearer {api_key}"}
         files = {"file": ("audio.wav", wav_data, "audio/wav")}
-        data = {"model": DEFAULT_WHISPER_MODEL}
+        data = {"model": config.model}
 
         if config.language:
             lang_code = (
@@ -260,12 +277,14 @@ def transcribe_whisper(
 
         data.update(config.extra_options)
 
-        response = requests.post(url, headers=headers, files=files, data=data)
+        response = requests.post(
+            url, headers=headers, files=files, data=data, timeout=40
+        )
 
         if response.status_code != 200:
             return TranscriptionResult(
                 transcript="",
-                error=f"OpenAI API error {response.status_code}: {response.text}",
+                error=f"OpenAI transcription HTTP {response.status_code}",
             )
 
         result = response.json()
@@ -273,7 +292,7 @@ def transcribe_whisper(
 
     except Exception as e:
         return TranscriptionResult(
-            transcript="", error=f"OpenAI transcription failed: {str(e)}"
+            transcript="", error=f"OpenAI transcription failed: {type(e).__name__}"
         )
 
 

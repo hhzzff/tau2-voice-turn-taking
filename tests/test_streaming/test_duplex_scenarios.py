@@ -122,7 +122,8 @@ def test_matched_scenario_uses_shared_story_and_audio_perception():
         Path("src/experiments/tau_voice/scenarios/picnic_matched_three_models.json")
     )
     assert plan.assistant_observation == "played_audio"
-    assert plan.transcription_model == "gemini-3.8-flash"
+    assert plan.user_model == "gpt-6.1-terra"
+    assert plan.transcription_model == "gpt-4o-mini-transcribe"
     assert set(plan.event_guidance) == set(plan.event_order)
     assert plan.event_order[0] == "interruption.follow_up"
     assert plan.event_order[-1] == "proactive.completion"

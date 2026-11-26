@@ -10,13 +10,13 @@ Volcengine 的停顿和 CTC 仍在单次 SSML 请求中插入 750 ms 停顿；�
 
 声学任务可独立运行，也可与事件组合。没有普通事件的独立声学任务不自动加入附和或 CTC；已有语义事件默认仍补充这两个机会，并支持 `--no-proactive-opportunities` 关闭。组合场景中的用户可在非记忆事件观察期间回答澄清追问；记忆回答仍保护至播放完成，助手的简短附和不会截断用户长陈述。
 
-ASR 既支持场景的 `transcription_model`（含 Gemini），也支持注入完整 `TranscriptionConfig`；显式完整配置优先。网关继续使用 Scribe，普通路径使用场景模型。关键词标注、实际声学扰动和最终评审证据保持隔离。
+普通双工场景默认使用专用 ASR `gpt-4o-mini-transcribe`，通过 OpenAI `/v1/audio/transcriptions` 上传已播放音频，使用本地 `OPENAI_API_KEY`。ASR 既支持场景的 `transcription_model`（保留 Gemini 等兼容项），也支持注入完整 `TranscriptionConfig`；显式完整配置优先。网关继续使用 Scribe。纯数字静音直接返回空转写；带文字但无声音的初始化占位消息不进入听觉历史，真实话语内部的静音帧仍保留以维持时间位置。关键词标注、实际声学扰动和最终评审证据保持隔离。
 
 ## 三模型同顺序、同剧情比较
 
 场景模板 `scenarios/picnic_matched_three_models.json` 用于 Grok、Gemini Live、Doubao Seeduplex。`event_order` 必须是全部覆盖目标（含附和、CTC）的完整排列；控制器拒绝越序触发。`conversation_outline` 给出共同主题阶段，`event_guidance` 约束各事件的语义目标，台词和插入时机仍由用户 LLM 根据实际已播放音频决定。`prepare_event` 可提前建立记忆事实，不推进事件顺序。背景问话固定为向 Jamie 询问门口钥匙；CTC 使用此前共享的 sesame 过敏事实，不能只凭私有计划判断刺激有效。
 
-此模板显式使用 `gemini/gemini-3.8-flash` 作为用户模拟器和综合 Judge、`gemini-3.8-flash` 作为音频转写，解决当前 OpenAI HTTP 接口鉴权失败的依赖。Gemini 转写只接收实际已播放音频，不接收剧情或预期补全；可能修订部分转写，仍需结合原音频审查。转写凭证支持 `GEMINI_API_KEY` 或 `GEMINI_LIVE_API_KEY`；LiteLLM 文本调用使用 `GEMINI_API_KEY`，启动进程时可从现有 Live Key 映射，不要把凭证写入模板或报告。用户 TTS 仍为豆包 Seed TTS 2.0，两个停顿事件仍为单次 SSML `<break time="750ms"/>`。
+此模板显式使用 `gpt-6.1-terra` 作为用户决策模型，控制等待、打断时机和发言内容；下方命令显式选择 `gemini/gemini-3.8-flash` 作为综合 Judge，音频转写使用 `gpt-4o-mini-transcribe`。Terra 与转写均使用本地配置中的 `OPENAI_API_KEY`。转写只接收实际已播放音频，不接收剧情或预期补全；仍可能误识别，需结合原音频审查。Gemini Judge 的 LiteLLM 文本调用使用 `GEMINI_API_KEY`，启动进程时可从现有 Live Key 映射，不要把凭证写入模板或报告。用户 TTS 仍为豆包 Seed TTS 2.0，两个停顿事件仍为单次 SSML `<break time="750ms"/>`。
 
 ```powershell
 uv run python -m experiments.tau_voice.duplex_bench run --scenario src/experiments/tau_voice/scenarios/picnic_matched_three_models.json --provider xai --judge-model gemini/gemini-3.8-flash --output data/simulations/matched_grok

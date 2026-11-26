@@ -58,6 +58,12 @@ class PlayedAudioPerception:
         )
         if not audio.data:
             return
+        if not audio.data.strip(b"\x00") and (
+            self.current is None or self.current["utterance_ids"] != ids
+        ):
+            # A text greeting with silent placeholder audio is not heard speech.
+            # Preserve zero frames inside an existing utterance for timing.
+            return
         if self.current is None or self.current["utterance_ids"] != ids:
             self.current = {
                 "segment_id": len(self.segments),
