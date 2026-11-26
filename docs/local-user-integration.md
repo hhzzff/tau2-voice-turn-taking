@@ -1,7 +1,7 @@
 # 本地用户模拟器接入与阶段验收
 
 实现分支：`experiment/local-user-simulator`。原克隆目录保留 `main` 基线，
-开发位于独立 worktree。远端 PR 等本地 19 条听测审阅后再提交。
+开发位于独立 worktree。按用户授权整理草稿 PR，完成后交由用户最终审阅。
 
 ## 实现边界
 
@@ -127,7 +127,7 @@ python -m experiments.tau_voice.local_user_report data/simulations/local-user-re
 应结合首token/首可用文本/TTS首音/发送回执，不能仅用总时长推算解码速度。
 
 
-## 最终本地听测验收（2026-11-26）
+## 历史听测验收（结构整改前，2026-11-26）
 
 19个场景均已从干净集成提交完成真实gpt-realtime-1.5试验。首轮保留原样，
 I04/R05/P03/M01针对性补测完成；最终选择19条均正常结束、目标无输出上限截断，
@@ -146,4 +146,65 @@ P03补测发现ASR“范前”使Python字段守卫误拒绝B已正确选中的�
 
 最终页面支持可选 `review-notes.json`，每条日志审阅注释必须匹配对应
 `summary.json` 的SHA256；不把旧结论套到新录音。首轮、补测和版本证据均可查看。
-本地检查和用户听测之后再考虑整理远端PR；当前没有push或PR。
+以上是当时的本地验收记录；后续规范整改、复验与草稿 PR 准备见下节。
+
+## PR 前规范整改与复验（2026-11-26）
+
+上述“历史听测验收”是结构整改前的历史录音，保留原文件和结论。
+本节记录提交 PR 前的独立复验。实验已整体迁至
+`src/experiments/tau_voice/local_user/`，保留本地剧本和执行器，
+通过显式注册使用 τ 的 `FullDuplexUser`，核心不反向依赖实验代码。
+
+最终运行代码提交为 `0ae4b9199e2f25a2961ec414d4260749733d4cf1`。
+后续提交仅增加故障测试和审阅证据文档；不会把旧录音标成新提交运行。
+[规范整改和测试审计](local-user-pr-audit.md)记录实现边界、生命周期修复、
+Pydantic/类型/文档规范及核心和语音测试的基线失败比较。
+
+新录音分为三组，均复用之前选定记录的场景与配置，原始失败不覆盖：
+
+```bash
+python -m experiments.tau_voice.duplex_bench local \
+  --scenes I01,I02,I03,I05,I06,I07,I08,R01,R02,R03,R04,R06,P01,P02,P04 \
+  --asr-model-path /path/to/x-asr-160ms \
+  --output data/simulations/local-user-integration/pr-validation-20261126/standard
+
+python -m experiments.tau_voice.duplex_bench local \
+  --scenes I04,R05,P03 --max-seconds 300 --target-max-output-tokens 4096 \
+  --asr-model-path /path/to/x-asr-160ms \
+  --output data/simulations/local-user-integration/pr-validation-20261126/extended
+
+python -m experiments.tau_voice.duplex_bench local \
+  --scenes M01 --max-seconds 1800 --target-max-output-tokens 4096 \
+  --asr-model-path /path/to/x-asr-160ms \
+  --output data/simulations/local-user-integration/pr-validation-20261126/memory
+```
+
+本轮19条均正常结束，共47.89分钟；每条的场景和配置哈希与此前选定记录
+一致，ASR观察已排空，目标无输出上限截断。正常结束不等于语义通过：
+R01的附和触发重启、R03/R04回应旁人等问题按原样保留并标注。
+P03在一次回答中发送两笔金额，净转账57/96元与独立账本一致。
+M01为15分53秒、16阶段，三组回忆内容正确，但模拟用户中途重复了初始
+预算，不能声称预算只暴露一次；本地B最大输入1688 token，也不代表9B
+超长上下文能力已验证。详情见[机器可读证据](local-user-pr-validation.json)。
+
+真实取消与断网测试2项通过；故障记录保留部分音频和摘要，并确认ASR、
+后台任务、录音线程与连接释放。最终提交测试与已执行测试逐字节一致。
+
+听测入口为
+`data/simulations/local-user-integration/pr-validation-20261126/review/index.html`。
+这是静态文件，不新开服务。其相邻场景目录是指向本次原始运行的相对链接，
+离线复制整个听测目录时须解引用（`cp -rL`）。每条日志审阅注释绑定摘要哈希，
+最终听感由用户审阅；不继承历史录音的语义判断。
+
+取消和断网测试用真实 I01 播放音频后注入故障，检查部分录音、摘要、ASR
+收尾和所有资源释放。它们不纳入正常场景的成功率。复现时提供新目录：
+
+```bash
+LOCAL_USER_LIVE_TEST_ENABLED=1 \
+LOCAL_USER_ASR_MODEL_PATH=/path/to/x-asr-160ms \
+LOCAL_USER_LIVE_OUTPUT=data/simulations/local-user-live-faults-new \
+python -m pytest tests/test_streaming/test_local_user_live.py -q
+```
+
+PR 以 draft 交给用户最终审阅，不自动合并。完整核心/语音测试仍有在基线
+复现的失败，未声称全套通过。所有实际结果和限制均随 PR 提交。

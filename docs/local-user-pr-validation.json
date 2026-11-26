@@ -1,0 +1,955 @@
+{
+  "date": "2026-11-26",
+  "scope": "Controlled local-user experiment; not native tau domain tasks/rewards.",
+  "baseline_commit": "0f634c66f9a90f573b6ca380229895fa992c391c",
+  "runtime_commit": "0ae4b9199e2f25a2961ec414d4260749733d4cf1",
+  "final_head_relationship": "Subsequent commits add tests/docs only; runtime, fixtures and dependencies retain these hashes.",
+  "python": "3.12.13",
+  "offline_regressions": {
+    "passed": 42
+  },
+  "required_live_provider_suite": {
+    "passed": 11,
+    "failed": 0,
+    "skipped": 66,
+    "provider": "OpenAI"
+  },
+  "tier_comparison": {
+    "core": {
+      "baseline_log": "core-baseline-authenticated.log",
+      "current_log": "core-pr-authenticated.log",
+      "failures": [
+        "tests/test_orchestrator.py::test_orchestrator_restart",
+        "tests/test_orchestrator.py::test_orchestrator_run",
+        "tests/test_orchestrator.py::test_orchestrator_run_with_solo_agent",
+        "tests/test_orchestrator.py::test_orchestrator_step",
+        "tests/test_run.py::test_run_task_base",
+        "tests/test_run.py::test_run_tasks_base",
+        "tests/test_run.py::test_run_tasks_env_assertions",
+        "tests/test_run.py::test_run_tasks_history_and_env_assertions",
+        "tests/test_run.py::test_run_tasks_initialization_actions",
+        "tests/test_run.py::test_run_tasks_initialization_data",
+        "tests/test_run.py::test_run_tasks_message_history",
+        "tests/test_run.py::test_run_tasks_nl_assertions"
+      ],
+      "new_failures": [],
+      "current": {
+        "passed": 193,
+        "failed": 12,
+        "xfailed": 1
+      },
+      "baseline": {
+        "passed": 187,
+        "failed": 12,
+        "xfailed": 1
+      },
+      "cause": "Tests request retired gpt-3.5-turbo, including downstream empty-result assertion."
+    },
+    "voice": {
+      "baseline_log": "voice-baseline-complete.log",
+      "current_log": "voice-pr.log",
+      "failures": [
+        "tests/test_streaming/test_third_party_simulator.py::test_audio_injection_keeps_third_party_out_of_primary_history",
+        "tests/test_streaming/test_third_party_simulator.py::test_background_waits_for_audible_audio_when_provider_flag_leads",
+        "tests/test_streaming/test_third_party_simulator.py::test_live_reply_correction_overlaps_assistant_and_allows_second",
+        "tests/test_streaming/test_third_party_simulator.py::test_primary_generation_uses_primary_voice_and_normal_turn_counter",
+        "tests/test_voice/test_audio_native/open_model/test_adapter.py::test_default_salmonn_runtime_uses_selected_checkpoint_and_training_audio_contract"
+      ],
+      "new_failures": [],
+      "current": {
+        "passed": 544,
+        "failed": 5,
+        "skipped": 5,
+        "deselected": 83
+      },
+      "baseline": {
+        "passed": 508,
+        "failed": 5,
+        "skipped": 5,
+        "deselected": 83
+      },
+      "cause": "Missing machine-specific SALMONN runtime and four pre-existing third-party simulator assertions."
+    }
+  },
+  "live_fault_test_result": {
+    "passed": 2,
+    "failed": 0
+  },
+  "listening_artifact_checks": {
+    "records": 19,
+    "audio_files": 95,
+    "audio_rate_hz": 16000,
+    "review_notes_bound": true,
+    "browser_verification_performed": false,
+    "duration_difference_tolerance_seconds": 1
+  },
+  "source_invariants": {
+    "commit": "0ae4b9199e2f25a2961ec414d4260749733d4cf1",
+    "missing_public_docstrings": [],
+    "prompt_constants_identical": true,
+    "changed_scene_assets": [],
+    "frame_max_batch_mean_us": 0.9793434292078018,
+    "floor_state_max_batch_mean_us": 1.4767173677682877,
+    "batch_size": 10000,
+    "repeats": 5
+  },
+  "live_replay": [
+    {
+      "id": "I01",
+      "status": "ok",
+      "error_class": null,
+      "duration_s": 95.40576036,
+      "observations_drained": true,
+      "stages_sampled": 4,
+      "total_stages": 4,
+      "commit": "0ae4b9199e2f25a2961ec414d4260749733d4cf1",
+      "dirty": false,
+      "same_case_as_previous": true,
+      "same_config_as_previous": true,
+      "summary_sha256": "b19808e080a4b3d36c2ad2d0acef0dae8637854e730513b3900c417740cd5ee1",
+      "target_incomplete": 0
+    },
+    {
+      "id": "I02",
+      "status": "ok",
+      "error_class": null,
+      "duration_s": 124.59029674,
+      "observations_drained": true,
+      "stages_sampled": 4,
+      "total_stages": 4,
+      "commit": "0ae4b9199e2f25a2961ec414d4260749733d4cf1",
+      "dirty": false,
+      "same_case_as_previous": true,
+      "same_config_as_previous": true,
+      "summary_sha256": "f71cd85e496aea74b60583b3c7d000d5c7419252d7f0366320620dd38ccec0c4",
+      "target_incomplete": 0
+    },
+    {
+      "id": "I03",
+      "status": "ok",
+      "error_class": null,
+      "duration_s": 107.758107287,
+      "observations_drained": true,
+      "stages_sampled": 4,
+      "total_stages": 4,
+      "commit": "0ae4b9199e2f25a2961ec414d4260749733d4cf1",
+      "dirty": false,
+      "same_case_as_previous": true,
+      "same_config_as_previous": true,
+      "summary_sha256": "cd13c2278933d3a0932b1f32f1fb9d42ce0fb5251074dff08921ce37660565d4",
+      "target_incomplete": 0
+    },
+    {
+      "id": "I04",
+      "status": "ok",
+      "error_class": null,
+      "duration_s": 210.661865552,
+      "observations_drained": true,
+      "stages_sampled": 5,
+      "total_stages": 5,
+      "commit": "0ae4b9199e2f25a2961ec414d4260749733d4cf1",
+      "dirty": false,
+      "same_case_as_previous": true,
+      "same_config_as_previous": true,
+      "summary_sha256": "8f52a3b4eaa05bba58b386e59f466d36c52e80d6bfb3c3cee45d2b4f04bc1f9f",
+      "target_incomplete": 0
+    },
+    {
+      "id": "I05",
+      "status": "ok",
+      "error_class": null,
+      "duration_s": 149.85286259,
+      "observations_drained": true,
+      "stages_sampled": 4,
+      "total_stages": 4,
+      "commit": "0ae4b9199e2f25a2961ec414d4260749733d4cf1",
+      "dirty": false,
+      "same_case_as_previous": true,
+      "same_config_as_previous": true,
+      "summary_sha256": "2268e313dbc5ca2b946e36472594c62890fac2e326154ce51d1c28d079809c2e",
+      "target_incomplete": 0
+    },
+    {
+      "id": "I06",
+      "status": "ok",
+      "error_class": null,
+      "duration_s": 45.999468899,
+      "observations_drained": true,
+      "stages_sampled": 3,
+      "total_stages": 3,
+      "commit": "0ae4b9199e2f25a2961ec414d4260749733d4cf1",
+      "dirty": false,
+      "same_case_as_previous": true,
+      "same_config_as_previous": true,
+      "summary_sha256": "75405591bbc79e45c65ef71e768e0dfcb61e36560d40ad701e01ebabf5ba9a42",
+      "target_incomplete": 0
+    },
+    {
+      "id": "I07",
+      "status": "ok",
+      "error_class": null,
+      "duration_s": 57.2863301,
+      "observations_drained": true,
+      "stages_sampled": 5,
+      "total_stages": 5,
+      "commit": "0ae4b9199e2f25a2961ec414d4260749733d4cf1",
+      "dirty": false,
+      "same_case_as_previous": true,
+      "same_config_as_previous": true,
+      "summary_sha256": "39a58f7ea2296f553488d58d6b3c201e3d8ea88f78e98f59d4f3b18fd39c41e3",
+      "target_incomplete": 0
+    },
+    {
+      "id": "I08",
+      "status": "ok",
+      "error_class": null,
+      "duration_s": 105.931252034,
+      "observations_drained": true,
+      "stages_sampled": 4,
+      "total_stages": 4,
+      "commit": "0ae4b9199e2f25a2961ec414d4260749733d4cf1",
+      "dirty": false,
+      "same_case_as_previous": true,
+      "same_config_as_previous": true,
+      "summary_sha256": "e5274e078b7840ab2270dcff6a4e1a94740ea6c341a4415b2edf1f4f3e352618",
+      "target_incomplete": 0
+    },
+    {
+      "id": "M01",
+      "status": "ok",
+      "error_class": null,
+      "duration_s": 952.808335226,
+      "observations_drained": true,
+      "stages_sampled": 16,
+      "total_stages": 16,
+      "commit": "0ae4b9199e2f25a2961ec414d4260749733d4cf1",
+      "dirty": false,
+      "same_case_as_previous": true,
+      "same_config_as_previous": true,
+      "summary_sha256": "9368e5f1e7454206d1e2cdf56c1b71f3135ffe4e88ebffe01cae1681412b72d3",
+      "target_incomplete": 0
+    },
+    {
+      "id": "P01",
+      "status": "ok",
+      "error_class": null,
+      "duration_s": 44.317106485,
+      "observations_drained": true,
+      "stages_sampled": 3,
+      "total_stages": 3,
+      "commit": "0ae4b9199e2f25a2961ec414d4260749733d4cf1",
+      "dirty": false,
+      "same_case_as_previous": true,
+      "same_config_as_previous": true,
+      "summary_sha256": "f8088b0f3b0bbfa9757dcdf983634d33365d8b4991a76506050547a1d01542e1",
+      "target_incomplete": 0
+    },
+    {
+      "id": "P02",
+      "status": "ok",
+      "error_class": null,
+      "duration_s": 82.869147785,
+      "observations_drained": true,
+      "stages_sampled": 3,
+      "total_stages": 3,
+      "commit": "0ae4b9199e2f25a2961ec414d4260749733d4cf1",
+      "dirty": false,
+      "same_case_as_previous": true,
+      "same_config_as_previous": true,
+      "summary_sha256": "28041364a31702a716e7a831a205dd0c8780655367bef3527aeb00d6a2a14abf",
+      "target_incomplete": 0
+    },
+    {
+      "id": "P03",
+      "status": "ok",
+      "error_class": null,
+      "duration_s": 113.236700501,
+      "observations_drained": true,
+      "stages_sampled": 6,
+      "total_stages": 6,
+      "commit": "0ae4b9199e2f25a2961ec414d4260749733d4cf1",
+      "dirty": false,
+      "same_case_as_previous": true,
+      "same_config_as_previous": true,
+      "summary_sha256": "f74a6045c7b0fa3a4a8988aaee10d5b371e434334a95a77910bc03a2e7c50e9e",
+      "target_incomplete": 0
+    },
+    {
+      "id": "P04",
+      "status": "ok",
+      "error_class": null,
+      "duration_s": 81.609359844,
+      "observations_drained": true,
+      "stages_sampled": 4,
+      "total_stages": 4,
+      "commit": "0ae4b9199e2f25a2961ec414d4260749733d4cf1",
+      "dirty": false,
+      "same_case_as_previous": true,
+      "same_config_as_previous": true,
+      "summary_sha256": "5f487cbb0ad7482b03a8fc0e23548292e760e17b0b6adaf7c18b0c5def7852fd",
+      "target_incomplete": 0
+    },
+    {
+      "id": "R01",
+      "status": "ok",
+      "error_class": null,
+      "duration_s": 114.973981358,
+      "observations_drained": true,
+      "stages_sampled": 5,
+      "total_stages": 5,
+      "commit": "0ae4b9199e2f25a2961ec414d4260749733d4cf1",
+      "dirty": false,
+      "same_case_as_previous": true,
+      "same_config_as_previous": true,
+      "summary_sha256": "5f66ec17c918157d1824d23bf5e2bb5eea0d476d1a0b5ce9afaba76d785d566f",
+      "target_incomplete": 0
+    },
+    {
+      "id": "R02",
+      "status": "ok",
+      "error_class": null,
+      "duration_s": 99.381810061,
+      "observations_drained": true,
+      "stages_sampled": 3,
+      "total_stages": 3,
+      "commit": "0ae4b9199e2f25a2961ec414d4260749733d4cf1",
+      "dirty": false,
+      "same_case_as_previous": true,
+      "same_config_as_previous": true,
+      "summary_sha256": "f3e9c2faab7198cc66821a465aa2eddd03cd5a46f8cb2ea2cbc92749d879ed56",
+      "target_incomplete": 0
+    },
+    {
+      "id": "R03",
+      "status": "ok",
+      "error_class": null,
+      "duration_s": 87.914616865,
+      "observations_drained": true,
+      "stages_sampled": 5,
+      "total_stages": 5,
+      "commit": "0ae4b9199e2f25a2961ec414d4260749733d4cf1",
+      "dirty": false,
+      "same_case_as_previous": true,
+      "same_config_as_previous": true,
+      "summary_sha256": "d0f03ca8dcb792a4af0a1cc58ee44f1e33ddac84c40946d84d84343532d59fa5",
+      "target_incomplete": 0
+    },
+    {
+      "id": "R04",
+      "status": "ok",
+      "error_class": null,
+      "duration_s": 96.124875058,
+      "observations_drained": true,
+      "stages_sampled": 5,
+      "total_stages": 5,
+      "commit": "0ae4b9199e2f25a2961ec414d4260749733d4cf1",
+      "dirty": false,
+      "same_case_as_previous": true,
+      "same_config_as_previous": true,
+      "summary_sha256": "9bb95594f85cad11dbd3f743644483a6cc59f8a3808051d6be1dc98cbdadfd79",
+      "target_incomplete": 0
+    },
+    {
+      "id": "R05",
+      "status": "ok",
+      "error_class": null,
+      "duration_s": 147.060033933,
+      "observations_drained": true,
+      "stages_sampled": 5,
+      "total_stages": 5,
+      "commit": "0ae4b9199e2f25a2961ec414d4260749733d4cf1",
+      "dirty": false,
+      "same_case_as_previous": true,
+      "same_config_as_previous": true,
+      "summary_sha256": "c4350d9455006f64c8d1994a51619b2e0082c922652a0d86872fdce260609df0",
+      "target_incomplete": 0
+    },
+    {
+      "id": "R06",
+      "status": "ok",
+      "error_class": null,
+      "duration_s": 155.508820724,
+      "observations_drained": true,
+      "stages_sampled": 8,
+      "total_stages": 8,
+      "commit": "0ae4b9199e2f25a2961ec414d4260749733d4cf1",
+      "dirty": false,
+      "same_case_as_previous": true,
+      "same_config_as_previous": true,
+      "summary_sha256": "b5e42a2ffca0ce031f99827c06066596f7659c8191ebaf5d1aeea90cd94231e2",
+      "target_incomplete": 0
+    }
+  ],
+  "live_faults": [
+    {
+      "fault": "cancel",
+      "status": "cancelled",
+      "error_class": "CancelledError",
+      "duration_s": 11.506791014,
+      "observations_drained": true,
+      "summary_sha256": "c1458115251d93cbf6fdfbdde1dd664085879738288aa07b75e69a7dbac41ab1",
+      "commit": "0ae4b9199e2f25a2961ec414d4260749733d4cf1",
+      "dirty": false,
+      "test_file_sha256": "2f6ac9daff62cb3e31a088552272e7f755bfe47ec00e80a2c63d01eefdff1a89"
+    },
+    {
+      "fault": "disconnect",
+      "status": "error",
+      "error_class": "RuntimeError",
+      "duration_s": 11.219994751,
+      "observations_drained": true,
+      "summary_sha256": "b0c78467bb4385228661c21e830a90cf9ff34475fe8ee19ec55ad34de6c45279",
+      "commit": "0ae4b9199e2f25a2961ec414d4260749733d4cf1",
+      "dirty": false,
+      "test_file_sha256": "2f6ac9daff62cb3e31a088552272e7f755bfe47ec00e80a2c63d01eefdff1a89"
+    }
+  ],
+  "live_inspection": [
+    {
+      "id": "I01",
+      "status": "ok",
+      "duration_s": 95.4,
+      "observations_drained": true,
+      "stages_sampled": 4,
+      "total_stages": 4,
+      "error": null,
+      "target_statuses": {
+        "cancelled": 1,
+        "completed": 3
+      },
+      "unfinalized_asr_items": [],
+      "generation_rejections": 0,
+      "stimulus_not_triggered": false,
+      "longest_heard_text_chars": 185,
+      "consecutive_repetition_signals": [],
+      "maximum_target_input_tokens": 1177,
+      "maximum_b_input_tokens": 851
+    },
+    {
+      "id": "I02",
+      "status": "ok",
+      "duration_s": 124.6,
+      "observations_drained": true,
+      "stages_sampled": 4,
+      "total_stages": 4,
+      "error": null,
+      "target_statuses": {
+        "cancelled": 1,
+        "completed": 3
+      },
+      "unfinalized_asr_items": [],
+      "generation_rejections": 0,
+      "stimulus_not_triggered": false,
+      "longest_heard_text_chars": 246,
+      "consecutive_repetition_signals": [],
+      "maximum_target_input_tokens": 1703,
+      "maximum_b_input_tokens": 853
+    },
+    {
+      "id": "I03",
+      "status": "ok",
+      "duration_s": 107.8,
+      "observations_drained": true,
+      "stages_sampled": 4,
+      "total_stages": 4,
+      "error": null,
+      "target_statuses": {
+        "cancelled": 1,
+        "completed": 3
+      },
+      "unfinalized_asr_items": [],
+      "generation_rejections": 0,
+      "stimulus_not_triggered": false,
+      "longest_heard_text_chars": 185,
+      "consecutive_repetition_signals": [],
+      "maximum_target_input_tokens": 1278,
+      "maximum_b_input_tokens": 978
+    },
+    {
+      "id": "I04",
+      "status": "ok",
+      "duration_s": 210.7,
+      "observations_drained": true,
+      "stages_sampled": 5,
+      "total_stages": 5,
+      "error": null,
+      "target_statuses": {
+        "cancelled": 1,
+        "completed": 4
+      },
+      "unfinalized_asr_items": [],
+      "generation_rejections": 0,
+      "stimulus_not_triggered": false,
+      "longest_heard_text_chars": 320,
+      "consecutive_repetition_signals": [],
+      "maximum_target_input_tokens": 2078,
+      "maximum_b_input_tokens": 1291
+    },
+    {
+      "id": "I05",
+      "status": "ok",
+      "duration_s": 149.9,
+      "observations_drained": true,
+      "stages_sampled": 4,
+      "total_stages": 4,
+      "error": null,
+      "target_statuses": {
+        "cancelled": 1,
+        "completed": 3
+      },
+      "unfinalized_asr_items": [],
+      "generation_rejections": 0,
+      "stimulus_not_triggered": false,
+      "longest_heard_text_chars": 321,
+      "consecutive_repetition_signals": [],
+      "maximum_target_input_tokens": 2000,
+      "maximum_b_input_tokens": 1182
+    },
+    {
+      "id": "I06",
+      "status": "ok",
+      "duration_s": 46.0,
+      "observations_drained": true,
+      "stages_sampled": 3,
+      "total_stages": 3,
+      "error": null,
+      "target_statuses": {
+        "cancelled": 1,
+        "completed": 2
+      },
+      "unfinalized_asr_items": [],
+      "generation_rejections": 0,
+      "stimulus_not_triggered": false,
+      "longest_heard_text_chars": 50,
+      "consecutive_repetition_signals": [],
+      "maximum_target_input_tokens": 486,
+      "maximum_b_input_tokens": 658
+    },
+    {
+      "id": "I07",
+      "status": "ok",
+      "duration_s": 57.3,
+      "observations_drained": true,
+      "stages_sampled": 5,
+      "total_stages": 5,
+      "error": null,
+      "target_statuses": {
+        "cancelled": 1,
+        "completed": 3
+      },
+      "unfinalized_asr_items": [],
+      "generation_rejections": 0,
+      "stimulus_not_triggered": false,
+      "longest_heard_text_chars": 76,
+      "consecutive_repetition_signals": [],
+      "maximum_target_input_tokens": 574,
+      "maximum_b_input_tokens": 692
+    },
+    {
+      "id": "I08",
+      "status": "ok",
+      "duration_s": 105.9,
+      "observations_drained": true,
+      "stages_sampled": 4,
+      "total_stages": 4,
+      "error": null,
+      "target_statuses": {
+        "cancelled": 1,
+        "completed": 3
+      },
+      "unfinalized_asr_items": [],
+      "generation_rejections": 0,
+      "stimulus_not_triggered": false,
+      "longest_heard_text_chars": 183,
+      "consecutive_repetition_signals": [],
+      "maximum_target_input_tokens": 1203,
+      "maximum_b_input_tokens": 941
+    },
+    {
+      "id": "M01",
+      "status": "ok",
+      "duration_s": 952.8,
+      "observations_drained": true,
+      "stages_sampled": 16,
+      "total_stages": 16,
+      "error": null,
+      "target_statuses": {
+        "completed": 16
+      },
+      "unfinalized_asr_items": [],
+      "generation_rejections": 0,
+      "stimulus_not_triggered": false,
+      "longest_heard_text_chars": 417,
+      "consecutive_repetition_signals": [],
+      "maximum_target_input_tokens": 5315,
+      "maximum_b_input_tokens": 1688
+    },
+    {
+      "id": "P01",
+      "status": "ok",
+      "duration_s": 44.3,
+      "observations_drained": true,
+      "stages_sampled": 3,
+      "total_stages": 3,
+      "error": null,
+      "target_statuses": {
+        "completed": 2
+      },
+      "unfinalized_asr_items": [],
+      "generation_rejections": 0,
+      "stimulus_not_triggered": false,
+      "longest_heard_text_chars": 137,
+      "consecutive_repetition_signals": [],
+      "maximum_target_input_tokens": 804,
+      "maximum_b_input_tokens": 738
+    },
+    {
+      "id": "P02",
+      "status": "ok",
+      "duration_s": 82.9,
+      "observations_drained": true,
+      "stages_sampled": 3,
+      "total_stages": 3,
+      "error": null,
+      "target_statuses": {
+        "completed": 3
+      },
+      "unfinalized_asr_items": [],
+      "generation_rejections": 0,
+      "stimulus_not_triggered": false,
+      "longest_heard_text_chars": 143,
+      "consecutive_repetition_signals": [],
+      "maximum_target_input_tokens": 1213,
+      "maximum_b_input_tokens": 766
+    },
+    {
+      "id": "P03",
+      "status": "ok",
+      "duration_s": 113.2,
+      "observations_drained": true,
+      "stages_sampled": 6,
+      "total_stages": 6,
+      "error": null,
+      "target_statuses": {
+        "completed": 3
+      },
+      "unfinalized_asr_items": [],
+      "generation_rejections": 0,
+      "stimulus_not_triggered": false,
+      "longest_heard_text_chars": 252,
+      "consecutive_repetition_signals": [],
+      "maximum_target_input_tokens": 1781,
+      "maximum_b_input_tokens": 925
+    },
+    {
+      "id": "P04",
+      "status": "ok",
+      "duration_s": 81.6,
+      "observations_drained": true,
+      "stages_sampled": 4,
+      "total_stages": 4,
+      "error": null,
+      "target_statuses": {
+        "completed": 3
+      },
+      "unfinalized_asr_items": [],
+      "generation_rejections": 0,
+      "stimulus_not_triggered": false,
+      "longest_heard_text_chars": 93,
+      "consecutive_repetition_signals": [],
+      "maximum_target_input_tokens": 951,
+      "maximum_b_input_tokens": 907
+    },
+    {
+      "id": "R01",
+      "status": "ok",
+      "duration_s": 115.0,
+      "observations_drained": true,
+      "stages_sampled": 5,
+      "total_stages": 5,
+      "error": null,
+      "target_statuses": {
+        "completed": 4
+      },
+      "unfinalized_asr_items": [],
+      "generation_rejections": 0,
+      "stimulus_not_triggered": false,
+      "longest_heard_text_chars": 267,
+      "consecutive_repetition_signals": [],
+      "maximum_target_input_tokens": 1603,
+      "maximum_b_input_tokens": 806
+    },
+    {
+      "id": "R02",
+      "status": "ok",
+      "duration_s": 99.4,
+      "observations_drained": true,
+      "stages_sampled": 3,
+      "total_stages": 3,
+      "error": null,
+      "target_statuses": {
+        "completed": 3
+      },
+      "unfinalized_asr_items": [],
+      "generation_rejections": 0,
+      "stimulus_not_triggered": false,
+      "longest_heard_text_chars": 187,
+      "consecutive_repetition_signals": [],
+      "maximum_target_input_tokens": 1318,
+      "maximum_b_input_tokens": 955
+    },
+    {
+      "id": "R03",
+      "status": "ok",
+      "duration_s": 87.9,
+      "observations_drained": true,
+      "stages_sampled": 5,
+      "total_stages": 5,
+      "error": null,
+      "target_statuses": {
+        "cancelled": 1,
+        "completed": 3
+      },
+      "unfinalized_asr_items": [],
+      "generation_rejections": 0,
+      "stimulus_not_triggered": false,
+      "longest_heard_text_chars": 219,
+      "consecutive_repetition_signals": [],
+      "maximum_target_input_tokens": 1391,
+      "maximum_b_input_tokens": 723
+    },
+    {
+      "id": "R04",
+      "status": "ok",
+      "duration_s": 96.1,
+      "observations_drained": true,
+      "stages_sampled": 5,
+      "total_stages": 5,
+      "error": null,
+      "target_statuses": {
+        "cancelled": 1,
+        "completed": 3
+      },
+      "unfinalized_asr_items": [],
+      "generation_rejections": 0,
+      "stimulus_not_triggered": false,
+      "longest_heard_text_chars": 172,
+      "consecutive_repetition_signals": [],
+      "maximum_target_input_tokens": 1258,
+      "maximum_b_input_tokens": 937
+    },
+    {
+      "id": "R05",
+      "status": "ok",
+      "duration_s": 147.1,
+      "observations_drained": true,
+      "stages_sampled": 5,
+      "total_stages": 5,
+      "error": null,
+      "target_statuses": {
+        "completed": 3
+      },
+      "unfinalized_asr_items": [],
+      "generation_rejections": 0,
+      "stimulus_not_triggered": false,
+      "longest_heard_text_chars": 320,
+      "consecutive_repetition_signals": [],
+      "maximum_target_input_tokens": 1906,
+      "maximum_b_input_tokens": 1236
+    },
+    {
+      "id": "R06",
+      "status": "ok",
+      "duration_s": 155.5,
+      "observations_drained": true,
+      "stages_sampled": 8,
+      "total_stages": 8,
+      "error": null,
+      "target_statuses": {
+        "cancelled": 2,
+        "completed": 4
+      },
+      "unfinalized_asr_items": [],
+      "generation_rejections": 0,
+      "stimulus_not_triggered": false,
+      "longest_heard_text_chars": 307,
+      "consecutive_repetition_signals": [],
+      "maximum_target_input_tokens": 1910,
+      "maximum_b_input_tokens": 968
+    }
+  ],
+  "log_review_notes": {
+    "I01": {
+      "summary_sha256": "b19808e080a4b3d36c2ad2d0acef0dae8637854e730513b3900c417740cd5ee1",
+      "note": "追问在助手讲解中实际插入，目标接住末班车问题并继续打车建议。目标在已播放内容中声称“地铁2号线从天府机场到市区”，属于需单独核验的交通事实，不能把交互完成视为事实准确；转写与服务端审计均有此说法。用户只要一个提醒，目标给出多项。未见长重复输出。"
+    },
+    "I02": {
+      "summary_sha256": "f71cd85e496aea74b60583b3c7d000d5c7419252d7f0366320620dd38ccec0c4",
+      "note": "目标收到排除临主路酒店的要求后转向 B，保留安静偏好与450元预算；后续核实隔音等建议对应任务。日志未见长重复，听感待人工确认。"
+    },
+    "I03": {
+      "summary_sha256": "cd13c2278933d3a0932b1f32f1fb9d42ce0fb5251074dff08921ce37660565d4",
+      "note": "局部重说在第二步刚开始时实际发出，目标重说连接模式，允许后继续后续步骤；但重述“第二步”时把上一条插数据线的动作也并入，不能声称逐步定位完全精确。模拟用户说“局部重说”略像测试指令，原样保留。"
+    },
+    "I05": {
+      "summary_sha256": "2268e313dbc5ca2b946e36472594c62890fac2e326154ce51d1c28d079809c2e",
+      "note": "目标接收12月12日上午出发、14日返回的更正并保留两人和2000元预算，继续比较交通；未见回退到原日期或长重复。费用等外部事实未经核验。"
+    },
+    "I06": {
+      "summary_sha256": "75405591bbc79e45c65ef71e768e0dfcb61e36560d40ad701e01ebabf5ba9a42",
+      "note": "赶时间的打断实际发生；目标随后只选 A，核心理由为地铁中主动降噪，明显缩短了回答。未见长篇道歉或重复。"
+    },
+    "I07": {
+      "summary_sha256": "39a58f7ea2296f553488d58d6b3c201e3d8ea88f78e98f59d4f3b18fd39c41e3",
+      "note": "停止要求后目标有一句“好的，你需要我的时候再叫我就行”，未自行续讲搬家步骤，用户允许后才回答检查要点。4秒观察窗含这句确认，不是全程静默；严格静默与允许简短确认应分开判定。"
+    },
+    "M01": {
+      "summary_sha256": "9368e5f1e7454206d1e2cdf56c1b71f3135ffe4e88ebffe01cae1681412b72d3",
+      "note": "15分53秒、16阶段完整。三组回忆问题本身不提示答案：目标正确回答青竹47与不夜间自驾，当前三人/12月13日至16日/机票住宿合计8500元，最初两人合计6000元。但模拟用户在预算讨论阶段重复了“六千”，不符合该阶段不重报数字的要求，因此不能声称初始预算只暴露一次；语义正确与刺激质量限制分开记录。B最大单次输入1688 token，目标最大输入5315 token，不是9B超长上下文极限测试。"
+    },
+    "P03": {
+      "summary_sha256": "f74a6045c7b0fa3a4a8988aaee10d5b371e434334a95a77910bc03a2e7c50e9e",
+      "note": "目标先询问饭钱和车费，用户47.15秒起在同一轮实际发送288元与78元，未在提问前泄露。独立账本与实际回答末尾均为小林→我57元、阿哲→我96元；无输出上限截断。本地ASR出现“饭前”“范总金额”及算式误转写，按正常识别限制保留，没有改提示词或守卫刷结果。"
+    },
+    "R05": {
+      "summary_sha256": "c4350d9455006f64c8d1994a51619b2e0082c922652a0d86872fdce260609df0",
+      "note": "22.17秒噪声素材在目标讲解中实际发送；目标继续同一条备份步骤回答，没有新起答或服务端VAD截断。后续检查遗漏文件的建议对应用户追问。刺激已形成，结果与此前因缺操作系统信息而未触发的历史尝试分开保存。"
+    },
+    "I04": {
+      "summary_sha256": "8f52a3b4eaa05bba58b386e59f466d36c52e80d6bfb3c3cee45d2b4f04bc1f9f",
+      "note": "酒店讲解中实际切换到打印机脱机问题，随后补充 Windows/通电信息并返回春熙路与人民公园比较，5阶段完整。目标保留两个住宿候选和安静/交通维度；打印机排查两轮有相似步骤，但未见失控长循环。211秒内正常结束，未触及300秒或4096输出token预算。"
+    },
+    "P04": {
+      "summary_sha256": "5f487cbb0ad7482b03a8fc0e23548292e760e17b0b6adaf7c18b0c5def7852fd",
+      "note": "助手记住编号判重规则并在48.62秒指出 A17 重复；但提示发生在24.22秒开始的整段小票与尾句念完之后，没有展示在清单仍进行时按约定主动插话。判重内容正确与提醒时机达标应分开判断。"
+    },
+    "P02": {
+      "summary_sha256": "28041364a31702a716e7a831a205dd0c8780655367bef3527aeb00d6a2a14abf",
+      "note": "用户连续讲述期间未见助手的短附和；43.08秒助手在叙述结束后回应提纲、熟悉内容等完整信息。体现等待用户交接，但不能标成已展示叙述中主动倾听反馈。"
+    },
+    "P01": {
+      "summary_sha256": "f8088b0f3b0bbfa9757dcdf983634d33365d8b4991a76506050547a1d01542e1",
+      "note": "“做个……呃，做个那个……”的预录语流完整发出，目标10.23秒起答并使用“备份”概念，随后展开操作步骤。具备概念接续证据；自然补全时机和是否过度展开需听测确认，不能仅凭出现关键词算满分。"
+    },
+    "R06": {
+      "summary_sha256": "b5e42a2ffca0ce031f99827c06066596f7659c8191ebaf5d1aeea90cd94231e2",
+      "note": "约定前旁人话被当成请求回答；约定后第二次同一句素材于57.50秒发出，目标不再回答关窗请求，61.41秒转为确认只关注主用户并继续原任务。但57.84秒服务端 VAD 仍截断当时的讲解，并从麦克风步骤重新起答；内容过滤有所改善，不等于连续播放完全不受干扰。"
+    },
+    "R04": {
+      "summary_sha256": "9bb95594f85cad11dbd3f743644483a6cc59f8a3808051d6be1dc98cbdadfd79",
+      "note": "18.44秒主用户转头让小林拿快递，目标23.27秒回应自己无法代取并给出代收建议，未识别旁支说话对象。42.61秒用户明确澄清后，目标才恢复地铁/打车建议。按原样记录，不算作语义通过。"
+    },
+    "R02": {
+      "summary_sha256": "f3e9c2faab7198cc66821a465aa2eddd03cd5a46f8cb2ea2cbc92749d879ed56",
+      "note": "含短暂停顿的预录请求完整发送，目标在11.23秒开始回答并复述安静双床房、12月12日入住两晚和450元预算；日志未见在句内停顿处起答。需结合时间戳音轨核对停顿听感。"
+    },
+    "R03": {
+      "summary_sha256": "d0f03ca8dcb792a4af0a1cc58ee44f1e33ddac84c40946d84d84343532d59fa5",
+      "note": "13.81秒旁人素材“小周，帮我把窗户关一下”实际插入；14.13秒服务端 VAD 截断原回答，17.46秒助手说自己无法关窗户并建议找小周。未做到把旁人话排除为新任务。29.87秒模拟用户后续说“刚才您问麦克风检查…”，措辞不自然，单独保留为刺激质量限制。"
+    },
+    "R01": {
+      "summary_sha256": "5f66ec17c918157d1824d23bf5e2bb5eea0d476d1a0b5ce9afaba76d785d566f",
+      "note": "23.60秒实际发出轻声附和“嗯”，23.91秒服务端 VAD 截断原回答（已播13.26秒），26.08秒目标重新起一轮“那我按顺序说”。因此未达到“不交出话轮、继续原答复”的目标；程序正常结束不代表此项通过。原始结果保留，不重跑消除失败。"
+    },
+    "I08": {
+      "summary_sha256": "e5274e078b7840ab2270dcff6a4e1a94740ea6c341a4415b2edf1f4f3e352618",
+      "note": "术语解释请求实际打断讲解；目标用5000元免赔额、8000元损失、赔3000元的例子解释，再回答保额上限。局部ASR未完全识出“免赔额”时用户已按剧本问出该词，刺激来源需要与自然自发追问区分。"
+    }
+  },
+  "log_review_scope": "Transcript and event review only; final listening by the user. Normal termination and sampled agenda are not semantic pass.",
+  "repetition_screen": "Consecutive repeats of a normalized 8–80 character substring at least three times in finalized local ASR; heuristic only, not proof against all repetition or hallucination.",
+  "runtime_file_sha256": {
+    "data/voice/local_user/README.md": "321d19b3140bdd78d192be78dc1e4c99b176d420b3d30426511c153900f1bfdb",
+    "data/voice/local_user/audio/manifest.json": "f8b8220dcdd6cc2de0a2703a9d4725459078e6d1bcb0957d06c36aea25b28842",
+    "data/voice/local_user/audio/p01_v16_retrace.wav": "b8695a53102f804f7b8d884373ba106e5f7fe552ea0baa8c3354569441f11652",
+    "data/voice/local_user/audio/p02_handoff.wav": "aee2ee44504191988ea56fb0b051a4ed110e5d5402e4634a9b7bac84452d923b",
+    "data/voice/local_user/audio/p02_part1.wav": "31441288fffac8c1ad6cda8e4d07c6c75daa5c0d7700acf0a3b9f5de0ff2a5bf",
+    "data/voice/local_user/audio/p02_part2.wav": "14d3a9c089e3698c6b9dfa564d9414890df2d414c17b7c142df1f8c4eab7f64e",
+    "data/voice/local_user/audio/p03_v17_opening.wav": "e2d3154dec93f548327206030315964c82d60cf83c678686f255b87b8dc6e09d",
+    "data/voice/local_user/audio/p04_a.wav": "307aa3a67110bf7307cbb1160ac1924d005ea042f48672779964b6180401b9f0",
+    "data/voice/local_user/audio/p04_b.wav": "52fd50d025c43efdcdf997e82190eb007a3ed0efc56c9e7559772a0c79c676a9",
+    "data/voice/local_user/audio/p04_c.wav": "3b41884b0eccbfeecd80b51c202c9a870f435136b0f603e330ff499f687943f1",
+    "data/voice/local_user/audio/p04_tail1.wav": "51aa4c83da367cdcd18bda4c2a7a8cf6b2be0e3a8f6dbdf1bc80c0c1511f03a8",
+    "data/voice/local_user/audio/p04_tail2.wav": "6047a8c4c4c764100f46906ec53098d6327f414aaeee5df2e9cb1a3779234a2e",
+    "data/voice/local_user/audio/r02_prefix.wav": "b5808d9abdf59bd2d83c96f042127211a2897e5c2ce9887b32dbd773fc891fa3",
+    "data/voice/local_user/audio/r02_suffix.wav": "073a15d3d32eb0081e1850a4a720bc433c7e11624cb371ed47282ee6637650d9",
+    "data/voice/local_user/audio/r03_colleague.wav": "586f44e371efcf38285fd85f7240bcce3b748a4c702bd23ad2583d9aeec16fa6",
+    "data/voice/local_user/audio/r04_side.wav": "98b264be2452973b3ffa7c81b7267b8ade44566204f7ebb156543933fb102558",
+    "data/voice/local_user/audio/r05_keyboard.wav": "583200b7af4b6f0c69c8492f3d9a29efb177915f541965859ff59f6240b26435",
+    "data/voice/local_user/feedback/b079ccb9a2cd2.wav": "050ef593cad8068f6dfbe2c29ff274693c703cf63683a02a6fe8730a437ac796",
+    "data/voice/local_user/feedback/b19782b24349f.wav": "4e6df7a10f399be897f92ba1b92d935bfdf0867b7e3ee1341a88d84460a9dae3",
+    "data/voice/local_user/feedback/b2bc629c62abb.wav": "bdba2e0932a353b3e299ddda4f4958db81599a4573a2b65160d09690fa2a1bc4",
+    "data/voice/local_user/feedback/b3ab7562e6ef8.wav": "23211c5e16d10145c10426aff0a9551080901eba3c27511d3098ffc4b73d131c",
+    "data/voice/local_user/feedback/b3d5b6aa4d073.wav": "38d91f48e2d9cc7b87dbb2df743a7a40cedae9557d62571607ddbb26921d1427",
+    "data/voice/local_user/feedback/b7bd5d5d23429.wav": "0932dcb129a99f3ce95386b85b978ca6f184ead56d21ba936a0f4cc5e69f9faf",
+    "data/voice/local_user/feedback/ba52c1edf8de5.wav": "13821e9804a25748a98e6e7f265a2b7fe2cedbb89fae433e23ccb412effd3325",
+    "data/voice/local_user/feedback/bb664bd22dec8.wav": "7c5bd1b34ae15505e61f65597c1b7a7bfb756f6765b4559923f95f555c78ece7",
+    "data/voice/local_user/feedback/bc2dd6a108221.wav": "e927e030693dbe89100784e1d06e88053194f9138b598689287fb1211afb78b4",
+    "data/voice/local_user/feedback/bc4013d7d27ea.wav": "f9398a15d008ee6c9fd54e2ef6cc7ac429591366b260abfa92ad3d27fc54b7ff",
+    "data/voice/local_user/feedback/bc944dbc85c7c.wav": "eb8f78cbcae9a78bf9bb427498aad8fd5b392ed96c70c1c4b2cd99fe5f135669",
+    "data/voice/local_user/feedback/bddf61e9a3f15.wav": "7a08fae6cb93a3c3e7652bc0732de411fb85979089dc0872d6f26a9bf880e57b",
+    "data/voice/local_user/feedback/be17b77f86dab.wav": "45c126b963c40579939eb8f536c1d628793bbf9cfac8f225e7dfb5d57c091f75",
+    "data/voice/local_user/feedback/manifest.json": "5d2e82099f8e70dad749f414604019c89c6ebe9b149181cd3dfd7fa7a262de5e",
+    "data/voice/local_user/migration.json": "eee961bab94a50e243d0aee6203f29b5d223603b381da0fab56ef8d423473fa6",
+    "data/voice/local_user/scenarios.json": "41fc3741936a1c1739a15198d327e39113db5be6de0d06ab1104952c3d9e1989",
+    "pyproject.toml": "042c1cc51d4b0e774ba37c1cfbc3d1df5bed79b88bcbbbe564589a687cb73fcb",
+    "src/experiments/tau_voice/README.md": "7b9e46e211e4caa99a8c043184935c9f9c644c7ddaf56c60a071187b181735ef",
+    "src/experiments/tau_voice/duplex_bench.py": "ac7f23cb27e0afdd011fd22d7be2ecde1c441c72e8fcedcd91cd5bee9650dced",
+    "src/experiments/tau_voice/examples/local_user_config.json": "1e0fbc8285de095156917a61673b40fed697bf29ff7260219ff989b1dc6e585d",
+    "src/experiments/tau_voice/local_user/README.md": "d9cf03dd01a080d0b5cad453ee79d6193f9dbeb331d2d32b8bc1bd31167442d1",
+    "src/experiments/tau_voice/local_user/__init__.py": "d0a1a61ae9aa3ffc544497c42d6d279ed1492c7c9edf387f7d9a1d6d854b1b38",
+    "src/experiments/tau_voice/local_user/agenda.py": "14e307e2458106f40230c37e3aa77143b9cd9dfdaf75d1a3c2d0523371763c85",
+    "src/experiments/tau_voice/local_user/audio.py": "8ada20b1d682115a7b77f9e89bdbc49503e812625f77daf00ddfe5aa38b54ec4",
+    "src/experiments/tau_voice/local_user/backends.py": "bd2229ee171d009cacc82afe394d1af82f9ac9b8f10e7c3b7316575539bdcec7",
+    "src/experiments/tau_voice/local_user/config.py": "224c1db9f61992ce2f2f2c23bc6e7b7af75e274882fb3657d36c2ed3e6f1cbf0",
+    "src/experiments/tau_voice/local_user/contracts.py": "a5a9fc287bc16e1207df92f3b504070d86659310a3667aaabbf8c8079407d9d3",
+    "src/experiments/tau_voice/local_user/driver.py": "a78e1c06d2596188943449df1424a0362f8ef2da7be4882e26ac0232ea96c839",
+    "src/experiments/tau_voice/local_user/feedback.py": "6abba65b15f61b0259f6bad75ae7396b543d45d899a4bc777d9caa65067e963c",
+    "src/experiments/tau_voice/local_user/llm.py": "0e1d818ead6afa52560c2eadf92407c0b2fd820187358375a3eda2dfa1b8210d",
+    "src/experiments/tau_voice/local_user/local_asr.py": "83bf1fd56fde31a27dbd396153209dfaed37ff0f5d67e36c5cb141423c93cab8",
+    "src/experiments/tau_voice/local_user/observation.py": "9038ddc98847b777205250df0da66ecb116415f379dee158d32ab99ce9c75b67",
+    "src/experiments/tau_voice/local_user/participant.py": "2607cf071b3053e800d4b5a7f2d140ca19f4e7ebcc0eb69e3aaeef45852bfb50",
+    "src/experiments/tau_voice/local_user/policy.py": "baa8a3734b957333e2afb40ecbc9f6e6e0f6ac3479fb045f514946b3655c7bf1",
+    "src/experiments/tau_voice/local_user/recording.py": "f445ccf7300118d7024335948ccb26631123e1baca111940dc3bb2488e7f6111",
+    "src/experiments/tau_voice/local_user/runtime.py": "8b48f70e699591287d3a419c2b773fb8de2c221fa09088e4b9d41f1843f0a658",
+    "src/experiments/tau_voice/local_user/scenario.py": "ae245fb5e231d866c6df2373dd062af95b559f9f85d31885554211ada611e33c",
+    "src/experiments/tau_voice/local_user/scenarios.py": "11621858e6ed55b7feb6f0efd46655a24deb37bfac269e876a21ff7627e47e50",
+    "src/experiments/tau_voice/local_user/scene_audio.py": "69ec1227e3984e5cb4067ebacde74bd085b0c0b8b524cfb922de5fb9c3f646aa",
+    "src/experiments/tau_voice/local_user/streaming.py": "87c6469cfba08c8f2eb80985672e7b629aa5be7cbc5a76c5dd955195cab34248",
+    "src/experiments/tau_voice/local_user/target.py": "54c8ce593e9a0df44fcd81b44da828ee3c663ef3048a391f42726befe3274e81",
+    "src/experiments/tau_voice/local_user/tts_quality.py": "773fed79aa456e368d8a783ee976846e98c822ec541961c9765e1abd3048786e",
+    "src/experiments/tau_voice/local_user_bench.py": "8e71d438783166b79b04b05aa966a3521247c386ca1052f9b73306bfbddb092e",
+    "src/experiments/tau_voice/local_user_cli.py": "00b288e6f49fee2f28588eb2012f54c497ed92318d6ae53fd73a95abe0bf4dce",
+    "src/experiments/tau_voice/local_user_report.py": "4f6711abc6b9be633b5202e444f65ae6af60ef62b2f7f098622f9a801969ac9d",
+    "src/tau2/config.py": "837a74b1633e0c5f1e73e92a48ef5f7230ab6f24d5b67ab28ec256014bc09035",
+    "src/tau2/voice/audio_native/audio_converter.py": "4ab2e969f2858f9aecaaa2cc9df67d2a1fe0b21a6b9c3196434ebb0b83297aa5",
+    "src/tau2/voice/audio_native/openai/provider.py": "192937ec12c9c4e163a2f2497b8cbc1a0f566ca3458bd4a1a8a8bcd7886603ab",
+    "uv.lock": "8a63761b03a3931116163bbed8f447e896ef2ad61692d87025b617ef615e1f8e"
+  },
+  "local_log_sha256": {
+    "contracts.log": "44a0e6e8900c1674fa828622ba158795db2e40ea5054ab40e5dcf14e80f98210",
+    "core-pr-authenticated.log": "e3e5011e5e9021323592b9e7d6695b34f662da6748f6acc185fb0f5dcfe1af69",
+    "core-baseline-authenticated.log": "f97cf76866c99a122a133201d2da016211559b0c523d0fac718b19bb88c0a66b",
+    "voice-pr.log": "3790d09d87bdf2cd5432fd6c2cbce402985a396fdf510a1974622c0bd4dfad4d",
+    "voice-baseline-complete.log": "3e22516ab50f191d254658c8861e9dd2bc5dd9605e65ca38e724757d8de239e6",
+    "provider-suite-pr.log": "5b86362172f1dd1636d97cc289af0d7557c5f25985fc28a3883d6844f0fd7555",
+    "provider-suite-pr-results.txt": "5b86362172f1dd1636d97cc289af0d7557c5f25985fc28a3883d6844f0fd7555",
+    "live-standard.log": "884b604addba09bdd3e3abcd271714cb786bdee5a218abab2f5a53310e8dc107",
+    "live-extended.log": "cf379f38fbdb00bf94170307b736e5e9f44445c48793ed290826c330d594bfbc",
+    "live-memory.log": "e516b11c1fb96e16d878333b93baca29e41627a12f269ed4a66e4d524fea34af",
+    "live-faults.log": "7d0de975da4d7ff27fb953679c636ba7da0bf5ff35bff568d813958f129dc54a",
+    "live-test-default-gate.log": "0c157ed9bd5f79f4faf71879f0cd96457e4b76e44d7c64f20296c29ed61dfe25",
+    "final-check-all.log": "5d088058047ac43db22cf758dc5ed8a34784986a9ae6d3e61e9437b27b81b830"
+  },
+  "live_default_gate": {
+    "executed": 0,
+    "skipped": 2,
+    "environment": "LOCAL_USER_LIVE_TEST_ENABLED unset"
+  },
+  "final_checks": {
+    "make_check_all": "passed",
+    "git_diff_check": "passed",
+    "runtime_files_match_recorded_commit": true,
+    "committed_live_test_matches_executed_file": true
+  }
+}

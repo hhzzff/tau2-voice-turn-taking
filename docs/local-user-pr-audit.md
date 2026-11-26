@@ -1,157 +1,181 @@
 # Local-user adaptation: pre-PR audit, 2026-11-26
 
-## Verdict and scope
+## Scope and review status
 
-The controlled local-user migration is working, but this branch cannot yet be
-described as fully compliant with the source repository's contribution rules
-or as having passed every required test. This audit fixed reproducible failure
-paths and added regression coverage. Architectural placement, API documentation,
-and the remaining full-suite failures still need explicit disposition before a
-merge-ready PR. Passing Ruff or completing 19 trials is insufficient evidence.
+This branch implements the controlled local duplex user experiment and its 19
+staged voice scenarios. It does not implement native tau airline/retail/telecom
+tasks or their rewards. The local scenario format and executor stay together;
+tau supplies the user interface, provider and shared audio conversion.
 
-Scope is the migrated local duplex user plus the 19 controlled voice scenarios.
-Native airline/retail/telecom tasks and rewards are not this phase's acceptance
-criteria. The P03 X-ASR homophone error is a normal recognition limitation, not
-an adaptation defect; this audit does not change its prompts or disclosure rules.
+The architectural and contribution-standard findings from the initial audit
+have been addressed. The PR is a draft for user review. Full core/voice tiers
+still have baseline failures, documented below; completing a live trial is not
+proof of target semantic correctness. P03 X-ASR homophone errors remain normal
+recognition limitations, and prompts/disclosure rules were not tuned to hide them.
 
-Reviewed baseline: `0f634c66f9a90f573b6ca380229895fa992c391c`.
-Reviewed implementation: `f7df2b451edffba9d7bc016176e8b650d7aa4b70` plus the
-uncommitted fixes and tests from this audit. The original `tau2-voice-turn-taking`
-checkout remains clean on the baseline. Nothing was pushed and no PR was opened.
+- Comparison baseline: `0f634c66f9a90f573b6ca380229895fa992c391c`.
+- Initial audited implementation: `f7df2b451edffba9d7bc016176e8b650d7aa4b70`.
+- Final runtime and dependency commit: `0ae4b9199e2f25a2961ec414d4260749733d4cf1`.
+- Branch: `experiment/local-user-simulator` in an isolated worktree. The original
+  `tau2-voice-turn-taking` checkout remains clean on the baseline.
+- Final evidence/test/documentation commits follow the runtime commit. Recordings
+  are attributed to their actual clean runtime commit, not to a later PR SHA.
 
-## Confirmed defects fixed in this audit
+## Resolved findings
 
-1. **Optional dependencies leaked into the existing CLI.** Building the parser
-   imported the local runtime and `soundfile`, so even `list` and `--help` failed
-   without the local-user extra. Registration now lives in the small
-   `local_user_cli.py` module; execution imports the runtime only when selected.
-   Three subprocess regressions explicitly block optional audio imports.
+### Lifecycle and optional dependencies (`bd74848`)
 
-2. **One cleanup/export failure skipped remaining cleanup and evidence.** A
-   failure in playback finalization, runtime close, provider disconnect, or track
-   export could prevent later cleanup and `summary.json`; provenance failure
-   also left the recorder worker running. Each finalizer is now attempted,
-   failures retain their stage and original error, and recorder close runs in an
-   outer `finally`. Cancellation saves partial evidence where possible and is
-   re-raised. Journal failures cannot produce a successful return. Runtime
-   shutdown also cancels its tasks and closes ASR if observation journaling fails.
+- CLI construction no longer imports optional audio packages. Existing `list`
+  and `--help` work without the local-user extra; execution imports it explicitly.
+  Subprocess regressions block the optional audio imports.
+- Each cleanup/export stage is attempted independently. Errors retain their
+  original cause and stage; recorder shutdown runs in an outer `finally`.
+  Cancellation exports partial evidence where possible and is re-raised.
+  Failed durable journaling cannot yield a successful return.
+- Runtime shutdown still stops background tasks and closes ASR if drain
+  journaling fails. Native ASR worker tasks are shielded and joined before
+  recognizer/stream handles are released; a blocked fake recognizer reproduces
+  the original cancellation race.
+- Tests requiring `soundfile`/`soxr` are dependency-gated. Policy, report and
+  ASR worker tests remain usable without those optional packages.
 
-3. **Cancelling an ASR coroutine released handles while its worker still ran.**
-   `asyncio.to_thread` cancellation does not stop native decoding. The old
-   `close()` cleared the recognizer/stream before the thread's subsequent access.
-   Worker tasks are now retained and shielded; shutdown awaits them before
-   releasing the handles. A blocked fake recognizer reproduces the old race
-   without requiring model weights or a live service.
+### Experimental ownership (`aa30718`)
 
-4. **The voice test tier implicitly required a separate extra.** Local runtime
-   and converter tests imported `soundfile`/`soxr` unconditionally, although the
-   documented `voice` extra does not install them. Relevant tests now skip at
-   collection without those optional packages. They execute with `local-user`
-   installed; policy, report and ASR worker tests remain independent of them.
+The local runtime, agenda, scenario stimuli/prompts, user participant, continuous
+driver and OpenAI playback adapter now live under
+`src/experiments/tau_voice/local_user/`. Core tau does not import the experiment.
+`register_local_user()` registers the `FullDuplexUser` implementation only when
+the experiment CLI is selected. Core registry defaults remain unchanged.
 
-An experiment README was also added, as required by `CONTRIBUTING.md`.
-Provider compatibility tests cover the three existing modality defaults and
-lossless raw response-status events. No model behavior was tuned in this audit.
+The real-time driver is intentional: its send/playback/receive clocks continue
+while ASR, B and TTS run. This preserves the experiment's elapsed-time semantics;
+it does not reinterpret local scenes as native tau domain tasks. Shared provider
+options and PCM conversion remain in the core voice layer, with unchanged
+existing defaults and live compatibility coverage.
 
-## Outstanding repository-standard findings
+### Models, interfaces and documentation (`58077c2`, `0ae4b91`)
 
-### Experimental placement needs a clear boundary
+- `contracts.py` defines outgoing packets and runtime/target callbacks.
+- Six serializable observation/policy/ASR data classes use strict Pydantic
+  models. Immutable snapshots are frozen, while playback retains shared item
+  identity. `OutputBuffer` is a resource-owning class, not a data model.
+- All non-private declarations in the local experiment modules have docstrings;
+  an AST inventory found none missing. Defaults for voice, ASR model and reference
+  hash come from `tau2/config.py`.
+- Validated `--config` JSON supports external service settings; explicit
+  `--asr-model-path` overrides the file. Unknown fields are rejected.
+- The `all` dependency extra includes `local-user`; the lock update introduces
+  no unrelated package-version changes. The branch uses the contribution guide's
+  experimental prefix and conventional commit subjects.
+- Each experiment has a README with ownership, lifecycle and execution guidance.
 
-`CONTRIBUTING.md` requires experimental code to be self-contained under
-`src/experiments/`. The runner/report follow that layout, but the frozen scene
-controller, scene audio, scenario agenda and scene-specific prompts remain in
-`src/tau2/user/local/`. `UserRuntime` directly constructs `ScenarioAgenda` and
-the new core OpenAI playback adapter depends on local-user observation classes.
-These are observable dependencies, not merely a directory naming preference.
+The scene assets and prompt constants are unchanged from the initial audited
+implementation. The prompt source-file hash changes with docs/types/imports;
+constant equality and fixture hashes are checked separately. Pydantic Frame and
+FloorState construction measured about 1–2 microseconds per operation in local
+batch means, not a general end-to-end latency guarantee.
 
-Before treating this as a general core component, isolate scenario-specific
-policy/stimuli in the experiment and define the reusable runtime/driver contracts,
-or obtain an explicit maintainer decision accepting this experimental component
-in core. This audit did not perform an unreviewed relocation of the migration.
+## Validation
 
-The continuous driver itself is intentional: the existing discrete-time adapter
-freezes simulated time during work, whereas this experiment measures real elapsed
-time. Its separate clock is not evidence that domain adaptation is unfinished.
-The existing provider is reused, event handling lives in `_process_event`, and
-PCM conversion stays in the shared converter module.
+Tests used Python 3.12.13. Missing voice packages were installed into an isolated
+lock-version overlay, with PortAudio/JACK libraries extracted locally. Neither
+the original checkout nor system packages were modified for provisioning.
+Baseline comparison used a complete Git checkout with the baseline and
+`origin/main` refs, avoiding artificial failures from archive-only metadata.
 
-### Public API documentation and model conventions are not fully met
+| Check | Implementation | Baseline / interpretation |
+| --- | --- | --- |
+| Local-user and provider compatibility regressions | 42 passed | CLI, lifecycle, ASR cancellation, contracts, config, provider defaults/events |
+| Core tier, valid OpenAI credentials | 193 passed, 12 failed, 1 xfailed | 187 passed, same 12 failed, 1 xfailed |
+| Voice tier | 544 passed, 5 failed, 5 skipped, 83 deselected | 508 passed, same 5 failed, 5 skipped, 83 deselected |
+| Required provider suite, real OpenAI | 11 passed, 0 failed, 66 skipped | Other-provider credentials unavailable |
+| `make check-all`, `git diff --check` | Passed | Lint/format/whitespace checks, not runtime tests |
+| Final 19-scene live replay | 19 normal completions, 47.89 minutes | Same clean runtime commit and matched case/config hashes; not 19 semantic passes |
+| Live cancellation / disconnect | 2 passed | Partial audio/summary retained, ASR drained, resources released |
 
-`AGENTS.md` and `CONTRIBUTING.md` require docstrings for public APIs and complex
-functions. Examples still missing them include `ScenarioRuntime.control`,
-`ScenarioAgenda.update_review`, `FloorController.evaluate`, and the LLM `review`
-function. The audit inventory finds 101 undocumented non-private declarations
-in the added local/continuous modules, including simple classes and accessors;
-this is an inventory, not 101 independent correctness defects. Ruff's configured
-rules do not check this requirement.
+Initial core runs lacked a generic `OPENAI_API_KEY`. Re-running both checkouts
+with a valid existing OpenAI credential raised the pass count. The remaining 12
+failures request the retired `gpt-3.5-turbo` model, including a downstream empty
+simulation assertion. No credential value was printed or committed.
 
-`AGENTS.md` specifies Pydantic `BaseModel` for data classes. Configuration uses
-it, but seven observation/policy/recording/buffer classes use standard dataclasses.
-Their internal runtime role may justify an exception, but none is documented.
-Resolve this convention explicitly instead of claiming blanket compliance.
-Some defaults also remain local (for example target voice `marin` in the
-continuous adapter), despite the central-configuration convention.
+The five voice failures are the missing machine-specific SALMONN runtime
+`/mnt/bn/audio-visual-llm-data6/terumi/pi-bench/inference/salmonn-omni/runtime.json`
+and four existing third-party simulator assertions. The baseline and PR failure
+IDs are identical in both tiers. This is evidence of no new failing test ID in
+these runs, not a claim that the full required suites passed. See the validation
+JSON for the exact failing IDs.
 
-The `codex/local-user-simulator` branch name is outside the recommended branch
-prefixes. This is a minor submission-hygiene issue, not a runtime defect; the
-existing seven commits already use conventional commit subjects.
+The required provider suite executed all 11 available OpenAI cases through the
+repository's existing test interface. The other 66 cases were skipped, not
+counted as passing. Its result file was redirected to the ignored audit directory
+so the source tree stayed clean during the real-time trials.
 
-### Required tests are not all green
+## Live evidence and limitations
 
-Core and voice tests were run on the implementation and the same baseline using
-the same interpreter. Missing audio dependencies were installed into an isolated
-audit overlay at their `uv.lock` versions, with PortAudio/JACK libraries extracted
-locally. The working virtualenv, system packages, and original checkout were not
-changed to provision these tests.
+All 19 trials completed normally with their planned stages sampled, observations
+drained, and no target response marked `incomplete`. The replay used the same
+clean runtime commit throughout. Each case/config hash matches the corresponding
+previously selected recording. Total recorded trial duration is 47.89 minutes.
+The listening artifact contains 19 hash-bound notes and 95 valid local audio
+files; HTML data and audio headers were checked without opening a browser.
 
-| Check | Observed result |
-| --- | --- |
-| Local-user tests including CLI | 34 passed |
-| Added provider compatibility tests | 4 passed |
-| Optional-package absence simulation | 1 passed, 3 modules skipped; no collection errors |
-| `make check-all` | Passed; this runs lint and format, not tests |
-| Core baseline | 182 passed, 17 failed, 1 xfailed |
-| Core after fixes | 185 passed, same 17 failed, 1 xfailed |
-| Voice baseline | 508 passed, 5 failed, 5 skipped, 83 deselected |
-| Voice after fixes | 543 passed, 5 failed, 5 skipped, 83 deselected |
-| Required provider suite | 77 skipped, 0 executed; credentials unavailable |
+The two opt-in live fault tests passed in 54.45 seconds. Each waited for actual
+target playback before cancellation or WebSocket closure. Cancellation preserved
+a `cancelled` summary and re-raised `CancelledError`; disconnection preserved an
+`error` summary. Both retained partial audio, drained observations, closed the
+provider, stopped recorder/runtime workers and released native ASR handles.
+The final committed test is byte-identical to the externally executed test.
 
-The 17 core failures are authentication failures or their downstream empty-result
-assertion. The voice failures include a missing machine-specific SALMONN runtime
-file and four assertions in the existing third-party simulator tests. They must
-not be represented as passing just because they also reproduce on the baseline.
-The final baseline and implementation have identical failing test IDs in each
-tier; no newly failing core or voice test was observed in this comparison.
-Provider tests skipped for missing credentials are not provider compatibility
-proof; the added mock tests cover defaults and payload preservation only.
+P03 received both missing amounts in one delivered answer. The target's final
+57/96-yuan transfers match the independent ledger. Its normal ASR homophone and
+arithmetic-transcription errors remain recorded. M01 completed 16 stages in
+952.8 seconds and answered all three recall questions correctly in the local
+transcripts; the questions themselves supplied no answer. The repeated-budget
+limitation below still applies. Its maximum B input was 1688 tokens and maximum
+target input was 5315 tokens; it is not a 9B long-context limit benchmark.
 
-The historical 19 recordings remain valid evidence for their recorded commits.
-They were not regenerated after this audit's lifecycle fixes, and are not an
-end-to-end result for the modified working tree. This audit's new regressions
-exercise the modified paths offline.
+A simple local-ASR scan found no 8–80-character substring repeated consecutively
+three or more times. This does not rule out other repetition, hallucinations or
+factual errors. For example, I01's airport metro claim needs separate fact
+checking. The full per-scene notes, counts, failure IDs and source hashes are in
+[the portable validation evidence](local-user-pr-validation.json).
 
-## Evidence and next acceptance gate
+The recorded case/config hashes are compared with the corresponding previously
+selected trial, including its explicit runtime and output-token budgets. Every
+new run uses a new directory; historical failures and selected recordings remain
+intact. Normal end, complete agenda and B's `met` are distinct from semantic pass.
+Log-derived review notes bind to the exact summary SHA256; final listening remains
+with the user. The page shows local ASR of actually played audio separately from
+service transcripts retained only for audit.
 
-Local artifacts are in
+The local B model can deviate from a stage's expression constraints. In this
+M01 replay it repeated the initial 6000-yuan budget in the scope discussion,
+although that stage asks not to repeat numbers. This limits one-exposure memory
+claims and is annotated as stimulus quality, separately from target recall.
+R01/R03/R04 likewise preserve target behavior that did not meet the scenario
+expectation. No prompt changes or selective reruns were used to remove these
+observations.
+
+## Reproduction and artifacts
+
+Use the [experiment README](../src/experiments/tau_voice/README.md) for service
+configuration and the [integration guide](local-user-integration.md) for replay
+commands. The opt-in live fault tests require `LOCAL_USER_LIVE_TEST_ENABLED=1`,
+`LOCAL_USER_ASR_MODEL_PATH`, local B/TTS services and OpenAI credentials. They are
+marked `full_duplex_integration` and do not add live API work to default tests.
+With the enable flag unset, the final committed test reports 2 skipped and makes
+no live API calls. Final lint/format and whitespace checks passed; runtime and
+fixture/dependency file hashes still match the recording commit.
+
+Ignored machine-local audit artifacts remain under
 `/cpfs/user/jingpeng/workspace/tau_pr_audit_20261126/`:
 
-- `regression-before.log`: 10 failures and 2 passes on the original code.
-- `runtime-cleanup-before.log`: the original close method fails the recorder-error
-  cleanup regression (loaded separately without reverting the working tree).
-- `local-after.log`, `provider-compatibility.log`, `optional-gates.log`.
-- `core-baseline.log`, `core-after.log`, `voice-final.log`,
-  `voice-baseline-complete.log`, `provider-suite.log`, `check-all-final.log`.
-- `missing-public-docstrings.txt`, `dataclasses.txt`, and `deps/locked-overlay.txt`.
-- `comparison.json`, `reviewed-files.json`: failure-ID comparison and SHA256
-  inventory of the reviewed files, including uncommitted fixes.
+- `contracts.log`, `source-invariants.json`.
+- `core-pr-authenticated.log`, `core-baseline-authenticated.log`.
+- `voice-pr.log`, `voice-baseline-complete.log`, `pr-baseline-comparison.json`.
+- `provider-suite-pr.log`, `provider-suite-pr-results.txt`.
+- `live-standard.log`, `live-extended.log`, `live-memory.log`, `live-faults.log`.
 
-The initial archive-only baseline had one extra report-test failure because that
-test requires Git metadata. A separate baseline Git checkout was established
-inside the audit directory, including the original `origin/main` reference, for
-the final comparison; the original clone was not used as a mutable test workspace.
-
-A merge-ready PR should resolve the module boundary and documentation/model
-conventions, show the required checks in a suitable environment or explicitly
-track accepted baseline failures, and bind any claimed live validation to the
-final submitted commit. The audit supports a concrete review; it does not certify
-that all semantic scenarios or all repository checks have passed.
+Historical pre-fix reproduction logs are retained in the same audit directory.
+The committed validation JSON contains portable counts, identities and hashes;
+large recordings and raw service journals are intentionally local artifacts.
