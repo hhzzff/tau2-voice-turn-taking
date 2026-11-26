@@ -169,29 +169,32 @@ class UserRuntime:
         utterance-end just because the scenario controller finished first.
         """
         self.stop = True
-        control = getattr(self, "control_task", None)
-        if control:
-            control.cancel()
-            await asyncio.gather(control, return_exceptions=True)
         self.observations_drained = False
-        decoder = getattr(self, "decode_task", None)
-        if decoder and not decoder.done():
-            barrier = asyncio.get_running_loop().create_future()
-            try:
-                async with asyncio.timeout(3):
-                    await self.asr_queue.put(("drain", None, barrier))
-                    await barrier
-                await asyncio.sleep(0)
-                self.observations_drained = True
-                self.rec.emit("observation_drain_complete")
-            except TimeoutError:
-                self.rec.emit(
-                    "observation_drain_timeout", pending_frames=self.asr_queue.qsize()
-                )
-        for task in self.tasks:
-            task.cancel()
-        await asyncio.gather(*self.tasks, return_exceptions=True)
-        await self.asr.close()
+        try:
+            control = getattr(self, "control_task", None)
+            if control:
+                control.cancel()
+                await asyncio.gather(control, return_exceptions=True)
+            decoder = getattr(self, "decode_task", None)
+            if decoder and not decoder.done():
+                barrier = asyncio.get_running_loop().create_future()
+                try:
+                    async with asyncio.timeout(3):
+                        await self.asr_queue.put(("drain", None, barrier))
+                        await barrier
+                    await asyncio.sleep(0)
+                    self.observations_drained = True
+                    self.rec.emit("observation_drain_complete")
+                except TimeoutError:
+                    self.rec.emit(
+                        "observation_drain_timeout",
+                        pending_frames=self.asr_queue.qsize(),
+                    )
+        finally:
+            for task in self.tasks:
+                task.cancel()
+            await asyncio.gather(*self.tasks, return_exceptions=True)
+            await self.asr.close()
         for turn in [
             *self.turns,
             *self.backchannels,

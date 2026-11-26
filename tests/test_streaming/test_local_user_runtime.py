@@ -7,6 +7,8 @@ from types import SimpleNamespace
 import httpx
 import pytest
 
+pytest.importorskip("soundfile", reason="requires the local-user extra")
+
 from tau2.user.local.config import LocalUserConfig
 from tau2.user.local.local_asr import XASR
 from tau2.user.local.observation import HeardItem

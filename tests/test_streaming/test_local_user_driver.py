@@ -7,6 +7,10 @@ from types import SimpleNamespace
 import httpx
 import numpy as np
 import pytest
+
+pytest.importorskip("soundfile", reason="requires the local-user extra")
+pytest.importorskip("soxr", reason="requires the local-user extra")
+
 from websockets.protocol import State
 
 from tau2.orchestrator.continuous_voice import ContinuousVoiceDriver

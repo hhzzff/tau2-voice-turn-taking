@@ -18,10 +18,27 @@ class XASR:
         self.revision = 0
         self.segment = 0
         self.last_text = ""
+        self._workers = set()
+
+    async def _run_worker(self, operation, *args):
+        # Cancelling to_thread's awaiter does not stop native decoding. Retain
+        # the worker until close() can join it before releasing native handles.
+        worker = asyncio.create_task(asyncio.to_thread(operation, *args))
+        self._workers.add(worker)
+        try:
+            result = await asyncio.shield(worker)
+        except asyncio.CancelledError:
+            raise  # close() must still retrieve the worker result or exception.
+        except BaseException:
+            self._workers.discard(worker)
+            raise
+        else:
+            self._workers.discard(worker)
+            return result
 
     async def reset(self, *, preserve_events=False):
         """Reuse resident weights after a completed segment; never reload the model."""
-        self.stream = await asyncio.to_thread(self.recognizer.create_stream)
+        self.stream = await self._run_worker(self.recognizer.create_stream)
         self.segment += 1
         self.revision = 0
         self.last_text = ""
@@ -58,7 +75,7 @@ class XASR:
             )
             self.stream = self.recognizer.create_stream()
 
-        await asyncio.to_thread(load)
+        await self._run_worker(load)
         self.rec.emit(
             "asr_connected",
             provider="x-asr",
@@ -110,15 +127,16 @@ class XASR:
             )
 
     async def feed(self, frame):
-        self._publish(await asyncio.to_thread(self._decode, frame.pcm))
+        """Decode played PCM off-loop and publish only completed observations."""
+        self._publish(await self._run_worker(self._decode, frame.pcm))
 
     async def finish(self, *, padding_ms=0, end_events=True):
         self.rec.emit("asr_flush_submit", decoder_padding_ms=padding_ms)
         if padding_ms:
             # Algorithmic right-context padding, not additional captured audio or clock time.
             padding = bytes(self.cfg.audio.sample_rate * padding_ms // 1000 * 2)
-            self._publish(await asyncio.to_thread(self._decode, padding))
-        self._publish(await asyncio.to_thread(self._decode, None, True), final=True)
+            self._publish(await self._run_worker(self._decode, padding))
+        self._publish(await self._run_worker(self._decode, None, True), final=True)
         if end_events:
             self.q.put_nowait(None)
 
@@ -127,4 +145,12 @@ class XASR:
             yield event
 
     async def close(self):
-        self.stream = self.recognizer = None
+        """Join in-flight native work before releasing the recognizer and stream."""
+        try:
+            results = await asyncio.gather(*self._workers, return_exceptions=True)
+            for result in results:
+                if isinstance(result, BaseException):
+                    raise result
+        finally:
+            self._workers.clear()
+            self.stream = self.recognizer = None

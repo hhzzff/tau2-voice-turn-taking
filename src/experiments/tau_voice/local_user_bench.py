@@ -2,6 +2,7 @@
 
 import asyncio
 import hashlib
+import inspect
 import json
 import os
 import subprocess
@@ -13,10 +14,7 @@ import numpy as np
 import soundfile as sf
 from dotenv import load_dotenv
 
-from tau2.config import (
-    DEFAULT_LOCAL_USER_TARGET_MODEL,
-    DEFAULT_LOCAL_USER_TARGET_OUTPUT_TOKENS,
-)
+from tau2.config import DEFAULT_LOCAL_USER_TARGET_OUTPUT_TOKENS
 from tau2.orchestrator.continuous_voice import ContinuousVoiceDriver
 from tau2.user.local.config import LocalUserConfig
 from tau2.user.local.recording import Recorder, now
@@ -103,16 +101,52 @@ def save_tracks(runtime, path, length):
 
 
 async def run_case(cfg, case, output, model):
-    """Keep every failed or incomplete trial, including partial recordings."""
+    """Preserve partial evidence and attempt every cleanup, including on cancellation.
+
+    Cleanup and export failures make a trial fail without hiding its first error.
+    Journal failures propagate: a trial without durable evidence cannot succeed.
+    """
     rec = Recorder(output)
-    rec.save_json("provenance.json", provenance(cfg, case, model))
-    rec.save_json("case.json", case)
     status, error, origin = "error", None, None
-    runtime = target = provider = None
-    async with httpx.AsyncClient(
-        timeout=cfg.api_timeout_seconds, trust_env=False
-    ) as client:
+    runtime = target = provider = client = None
+    cancellation = None
+    failures = []
+
+    def record_error(stage, exc):
+        nonlocal status, error
+        if status != "cancelled":
+            status = "error"
+        error = error or type(exc).__name__
+        failure = {
+            "stage": stage,
+            "error_class": type(exc).__name__,
+            "message": str(exc)[:600],
+            "stack": [
+                {"file": Path(f.filename).name, "line": f.lineno, "function": f.name}
+                for f in traceback.extract_tb(exc.__traceback__)
+            ],
+        }
+        failures.append(failure)
         try:
+            rec.emit("live_error", **failure)
+        except Exception as journal_error:
+            failures.append(
+                {"stage": "error_journal", "error_class": type(journal_error).__name__}
+            )
+
+    async def finalize(stage, operation, *args):
+        try:
+            result = operation(*args)
+            return await result if inspect.isawaitable(result) else result
+        except Exception as exc:
+            record_error(stage, exc)
+            return None
+
+    try:
+        try:
+            rec.save_json("provenance.json", provenance(cfg, case, model))
+            rec.save_json("case.json", case)
+            client = httpx.AsyncClient(timeout=cfg.api_timeout_seconds, trust_env=False)
             runtime = ScenarioRuntime(cfg, case, rec, client)
             await runtime.start()
             # All stimuli are verified/preloaded before clocks, avoiding CPFS reads live.
@@ -141,36 +175,40 @@ async def run_case(cfg, case, output, model):
             status = await driver.run(case["max_seconds"])
             if status == "ok" and runtime.progress.error:
                 status, error = "incomplete", runtime.progress.error
+        except asyncio.CancelledError as exc:
+            cancellation = exc
+            status, error = "cancelled", "CancelledError"
         except Exception as exc:
-            error = type(exc).__name__
-            rec.emit(
-                "live_error",
-                error_class=error,
-                message=str(exc)[:600],
-                stack=[
-                    {
-                        "file": Path(f.filename).name,
-                        "line": f.lineno,
-                        "function": f.name,
-                    }
-                    for f in traceback.extract_tb(exc.__traceback__)
-                ],
-            )
+            record_error("run", exc)
         finally:
-            duration = (now() - origin) / 1e9 if origin else 0
+            duration = (now() - origin) / 1e9 if origin is not None else 0
             if target:
-                target.finish_playback()
+                await finalize("finish_playback", target.finish_playback)
             if runtime:
-                await runtime.close()
+                await finalize("runtime_close", runtime.close)
             if provider:
-                await provider.disconnect()
+                await finalize("provider_disconnect", provider.disconnect)
+            if client:
+                await finalize("client_close", client.aclose)
         extra = {}
-        if origin:
-            await asyncio.to_thread(
-                save_tracks, runtime, output, round(duration * 16000)
+        if origin is not None:
+            await finalize(
+                "save_tracks",
+                asyncio.to_thread,
+                save_tracks,
+                runtime,
+                output,
+                round(duration * 16000),
             )
-            extra = await asyncio.to_thread(runtime.additional_summary)
-            rec.save_json(
+            extra = (
+                await finalize(
+                    "additional_summary", asyncio.to_thread, runtime.additional_summary
+                )
+                or {}
+            )
+            await finalize(
+                "recording_layout",
+                rec.save_json,
                 "recording-layout.json",
                 {
                     "agent": runtime.agent_track.manifest(),
@@ -184,6 +222,7 @@ async def run_case(cfg, case, output, model):
             "title": case["title"],
             "status": status,
             "error_class": error,
+            "failures": failures,
             "duration_s": duration,
             "observations_drained": getattr(runtime, "observations_drained", False),
             "origin_ns": origin,
@@ -206,7 +245,12 @@ async def run_case(cfg, case, output, model):
         }
         rec.save_json("summary.json", summary)
         rec.emit("live_end", status=status, duration_s=duration)
-    await rec.close()
+    finally:
+        try:
+            await rec.close()
+        finally:
+            if cancellation is not None:
+                raise cancellation
     return summary
 
 
@@ -261,26 +305,3 @@ async def run_suite(args):
             flush=True,
         )
     return 1 if any(r["status"] != "ok" for r in results) else 0
-
-
-def add_parser(commands):
-    """Add an explicit route; do not modify the existing dynamic-user builder."""
-    parser = commands.add_parser(
-        "local", help="Run controlled local-user scenes on continuous real clocks"
-    )
-    parser.add_argument("--scenes", help="Comma-separated IDs; default all 19")
-    parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--asr-model-path", type=Path, required=True)
-    parser.add_argument("--model", default=DEFAULT_LOCAL_USER_TARGET_MODEL)
-    parser.add_argument(
-        "--max-seconds",
-        type=float,
-        help="Override each selected scene's real deadline; recorded in case.json",
-    )
-    parser.add_argument(
-        "--target-max-output-tokens",
-        type=int,
-        help="Override target output cap; recorded in case.json and session acknowledgement",
-    )
-    parser.add_argument("--env-file", type=Path, default=Path(".env"))
-    parser.set_defaults(func=lambda args: asyncio.run(run_suite(args)))
