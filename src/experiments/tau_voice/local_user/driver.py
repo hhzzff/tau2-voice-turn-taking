@@ -1,8 +1,14 @@
 """Real-time audio clocks independent of user inference and network reception."""
 
 import asyncio
+from collections.abc import Awaitable, Callable
+from typing import Literal
 
 from experiments.tau_voice.local_user.recording import now
+
+from .contracts import VoiceTarget
+from .participant import LocalStreamingUser
+from .recording import Recorder
 
 
 class ContinuousVoiceDriver:
@@ -12,13 +18,16 @@ class ContinuousVoiceDriver:
     listening. Missed deadlines are logged and never replayed in a fast burst.
     """
 
-    def __init__(self, user, target, recorder):
+    def __init__(
+        self, user: LocalStreamingUser, target: VoiceTarget, recorder: Recorder
+    ):
         self.user, self.target, self.rec = user, target, recorder
         self.state = user.get_init_state()
         self.tasks = []
         self.tick_counts = {"playback": 0, "send": 0}
 
-    async def _clock(self, name, action):
+    async def _clock(self, name: str, action: Callable[[int], Awaitable[None]]) -> None:
+        """Pace one audio path against monotonic time without catch-up bursts."""
         deadline = now()
         while True:
             await asyncio.sleep(max(0, (deadline - now()) / 1e9))
@@ -36,15 +45,15 @@ class ContinuousVoiceDriver:
             if now() > deadline:
                 deadline = now() + 20_000_000
 
-    async def _play(self, at):
+    async def _play(self, at: int) -> None:
         self.target.play_frame(at)
 
-    async def _send(self, at):
+    async def _send(self, at: int) -> None:
         chunk, self.state = self.user.get_next_chunk(self.state)
         sent = await self.target.send_packet(self.user.packet)
         self.user.acknowledge_delivery(chunk.chunk_id, sent)
 
-    async def run(self, timeout):
+    async def run(self, timeout: float) -> Literal["ok", "timeout"]:
         """Run until scenario end, failure, or a real wall-clock deadline."""
         runtime = self.user.runtime
         self.tasks = [

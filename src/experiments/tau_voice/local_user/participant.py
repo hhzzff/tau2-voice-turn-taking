@@ -1,10 +1,21 @@
 """FullDuplexUser adapter for the local continuous, audio-only simulator."""
 
+from tau2.config import DEFAULT_PCM_SAMPLE_RATE
 from tau2.data_model.audio import AudioEncoding, AudioFormat, audio_bytes_to_string
-from tau2.data_model.message import UserMessage
+from tau2.data_model.message import (
+    AssistantMessage,
+    EnvironmentMessage,
+    Message,
+    UserMessage,
+)
+from tau2.environment.tool import Tool
 from tau2.user.user_simulator_base import FullDuplexUser, UserState
 
-LOCAL_PCM = AudioFormat(encoding=AudioEncoding.PCM_S16LE, sample_rate=16000)
+from .contracts import LocalRuntime, OutputPacket
+
+LOCAL_PCM = AudioFormat(
+    encoding=AudioEncoding.PCM_S16LE, sample_rate=DEFAULT_PCM_SAMPLE_RATE
+)
 
 
 def register_local_user() -> type["LocalStreamingUser"]:
@@ -27,18 +38,28 @@ class LocalStreamingUser(FullDuplexUser):
     callers must start the runtime and acknowledge every submitted packet.
     """
 
-    def __init__(self, runtime, instructions=None, tools=None):
+    def __init__(
+        self,
+        runtime: LocalRuntime,
+        instructions: str | None = None,
+        tools: list[Tool] | None = None,
+    ):
         super().__init__(instructions=instructions, tools=tools)
         self.runtime = runtime
-        self.packet = None
+        self.packet: OutputPacket | None = None
 
-    def get_init_state(self, message_history=None):
+    def get_init_state(self, message_history: list[Message] | None = None) -> UserState:
         """A trial starts empty; private scene state lives in the runtime."""
         if message_history:
             raise ValueError("Controlled local trials require a fresh session")
         return UserState(system_messages=[], messages=[])
 
-    def get_next_chunk(self, state, participant_chunk=None, tool_results=None):
+    def get_next_chunk(
+        self,
+        state: UserState,
+        participant_chunk: AssistantMessage | None = None,
+        tool_results: EnvironmentMessage | None = None,
+    ) -> tuple[UserMessage, UserState]:
         """Consume only played PCM and return a ready frame, including silence."""
         if tool_results:
             raise ValueError("Controlled scenes have no domain tools")
@@ -56,7 +77,7 @@ class LocalStreamingUser(FullDuplexUser):
             source="local_user",
         ), state
 
-    def observe_played(self, participant_chunk):
+    def observe_played(self, participant_chunk: AssistantMessage) -> None:
         """Playback callback, also usable while an outgoing send is blocked."""
         if participant_chunk.audio_content:
             if participant_chunk.audio_format != LOCAL_PCM:
@@ -69,10 +90,15 @@ class LocalStreamingUser(FullDuplexUser):
                 participant_chunk.raw_data["played_ns"],
             )
 
-    def acknowledge_delivery(self, sequence, sent_ns):
+    def acknowledge_delivery(self, sequence: int, sent_ns: int) -> None:
         """Host callback after successful client transport submission."""
         self.runtime.acknowledge_delivery(sequence, sent_ns)
 
-    def stop(self, participant_chunk=None, state=None, tool_results=None):
+    def stop(
+        self,
+        participant_chunk: Message | None = None,
+        state: UserState | None = None,
+        tool_results: EnvironmentMessage | None = None,
+    ) -> None:
         """Request shutdown; the owning async driver awaits runtime.close()."""
         self.runtime.stop = True

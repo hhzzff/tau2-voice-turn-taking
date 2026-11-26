@@ -22,6 +22,12 @@ listening behavior. They do not implement native tau domain tasks or rewards.
 Core tau does not import this package. Native tau tasks and the existing dynamic
 duplex experiment keep their own task interpretation and progression rules.
 
+`contracts.py` specifies the runtime/target callbacks and outgoing packet shape.
+Observation, floor and ASR data use strict Pydantic models; frames, transcripts
+and floor decisions are immutable snapshots. Playback counters retain shared
+item identity. `OutputBuffer` is a runtime resource owner with a converter and
+mutable byte buffer, rather than a serializable data model.
+
 ## Audio and lifecycle contract
 
 1. `start()` initializes ASR before the live clock. `begin_live()` starts the

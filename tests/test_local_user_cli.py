@@ -1,9 +1,14 @@
 """Core CLI commands must not import optional local speech dependencies."""
 
+import json
 import subprocess
 import sys
+from argparse import Namespace
 
 import pytest
+from pydantic import ValidationError
+
+from experiments.tau_voice.local_user_cli import load_config
 
 
 @pytest.mark.parametrize("arguments", [["--help"], ["list"], ["local", "--help"]])
@@ -58,3 +63,33 @@ assert registry.get_user_constructor('local_streaming_user') is first
         [sys.executable, "-c", script], capture_output=True, text=True, timeout=30
     )
     assert result.returncode == 0, result.stderr
+
+
+def test_local_config_supports_external_services_and_explicit_asr_override(tmp_path):
+    path = tmp_path / "config.json"
+    path.write_text(
+        json.dumps(
+            {
+                "asr": {"model_path": "/models/original"},
+                "llm": {"base_url": "http://llm.internal:8000/v1"},
+                "tts": {"url": "http://tts.internal:8001/synthesize"},
+            }
+        )
+    )
+    cfg = load_config(Namespace(config=path, asr_model_path=tmp_path / "weights"))
+    assert cfg.asr.model_path == tmp_path / "weights"
+    assert cfg.llm.base_url == "http://llm.internal:8000/v1"
+    assert cfg.tts.url == "http://tts.internal:8001/synthesize"
+    assert (
+        str(load_config(Namespace(config=path, asr_model_path=None)).asr.model_path)
+        == "/models/original"
+    )
+
+
+def test_local_config_rejects_unknown_fields_and_missing_asr(tmp_path):
+    with pytest.raises(ValidationError):
+        load_config(Namespace(config=None, asr_model_path=None))
+    path = tmp_path / "invalid.json"
+    path.write_text(json.dumps({"asr": {"model_path": "/models"}, "llmm": {}}))
+    with pytest.raises(ValidationError, match="Extra inputs"):
+        load_config(Namespace(config=path, asr_model_path=None))

@@ -22,7 +22,11 @@ Usage:
 import audioop
 from typing import Optional, Tuple
 
-from tau2.config import DEFAULT_TELEPHONY_RATE
+from tau2.config import (
+    DEFAULT_OPENAI_OUTPUT_SAMPLE_RATE,
+    DEFAULT_PCM_SAMPLE_RATE,
+    DEFAULT_TELEPHONY_RATE,
+)
 
 TELEPHONY_SAMPLE_RATE = DEFAULT_TELEPHONY_RATE
 
@@ -132,7 +136,11 @@ class StreamingPCMConverter:
     Instances belong to one session (input) or output utterance, never globally.
     """
 
-    def __init__(self, local_rate=16000, provider_rate=24000):
+    def __init__(
+        self,
+        local_rate: int = DEFAULT_PCM_SAMPLE_RATE,
+        provider_rate: int = DEFAULT_OPENAI_OUTPUT_SAMPLE_RATE,
+    ):
         import soxr
 
         self.local_rate, self.provider_rate = local_rate, provider_rate
@@ -142,7 +150,7 @@ class StreamingPCMConverter:
         )
         self.output_finished = False
 
-    def convert_input(self, pcm):
+    def convert_input(self, pcm: bytes) -> bytes:
         """Submit one input frame; preserve interpolation phase across frames."""
         if len(pcm) % 2:
             raise ValueError("Unaligned PCM16 input")
@@ -151,7 +159,7 @@ class StreamingPCMConverter:
         )
         return out
 
-    def convert_output(self, pcm=b"", *, final=False):
+    def convert_output(self, pcm: bytes = b"", *, final: bool = False) -> bytes:
         """Downsample output and drain filter state once on final=True."""
         import numpy as np
 

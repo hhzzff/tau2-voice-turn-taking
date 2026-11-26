@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+
+from pydantic import BaseModel, ConfigDict
 
 
-@dataclass(frozen=True)
-class FloorState:
+class FloorState(BaseModel):
+    """Immutable audio evidence used to decide who may speak at one instant."""
+
+    model_config = ConfigDict(frozen=True, strict=True, extra="forbid")
     at_ns: int
     own_turn: int = 0
     own_active: bool = False
@@ -23,14 +26,18 @@ class FloorState:
     ambiguous_audio: bool = False
 
 
-@dataclass(frozen=True)
-class FloorPermission:
+class FloorPermission(BaseModel):
+    """A speech permission and its epoch, independent of semantic task success."""
+
+    model_config = ConfigDict(frozen=True, strict=True, extra="forbid")
     kind: str
     reason: str
     epoch: int
 
 
 class FloorController:
+    """Derive speaking permission from audio lifecycle and guard intervals only."""
+
     def __init__(self, end_guard_ms=200, pause_ms=1200, first_reply_ms=8000):
         self.end_guard_ns = end_guard_ms * 1_000_000
         self.pause_ns = pause_ms * 1_000_000
@@ -39,6 +46,7 @@ class FloorController:
         self._key = None
 
     def evaluate(self, s: FloorState) -> FloorPermission:
+        """Evaluate one audio snapshot and increment the epoch when its permission changes."""
         if s.own_active or s.reserved:
             kind, reason = "BUSY", "own_audio_or_reservation"
         elif s.ambiguous_audio:
@@ -69,12 +77,13 @@ class FloorController:
         if key != self._key:
             self.epoch += 1
             self._key = key
-        return FloorPermission(kind, reason, self.epoch)
+        return FloorPermission(kind=kind, reason=reason, epoch=self.epoch)
 
 
 def effective_action(
     proposed: str, permission: FloorPermission, *, observation=False
 ) -> str:
+    """Constrain a proposed action to the actual floor permission and observation mode."""
     if observation:
         return "WAIT"
     if permission.kind in {"RESPOND", "RECOVER"}:

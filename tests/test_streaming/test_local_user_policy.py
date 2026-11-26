@@ -1,6 +1,5 @@
 """Controlled stimuli and disclosure cannot silently change during migration."""
 
-from dataclasses import replace
 from types import SimpleNamespace
 
 import pytest
@@ -98,5 +97,5 @@ def test_floor_does_not_confuse_task_completion_with_speech_opportunity():
     )
     permission = floor.evaluate(state)
     assert effective_action("WAIT", permission) == "RESPOND"
-    permission = floor.evaluate(replace(state, own_active=True))
+    permission = floor.evaluate(state.model_copy(update={"own_active": True}))
     assert effective_action("INTERRUPT", permission) == "WAIT"

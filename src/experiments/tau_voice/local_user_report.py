@@ -9,6 +9,7 @@ import numpy as np
 
 
 def quantiles(values):
+    """Summarize available measurements; missing samples are excluded."""
     values = [v for v in values if v is not None]
     return (
         {
@@ -23,6 +24,7 @@ def quantiles(values):
 
 
 def delta(marks, end, start):
+    """Return a monotonic interval in milliseconds, or None if either mark is absent."""
     return (
         round((marks[end] - marks[start]) / 1e6, 2)
         if end in marks and start in marks
@@ -258,6 +260,7 @@ def build(root):
 
 
 def main():
+    """Build a portable listening report and optionally serve its audio locally."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("directory", type=Path)
     parser.add_argument(

@@ -13,6 +13,7 @@ from .recording import TurnRecorder, now
 
 
 def schema_format(name, schema):
+    """Build the strict structured-response envelope for the local B service."""
     return {
         "type": "json_schema",
         "json_schema": {"name": name, "strict": True, "schema": schema},
@@ -20,6 +21,7 @@ def schema_format(name, schema):
 
 
 def clause_end(text):
+    """Find the first punctuation boundary following at least six characters."""
     for match in re.finditer(r"[，,。！？!?；;：:]", text):
         if match.end() >= 6:
             return match.end()
@@ -61,6 +63,7 @@ EXPRESSION_PROMPT = (
 
 
 def safe_recent(history, recall=False):
+    """Copy recent context, hiding answer-bearing history when preparing recall probes."""
     recent = copy.deepcopy(history[-6:])
     if recall:
         # Semantic adjacency without disclosing any answer-bearing utterance.
@@ -75,6 +78,7 @@ def safe_recent(history, recall=False):
 
 
 def expression_violations(text, guard):
+    """Return the frozen expression-guard violations found in generated text."""
     return (
         ["forbidden_expression"]
         if any(re.search(p, text) for p in guard.get("forbidden_patterns", []))
@@ -87,10 +91,13 @@ def expression_violations(text, guard):
 
 
 class ScenarioSpeaker:
+    """Express one accepted intent while enforcing the scene disclosure guards."""
+
     def __init__(self, session, turn, state):
         self.session, self.turn, self.state = session, turn, state
 
     async def segments(self, *args, **kwargs):
+        """Yield guarded prepared text or streamed B clauses for the reserved speech intent."""
         s, turn = self.session, self.turn
         stage = self.state["pending_intent"]
         if stage.get("answer_mode") in {
@@ -235,6 +242,12 @@ class ScenarioSpeaker:
 
 
 async def review(session, state, allowed, trigger):
+    """Ask B to judge heard evidence and a proposed insertion opportunity.
+
+    The result is rechecked against current audio evidence before it can drive
+    an action. Semantic met values never grant speech permission or prove task
+    success; both the request and response remain part of the trial evidence.
+    """
     progress = session.progress
     previous = progress.last_sent
     criteria = previous["stage"].get("criteria", {}) if previous else {}

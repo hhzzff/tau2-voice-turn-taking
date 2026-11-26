@@ -9,10 +9,10 @@ import queue
 import threading
 import time
 import wave
-from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
+from pydantic import BaseModel, ConfigDict
 
 
 class Recorder:
@@ -51,6 +51,7 @@ class Recorder:
             self.error = exc
 
     def emit(self, kind, **values):
+        """Snapshot a journal event without blocking the audio loop; fail if the writer is unavailable."""
         if self.closed or self.error:
             raise RuntimeError("Experiment journal is unavailable") from self.error
         stamp = time.perf_counter_ns()
@@ -67,14 +68,17 @@ class Recorder:
         return stamp
 
     def save_audio(self, name, pcm, rate=16000):
+        """Queue a copied mono PCM16 recording for the journal worker."""
         self.pending.put_nowait(("audio", name, bytes(pcm), rate))
 
     def save_json(self, name, value):
+        """Serialize a JSON snapshot now and queue its disk write."""
         self.pending.put_nowait(
             ("json", name, json.dumps(value, ensure_ascii=False, indent=2) + "\n", None)
         )
 
     async def close(self):
+        """Drain queued evidence and join the writer, surfacing write or shutdown failures."""
         if self.error:
             raise RuntimeError("Experiment journal writer failed") from self.error
         if not self.closed:
@@ -86,18 +90,23 @@ class Recorder:
 
 
 def now() -> int:
+    """Return the process monotonic clock in nanoseconds for all trial timestamps."""
     return time.perf_counter_ns()
 
 
-@dataclass(frozen=True)
-class Frame:
+class Frame(BaseModel):
+    """An immutable played PCM frame with its sample position and arrival clock."""
+
+    model_config = ConfigDict(frozen=True, strict=True, extra="forbid")
     pcm: bytes
     sample_index: int
     received_mono_ns: int
 
 
-@dataclass(frozen=True)
-class Transcript:
+class Transcript(BaseModel):
+    """One ASR revision; text covers only the audio already supplied to ASR."""
+
+    model_config = ConfigDict(frozen=True, strict=True, extra="forbid")
     session_id: str
     event_id: str
     revision: int
@@ -122,6 +131,7 @@ class Track:
         self.timing_pieces, self.timing_end = [], 0
 
     def add(self, at, pcm, *, segment):
+        """Append PCM within its segment sample clock and retain its actual playback timestamp."""
         if len(pcm) % 2:
             raise ValueError("track requires aligned PCM16")
         offset = self.end
@@ -138,6 +148,7 @@ class Track:
         self.timing_end = timed_offset + len(pcm) // 2
 
     def render(self, length, *, timing=False):
+        """Render segment-aligned audio or the separate timestamp-aligned timing view."""
         pieces, end = (
             (self.timing_pieces, self.timing_end) if timing else (self.pieces, self.end)
         )
@@ -147,6 +158,7 @@ class Track:
         return out
 
     def manifest(self):
+        """Export sample positions, timestamps and per-piece hashes for reconstruction."""
         return {
             "sample_rate": self.rate,
             "segments": self.segments,
@@ -163,10 +175,13 @@ class Track:
 
 
 class TurnRecorder:
+    """Attach turn identity and speech-segment delivery bookkeeping to journal events."""
+
     def __init__(self, session, turn):
         self.session, self.turn = session, turn
 
     def emit(self, kind, **values):
+        """Journal a turn event and update local generation, synthesis and delivery marks."""
         feedback = self.turn.get("kind") == "backchannel"
         event_kind = kind.replace("user_", "backchannel_", 1) if feedback else kind
         tags = {"feedback_id": self.turn["id"]} if feedback else {}

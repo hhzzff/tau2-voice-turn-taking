@@ -120,7 +120,9 @@ async def test_only_played_audio_enters_the_asr_queue(tmp_path):
     async with httpx.AsyncClient() as client:
         user = ScenarioRuntime(config(), load_scenes()[0], rec, client)
         user.agent_track = Track(now(), 16000)
-        item = HeardItem("item", "response", 0, buffered_samples=16000)
+        item = HeardItem(
+            item_id="item", response_id="response", for_turn=0, buffered_samples=16000
+        )
         user.playback.items[item.item_id] = item
         assert user.asr_queue.empty()
         assert user.snapshot()["currently_heard_agent"] == ""

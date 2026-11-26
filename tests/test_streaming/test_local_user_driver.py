@@ -74,7 +74,9 @@ async def test_slow_b_and_tts_do_not_freeze_send_receive_playback_or_asr(tmp_pat
         class Target:
             def __init__(self):
                 self.received = 0
-                self.item = HeardItem("audible", "response", 0)
+                self.item = HeardItem(
+                    item_id="audible", response_id="response", for_turn=0
+                )
 
             async def receive(self):
                 while True:
@@ -208,7 +210,13 @@ async def test_shutdown_drains_played_utterance_before_cancelling_asr(tmp_path):
 
         runtime.control = idle_control
         runtime.begin_live(now())
-        item = HeardItem("last", "response", 0, played=320, complete=True)
+        item = HeardItem(
+            item_id="last",
+            response_id="response",
+            for_turn=0,
+            played=320,
+            complete=True,
+        )
         runtime.playback.items[item.item_id] = item
         runtime.begin_agent(item)
         runtime.agent_frame(item, b"\x00\x10" * 320, now())

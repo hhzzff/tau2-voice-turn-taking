@@ -27,6 +27,8 @@ class FeedbackPool:
             self._cache[ident] = self.read(ident)
 
     def retrieve(self, context, recent=()):
+        """Rank permitted clips by heard-context similarity, usage and recent repetition."""
+
         def grams(value):
             value = re.sub(r"\W", "", value)
             return {value[i : i + 2] for i in range(max(0, len(value) - 1))}
@@ -58,6 +60,7 @@ class FeedbackPool:
         return result
 
     def read(self, ident):
+        """Load and cache a clip only after verifying its PCM format and content hash."""
         if ident in self._cache:
             return self._cache[ident]
         row = self.rows[ident]
@@ -74,11 +77,13 @@ class FeedbackPool:
         return {**row, "pcm": pcm}
 
     def used(self, ident):
+        """Record a selected clip usage in this session without changing frozen assets."""
         self.rows[ident]["uses"] += 1
         self.rows[ident]["last_used"] = now()
 
 
 def feedback_actions(state):
+    """Allow backchannels only during an available, active assistant utterance."""
     control = state.get("feedback_control", {})
     return (
         {"BACKCHANNEL"}
@@ -88,6 +93,7 @@ def feedback_actions(state):
 
 
 def feedback_control(cfg, state, at, last_at, counts):
+    """Describe feedback eligibility from playback duration, silence and per-item quotas."""
     item = state["observed_item_id"]
     remaining = max(0, cfg.min_interval_ms - (at - last_at) / 1e6) if last_at else 0
     reason = (

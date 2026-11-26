@@ -6,11 +6,13 @@ import numpy as np
 
 
 def rms(pcm: bytes) -> float:
+    """Measure normalized RMS amplitude of mono PCM16; empty input measures zero."""
     x = np.frombuffer(pcm, dtype="<i2").astype(np.float64) / 32768
     return float(np.sqrt(np.mean(x * x))) if len(x) else 0.0
 
 
 def first_effective(pcm: bytes, threshold: float) -> int | None:
+    """Return the first sample whose absolute amplitude reaches the normalized threshold."""
     indices = np.flatnonzero(
         np.abs(np.frombuffer(pcm, dtype="<i2").astype(np.int32)) >= threshold * 32768
     )

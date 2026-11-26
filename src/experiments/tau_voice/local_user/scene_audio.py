@@ -26,7 +26,10 @@ def environment_trigger_evidence(stage, heard):
 
 
 class ScenarioAudioMixin:
+    """Execute prepared stimuli and pauses through the same delivery-receipt path as speech."""
+
     def input_frame_sent(self, turn, raw, at, source_samples, voice):
+        """Account for delivered fixture segments and gaps using the actual send clock."""
         if turn.get("kind") == "environment":
             if getattr(self, "environment_track", None) is None:
                 self.environment_track = Track(self.origin, self.user_track.rate)
@@ -76,6 +79,7 @@ class ScenarioAudioMixin:
                     event.set()
 
     async def play_prepared(self, action, state, decision_at, usage):
+        """Enqueue immutable stimulus PCM and track actual delivery across controlled pauses."""
         stage = state["pending_intent"]
         auxiliary = stage["kind"] in {"environment", "side_speech"}
         actor = (
@@ -248,6 +252,7 @@ class ScenarioAudioMixin:
                 turn["text"] = turn["spoken_text"]
 
     def additional_summary(self):
+        """Export auxiliary-input evidence and separate environment audio after track saving."""
         extra = {"scenario_audio": [self.serial_turn(t) for t in self.auxiliary_inputs]}
         track = getattr(self, "environment_track", None)
         if track is not None:

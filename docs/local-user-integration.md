@@ -1,6 +1,6 @@
 # 本地用户模拟器接入与阶段验收
 
-实现分支：`codex/local-user-simulator`。原克隆目录保留 `main` 基线，
+实现分支：`experiment/local-user-simulator`。原克隆目录保留 `main` 基线，
 开发位于独立 worktree。远端 PR 等本地 19 条听测审阅后再提交。
 
 ## 实现边界
@@ -80,6 +80,16 @@ python -m experiments.tau_voice.duplex_bench local \
 
 可加 `--scenes P03` 做单例验证；省略则逐条运行19例。拒绝覆盖已有目录。
 这是受控场景接入，不会悄悄替换原有动态用户构建器或领域任务评分。
+
+本地剧本和执行器集中在 `src/experiments/tau_voice/local_user/`，其中用户
+适配器继承 τ 的 `FullDuplexUser`，由实验入口显式注册。核心 τ 不反向导入
+实验包；共享 provider 与 PCM 转换保留在核心。接口与生命周期约定见
+[模块 README](../src/experiments/tau_voice/local_user/README.md)。
+
+其他机器可通过 `--config` 指定 ASR、B/TTS 服务配置，格式见
+[JSON 示例](../src/experiments/tau_voice/examples/local_user_config.json)。
+配置内提供 `asr.model_path` 时可省略 `--asr-model-path`；显式参数优先。
+校验拒绝未知字段，实际配置仍完整写入每次实验的 provenance。
 
 生成便携听测页（可在测试过程中对已结束样例反复更新）：
 

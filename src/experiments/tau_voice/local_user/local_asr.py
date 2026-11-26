@@ -11,6 +11,8 @@ from .recording import Transcript, now
 
 
 class XASR:
+    """Own one online recognizer and publish revisions of actually played PCM."""
+
     def __init__(self, cfg, rec):
         self.cfg, self.rec = cfg, rec
         self.recognizer = self.stream = None
@@ -47,6 +49,8 @@ class XASR:
         self.rec.emit("asr_segment_start", segment=self.segment)
 
     async def start(self):
+        """Load resident model weights off-loop and create the first online stream."""
+
         def load():
             import sherpa_onnx
 
@@ -116,13 +120,13 @@ class XASR:
             self.revision += 1
             self.q.put_nowait(
                 Transcript(
-                    self.rec.run_id,
-                    f"xasr:{self.segment}",
-                    self.revision,
-                    text,
-                    final,
-                    None,
-                    end,
+                    session_id=self.rec.run_id,
+                    event_id=f"xasr:{self.segment}",
+                    revision=self.revision,
+                    text=text,
+                    is_final=final,
+                    audio_end_ms=None,
+                    received_mono_ns=end,
                 )
             )
 
@@ -131,6 +135,7 @@ class XASR:
         self._publish(await self._run_worker(self._decode, frame.pcm))
 
     async def finish(self, *, padding_ms=0, end_events=True):
+        """Flush decoder right context without treating padding as captured audio."""
         self.rec.emit("asr_flush_submit", decoder_padding_ms=padding_ms)
         if padding_ms:
             # Algorithmic right-context padding, not additional captured audio or clock time.
@@ -141,6 +146,7 @@ class XASR:
             self.q.put_nowait(None)
 
     async def events(self):
+        """Yield local ASR revisions until the producer sends its terminal event."""
         while (event := await self.q.get()) is not None:
             yield event
 

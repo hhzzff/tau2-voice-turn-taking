@@ -44,6 +44,7 @@ class LeadingSilence:
         self.removed_samples = 0
 
     def feed(self, pcm):
+        """Trim only the initial quiet prefix, retaining context immediately before voice onset."""
         if self.started:
             return pcm
         data = self.pending + pcm
@@ -63,6 +64,8 @@ class LeadingSilence:
 
 
 class SpeechStream:
+    """Coordinate bounded text and PCM queues so the first clause can speak before generation ends."""
+
     def __init__(
         self,
         cfg,
@@ -80,6 +83,7 @@ class SpeechStream:
         self.prepared_text, self.text = text, text or ""
 
     async def audio(self):
+        """Yield reblocked PCM while text generation and synthesis run under one cancellable producer."""
         text_queue, pcm_queue = asyncio.Queue(maxsize=2), asyncio.Queue(maxsize=32)
         step = self.cfg.audio.sample_rate * self.cfg.audio.frame_ms // 1000 * 2
 
@@ -202,6 +206,7 @@ class SpeechStream:
 
 
 async def enumerate_async(source):
+    """Yield sequential indices alongside items from an asynchronous source."""
     index = 0
     async for item in source:
         yield index, item

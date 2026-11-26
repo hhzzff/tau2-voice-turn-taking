@@ -6,9 +6,11 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from tau2.config import (
+    DEFAULT_LOCAL_USER_ASR_MODEL,
     DEFAULT_LOCAL_USER_FRAME_MS,
     DEFAULT_LOCAL_USER_LLM_URL,
     DEFAULT_LOCAL_USER_MODEL,
+    DEFAULT_LOCAL_USER_REFERENCE_SHA256,
     DEFAULT_LOCAL_USER_SPEAKER,
     DEFAULT_LOCAL_USER_TTS_MODEL,
     DEFAULT_LOCAL_USER_TTS_URL,
@@ -17,17 +19,23 @@ from tau2.config import (
 
 
 class Strict(BaseModel):
+    """Reject unknown configuration keys rather than silently ignoring typos."""
+
     model_config = ConfigDict(extra="forbid")
 
 
 class AudioConfig(Strict):
+    """The fixed local PCM clock and effective-voice detection threshold."""
+
     sample_rate: Literal[16000] = DEFAULT_PCM_SAMPLE_RATE
     frame_ms: Literal[20] = DEFAULT_LOCAL_USER_FRAME_MS
     effective_rms: float = Field(0.005, gt=0, lt=1)
 
 
 class ASRConfig(Strict):
-    model: str = "GilgameshWind/X-ASR-zh-en/160ms"
+    """External online-transducer weights, execution provider and endpoint padding."""
+
+    model: str = DEFAULT_LOCAL_USER_ASR_MODEL
     model_path: Path
     execution_provider: Literal["cpu", "cuda"] = "cpu"
     num_threads: int = Field(2, ge=1)
@@ -35,6 +43,8 @@ class ASRConfig(Strict):
 
 
 class LLMConfig(Strict):
+    """Local B service and clause-streaming request settings."""
+
     model: str = DEFAULT_LOCAL_USER_MODEL
     base_url: str = DEFAULT_LOCAL_USER_LLM_URL
     max_output_tokens: int = 384
@@ -45,12 +55,12 @@ class LLMConfig(Strict):
 
 
 class TTSConfig(Strict):
+    """Pinned speaker and streaming synthesis settings recorded in trial provenance."""
+
     model: str = DEFAULT_LOCAL_USER_TTS_MODEL
     url: str = DEFAULT_LOCAL_USER_TTS_URL
     speaker: str = DEFAULT_LOCAL_USER_SPEAKER
-    reference_sha256: str = (
-        "7df4da8fc59d89e6f9a60f2b87218d02ff996d81d463a95e9d492d4a401889f8"
-    )
+    reference_sha256: str = DEFAULT_LOCAL_USER_REFERENCE_SHA256
     seed: int = 42
     stream_chunk_tokens: int = Field(2, ge=1, le=24)
     trim_leading_silence: bool = True
@@ -59,6 +69,8 @@ class TTSConfig(Strict):
 
 
 class FeedbackConfig(Strict):
+    """Frozen feedback retrieval limits and audible-opportunity guards."""
+
     enabled: bool = True
     excluded_clip_ids: list[str] = Field(default_factory=list)
     retrieval_limit: int = 4
@@ -71,6 +83,8 @@ class FeedbackConfig(Strict):
 
 
 class AgendaConfig(Strict):
+    """The supported single-agenda execution mode for controlled scenes."""
+
     enabled: Literal[True] = True
     mode: Literal["single"] = "single"
 

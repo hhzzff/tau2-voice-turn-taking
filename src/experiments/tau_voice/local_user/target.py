@@ -2,29 +2,41 @@
 
 import base64
 import hashlib
-from dataclasses import dataclass, field
 
 from experiments.tau_voice.local_user.audio import first_effective
 from experiments.tau_voice.local_user.observation import HeardItem
 from experiments.tau_voice.local_user.participant import LOCAL_PCM
 from experiments.tau_voice.local_user.recording import now
-from tau2.config import DEFAULT_LOCAL_USER_TARGET_OUTPUT_TOKENS
+from tau2.config import (
+    DEFAULT_LOCAL_USER_TARGET_OUTPUT_TOKENS,
+    DEFAULT_LOCAL_USER_TARGET_VOICE,
+    DEFAULT_OPENAI_OUTPUT_SAMPLE_RATE,
+)
 from tau2.data_model.audio import AudioEncoding, AudioFormat, audio_bytes_to_string
 from tau2.data_model.message import AssistantMessage
 from tau2.voice.audio_native.audio_converter import StreamingPCMConverter
-from tau2.voice.audio_native.openai.provider import OpenAIVADConfig, OpenAIVADMode
+from tau2.voice.audio_native.openai.provider import (
+    OpenAIRealtimeProvider,
+    OpenAIVADConfig,
+    OpenAIVADMode,
+)
+
+from .contracts import OutputPacket
+from .participant import LocalStreamingUser
+from .recording import Recorder
 
 
-@dataclass
 class OutputBuffer:
-    """Unplayed samples are private to the transport, never user context."""
+    """Own an utterance's converter and unplayed bytes, outside user context."""
 
-    heard: HeardItem
-    content_index: int = 0
-    pcm: bytearray = field(default_factory=bytearray)
-    converter: StreamingPCMConverter = field(default_factory=StreamingPCMConverter)
+    def __init__(self, heard: HeardItem, content_index: int = 0):
+        self.heard = heard
+        self.content_index = content_index
+        self.pcm = bytearray()
+        self.converter = StreamingPCMConverter()
 
-    def add(self, pcm=b"", final=False):
+    def add(self, pcm: bytes = b"", final: bool = False) -> None:
+        """Resample received bytes and flush once, ignoring already ended or cancelled items."""
         if self.heard.cancelled or self.heard.complete:
             return
         self.pcm.extend(self.converter.convert_output(pcm, final=final))
@@ -39,7 +51,9 @@ class ContinuousOpenAITarget:
     released by play_frame at the local listening clock, including underruns.
     """
 
-    def __init__(self, provider, user, rec):
+    def __init__(
+        self, provider: OpenAIRealtimeProvider, user: LocalStreamingUser, rec: Recorder
+    ):
         self.provider, self.user, self.rec = provider, user, rec
         self.runtime = user.runtime
         self.playback = self.runtime.playback
@@ -53,8 +67,10 @@ class ContinuousOpenAITarget:
         self.cancelled_responses = set()
 
     async def start(
-        self, instructions, max_output_tokens=DEFAULT_LOCAL_USER_TARGET_OUTPUT_TOKENS
-    ):
+        self,
+        instructions: str,
+        max_output_tokens: int = DEFAULT_LOCAL_USER_TARGET_OUTPUT_TOKENS,
+    ) -> None:
         """Await an acknowledged native-PCM configuration before starting clocks."""
         await self.provider.connect()
         await self.provider.configure_session(
@@ -63,9 +79,10 @@ class ContinuousOpenAITarget:
             OpenAIVADConfig(mode=OpenAIVADMode.SEMANTIC_VAD, eagerness="medium"),
             modality="audio",
             audio_format=AudioFormat(
-                encoding=AudioEncoding.PCM_S16LE, sample_rate=24000
+                encoding=AudioEncoding.PCM_S16LE,
+                sample_rate=DEFAULT_OPENAI_OUTPUT_SAMPLE_RATE,
             ),
-            voice="marin",
+            voice=DEFAULT_LOCAL_USER_TARGET_VOICE,
             transcription_language=None,
             max_output_tokens=max_output_tokens,
         )
@@ -77,13 +94,14 @@ class ContinuousOpenAITarget:
             },
         )
 
-    async def receive(self):
+    async def receive(self) -> None:
         """Receive continuously, independent of ASR, generation and playback."""
         async for event in self.provider.receive_raw_events():
             await self._process_event(event)
         raise RuntimeError("Target WebSocket ended before the trial")
 
-    async def _process_event(self, event):
+    async def _process_event(self, event: dict) -> None:
+        """Update audit state and playback queues; only server VAD truncates audio."""
         kind, at = event["type"], now()
         if kind == "error":
             error = {
@@ -103,7 +121,9 @@ class ContinuousOpenAITarget:
             item_id, rid = event["item_id"], event["response_id"]
             if item_id not in self.buffers:
                 meta = self.playback.responses.get(rid, self.last_input)
-                heard = HeardItem(item_id, rid, meta["for_turn"])
+                heard = HeardItem(
+                    item_id=item_id, response_id=rid, for_turn=meta["for_turn"]
+                )
                 heard.cancelled = rid in self.cancelled_responses
                 self.playback.items[item_id] = heard
                 self.buffers[item_id] = OutputBuffer(
@@ -178,7 +198,7 @@ class ContinuousOpenAITarget:
                 )
         self.rec.emit("target_event", at=at, event=event)
 
-    async def send_packet(self, packet):
+    async def send_packet(self, packet: OutputPacket) -> int:
         """Submit audio and audit the native bytes; host then issues a receipt."""
         raw = self.input_converter.convert_input(packet["pcm"])
         turn = packet["turn"]
@@ -205,14 +225,14 @@ class ContinuousOpenAITarget:
         )
         return stamp
 
-    def finish_playback(self):
+    def finish_playback(self) -> None:
         """Flush only already-played audio when a trial ends mid-utterance."""
         for output in self.buffers.values():
             item = output.heard
             if item.started_ns is not None and not item.ended:
                 self.end_item(item, "trial_end")
 
-    def end_item(self, item, reason):
+    def end_item(self, item: HeardItem, reason: str) -> None:
         """End only what was actually audible; unplayed transcripts stay private."""
         if item.ended:
             return
@@ -229,7 +249,7 @@ class ContinuousOpenAITarget:
             played_samples=item.played,
         )
 
-    def play_frame(self, at):
+    def play_frame(self, at: int) -> None:
         """Release at most 20 ms, or an audible underrun, per real clock tick."""
         for output in self.buffers.values():
             item = output.heard

@@ -77,6 +77,8 @@ def settlement_reference(problem, delivered):
 
 
 class ScenarioAgenda:
+    """Track staged sampling and delivered private facts separately from semantic judgments."""
+
     def __init__(self, case, cfg, client, rec, on_settled=None):
         self.case, self.cfg, self.client, self.rec = case, cfg, client, rec
         self.frames = copy.deepcopy(case["scenario_runtime"]["stages"])
@@ -107,12 +109,15 @@ class ScenarioAgenda:
 
     @property
     def active(self):
+        """Return the current private stage, or None once sampling has ended."""
         return self.frames[self.cursor] if self.cursor < len(self.frames) else None
 
     def state(self):
+        """Return independent copies of delivered facts and the pending stage."""
         return copy.deepcopy(self.profile), copy.deepcopy(self.active)
 
     def view(self):
+        """Snapshot progression and semantic counters without conflating them."""
         return {
             "version": self.version,
             "top": copy.deepcopy(self.active),
@@ -127,6 +132,7 @@ class ScenarioAgenda:
         }
 
     def activate_next(self, reason):
+        """Advance the sampling cursor and invalidate pending speech from the old stage."""
         old = self.active["id"]
         self.cursor += 1
         self.version += 1
@@ -139,6 +145,7 @@ class ScenarioAgenda:
         )
 
     def user_finished(self, turn):
+        """Record sent speech; update disclosed facts only after complete delivery."""
         if not turn["marks"].get("user_first_voice_tx"):
             return
         stage = turn["pending_intent"]
@@ -189,6 +196,7 @@ class ScenarioAgenda:
         self.rec.emit("scenario_user_evidence", **self.last_sent)
 
     def record_private_question(self, stage, asked, heard):
+        """Journal questions grounded in heard text, including repeated requests."""
         if not asked and not stage.get("other_question"):
             return
         row = {
@@ -207,6 +215,7 @@ class ScenarioAgenda:
         self.rec.emit("scenario_private_question", **row)
 
     def finish_private_answers_if_ready(self, stage, asked):
+        """End the answer stages when delivery, observation limits or lack of a question requires it."""
         reason = None
         if self.required_fields and all(
             k in self.profile for k in self.required_fields
@@ -222,6 +231,7 @@ class ScenarioAgenda:
         return bool(reason)
 
     def information_efficiency(self):
+        """Report disclosure rounds and missing fields from completed transmissions."""
         covered, first_complete = set(), None
         for i, row in enumerate(self.private_answers, 1):
             covered.update(row["fields"])
@@ -242,9 +252,11 @@ class ScenarioAgenda:
         }
 
     def heard_reply(self, turn):
+        """Mark a user turn as having an observed, eligible assistant reply."""
         self.exchanges.add(turn)
 
     def observe_reply(self, item_id, for_turn, text, heard_ns, complete=True):
+        """Journal the locally heard reply and whether playback completed normally."""
         self.rec.emit(
             "scenario_reply_evidence",
             item_id=item_id,
@@ -255,6 +267,7 @@ class ScenarioAgenda:
         )
 
     def update_review(self, met, request_id):
+        """Replace revisable B judgments for the last spoken stage; never grant the floor."""
         if not self.last_sent:
             return
         key = self.last_sent["stage"]["id"]
@@ -271,6 +284,7 @@ class ScenarioAgenda:
         self.rec.emit("scenario_semantic_review", **self.reviews[-1])
 
     def manifest(self):
+        """Export progression, judgments and an independent ledger reference for review."""
         return {
             "protocol": self.protocol_version,
             "sampling_cursor": self.cursor,
@@ -293,4 +307,5 @@ class ScenarioAgenda:
         }
 
     async def close(self):
+        """Complete the agenda lifecycle; this state holder owns no background work."""
         return

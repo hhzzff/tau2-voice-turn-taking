@@ -58,6 +58,7 @@ class PauseMonitor:
         return None
 
     def feed(self, pcm):
+        """Measure newly received PCM frames and return any newly reached pause warnings."""
         self.pending += pcm
         warnings = []
         while len(self.pending) >= self.frame_bytes:
@@ -70,6 +71,7 @@ class PauseMonitor:
         return warnings
 
     def finish(self):
+        """Flush the final partial frame and distinguish leading, internal and trailing silence."""
         if self.pending:
             self._frame(self.pending)
             self.pending = b""

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import copy
-from dataclasses import asdict
 
 from .agenda import private_answer_text
 from .audio import first_effective
@@ -17,6 +16,8 @@ from .scene_audio import ScenarioAudioMixin, environment_trigger_evidence
 
 
 class ScenarioRuntime(ScenarioAudioMixin, UserRuntime):
+    """Execute frozen stages using audio floor permission and revisable B evidence."""
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.floor = FloorController()
@@ -34,9 +35,11 @@ class ScenarioRuntime(ScenarioAudioMixin, UserRuntime):
         self._scheduled_release_ns = 0
 
     def scenario_speaker(self, turn, state):
+        """Create an expression source for the accepted stage and reserved turn."""
         return ScenarioSpeaker(self, turn, state)
 
     def own_audio_event(self, kind, turn, at):
+        """Pause or resume the decision clock using actual user voice transmission events."""
         feedback = turn.get("kind") == "backchannel" or turn.get(
             "non_main_input", False
         )
@@ -71,20 +74,24 @@ class ScenarioRuntime(ScenarioAudioMixin, UserRuntime):
         self.control_wakeup.set()
 
     def begin_agent(self, item):
+        """Queue a newly audible item and wake the scenario controller."""
         super().begin_agent(item)
         self.control_wakeup.set()
 
     def agent_frame(self, item, pcm, at):
+        """Observe played PCM and track the last effective voice sample for floor decisions."""
         super().agent_frame(item, pcm, at)
         if first_effective(pcm, self.cfg.audio.effective_rms) is not None:
             self.item_voice[item.item_id] = at
 
     def end_agent(self, item, reason):
+        """Record playback end, queue its ASR final and wake the controller."""
         self.item_ends[item.item_id] = (now(), reason)
         super().end_agent(item, reason)
         self.control_wakeup.set()
 
     def floor_state(self, *, ignore_reservation=False):
+        """Snapshot audible replies, buffered samples and speech reservations at one instant."""
         at = now()
         items = list(self.playback.items.values())
         current = [
@@ -127,6 +134,7 @@ class ScenarioRuntime(ScenarioAudioMixin, UserRuntime):
         )
 
     def snapshot(self):
+        """Extend heard context with audio floor permission and the current main-turn reply."""
         state = super().snapshot()
         audio = self.floor_state(ignore_reservation=True)
         permission = self.floor.evaluate(audio)
@@ -144,8 +152,8 @@ class ScenarioRuntime(ScenarioAudioMixin, UserRuntime):
             not in {"environment", "side", "backchannel"}
         ]
         state.update(
-            floor_permission=asdict(permission),
-            audio_state=asdict(audio),
+            floor_permission=permission.model_dump(),
+            audio_state=audio.model_dump(),
             current_reply_text="\n".join(t for t in texts if t.strip()),
             heard_current_main_reply=audio.reply_seen,
             current_main_turn=self.sent_turn,
@@ -159,6 +167,7 @@ class ScenarioRuntime(ScenarioAudioMixin, UserRuntime):
         return state
 
     def speech_valid(self, action, state):
+        """Recheck stage version and audible trigger evidence immediately before speech."""
         if state.get("agenda", {}).get("version") != self.progress.version:
             return False
         latest = self.snapshot()
@@ -186,6 +195,7 @@ class ScenarioRuntime(ScenarioAudioMixin, UserRuntime):
 
     async def choose_feedback(self, state, candidates):
         # Freeze this experiment to the reviewed pool: B chooses USE only.
+        """Ask B to choose an existing reviewed clip; reject invalid or empty selections."""
         candidates = [
             c
             for c in candidates
@@ -235,6 +245,7 @@ class ScenarioRuntime(ScenarioAudioMixin, UserRuntime):
         return {"mode": "retrieval", "id": candidates[int(raw)]["id"]}
 
     async def observe_stage(self, stage):
+        """Collect an observation window after a stimulus without declaring semantic success."""
         started = now()
         stimulus_end = max(self.main_end_ns, self.last_feedback_end)
         if stage.get("fixed_seconds") is not None:
@@ -306,10 +317,17 @@ class ScenarioRuntime(ScenarioAudioMixin, UserRuntime):
         self.progress.activate_next("observation_finished_not_semantic_success")
 
     def check_target(self):
+        """Propagate a recorded target transport failure to the controller."""
         if self.transport_error is not None:
             raise RuntimeError("Target transport failed") from self.transport_error
 
     async def control(self):
+        """Advance the local scenario while independent audio clocks keep running.
+
+        Sample only permitted actions, recheck asynchronous B results against
+        current evidence, and preserve unfinished or invalid stimuli as outcomes.
+        Finishing the sampling cursor does not assert semantic task success.
+        """
         invalids = 0
         while not self.stop:
             self.check_target()

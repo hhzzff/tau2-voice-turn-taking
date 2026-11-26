@@ -25,6 +25,8 @@ class QwenTTS:
         self.cfg, self.client, self.rec = cfg, client, rec
 
     async def stream(self, text):
+        """Yield PCM16 blocks from the pinned voice service; reject rate mismatch and empty output."""
+
         def emit(kind, **values):
             if self.rec:
                 self.rec.emit(kind, **values)

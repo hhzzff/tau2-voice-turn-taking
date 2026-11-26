@@ -5,10 +5,28 @@ import threading
 from types import SimpleNamespace
 
 import pytest
+from pydantic import ValidationError
 
 from experiments.tau_voice.local_user.config import LocalUserConfig
 from experiments.tau_voice.local_user.local_asr import XASR
+from experiments.tau_voice.local_user.observation import HeardItem, PlaybackObservation
 from experiments.tau_voice.local_user.recording import Frame
+
+
+def test_playback_state_keeps_live_item_identity_and_frames_are_immutable():
+    item = HeardItem(item_id="heard", response_id="response", for_turn=1)
+    playback = PlaybackObservation(items={item.item_id: item})
+    item.started_ns = 1
+    item.played += 320
+    assert playback.audible_item is item
+    assert playback.items["heard"].played == 320
+    other = PlaybackObservation()
+    assert not other.items
+    frame = Frame(pcm=bytes(640), sample_index=320, received_mono_ns=1)
+    with pytest.raises(ValidationError):
+        frame.sample_index = 640
+    with pytest.raises(ValidationError):
+        Frame(pcm="not PCM bytes", sample_index=0, received_mono_ns=0)
 
 
 @pytest.mark.asyncio
@@ -32,7 +50,9 @@ async def test_cancelled_decode_finishes_before_asr_releases_native_handles(tmp_
     )
     stream = SimpleNamespace(accept_waveform=lambda *args: None)
     asr.recognizer, asr.stream = Recognizer(), stream
-    feed = asyncio.create_task(asr.feed(Frame(bytes(640), 0, 0)))
+    feed = asyncio.create_task(
+        asr.feed(Frame(pcm=bytes(640), sample_index=0, received_mono_ns=0))
+    )
     closing = None
     try:
         assert await asyncio.to_thread(entered.wait, 2)

@@ -29,6 +29,12 @@ python -m experiments.tau_voice.local_user_report \
   data/simulations/local-user-smoke
 ```
 
+For other service addresses, pass `--config` with a validated JSON file; see
+[the example](examples/local_user_config.json). `--asr-model-path` overrides the
+file's ASR path, and may be omitted when the file supplies one. Unknown settings
+are rejected. The [local-user package](local_user/README.md) documents ownership,
+registration and the playback/delivery contract.
+
 Omit `--scenes` to run all 19 scenarios. Output directories must be new. Trials
 preserve partial audio and failure summaries where the filesystem is writable;
 cleanup/export failures cannot count as successful trials. Cancellation cleans

@@ -10,9 +10,10 @@ from contextlib import aclosing
 from .agenda import ScenarioAgenda
 from .audio import first_effective
 from .backends import QwenTTS
+from .contracts import OutputPacket
 from .feedback import FeedbackPool, feedback_actions, feedback_control
 from .local_asr import XASR
-from .observation import PlaybackObservation
+from .observation import HeardItem, PlaybackObservation
 from .recording import Frame, Track, TurnRecorder, now
 from .streaming import SpeechStream, update_spoken_text
 
@@ -64,7 +65,7 @@ class UserRuntime:
         self.control_task = asyncio.create_task(self.control())
         self.tasks.append(self.control_task)
 
-    def poll_output(self):
+    def poll_output(self) -> OutputPacket:
         """Return one ready frame without awaiting inference or transport."""
         if self._pending_packet is not None:
             raise RuntimeError("Previous output frame has no transmission receipt")
@@ -110,7 +111,7 @@ class UserRuntime:
         self._pending_packet = packet
         return packet
 
-    def acknowledge_delivery(self, sequence, sent_ns):
+    def acknowledge_delivery(self, sequence: int, sent_ns: int) -> None:
         """Commit only after the target transport submitted this exact frame."""
         if sequence <= self._acked_sequence:
             return  # Retransmitted receipt is idempotent.
@@ -162,7 +163,7 @@ class UserRuntime:
                 self._ending["done"].set()
                 self._active = self._ending = None
 
-    async def close(self):
+    async def close(self) -> None:
         """Stop generation, then drain observations of audio already played.
 
         This runs after the live clocks stop. It must never discard a queued
@@ -206,6 +207,7 @@ class UserRuntime:
 
     @staticmethod
     def serial_turn(turn):
+        """Export a turn without PCM buffers, asyncio objects or private execution state."""
         return {
             k: v
             for k, v in turn.items()
@@ -260,6 +262,7 @@ class UserRuntime:
         self.save_sent_audio(turn)
 
     def body(self, messages, stream=False):
+        """Build a B request using the validated model settings and streaming token budget."""
         return {
             "model": self.cfg.llm.model,
             "messages": messages,
@@ -270,22 +273,37 @@ class UserRuntime:
         }
 
     def enqueue_asr(self, value):
+        """Queue a played-audio event; overflow fails the trial instead of silently dropping audio."""
         if self.asr_queue.full():
             self.rec.emit("audio_drop", stage="live_asr", samples=320)
             raise RuntimeError("ASR did not keep up with live audio")
         self.asr_queue.put_nowait(value)
 
-    def begin_agent(self, item):
+    def begin_agent(self, item: HeardItem) -> None:
+        """Queue the start of an actually audible assistant item for ASR."""
         self.enqueue_asr(("begin", item, None))
 
-    def agent_frame(self, item, pcm, at):
+    def agent_frame(self, item: HeardItem, pcm: bytes, at: int) -> None:
+        """Record and queue only PCM already released by the playback clock."""
         self.agent_track.add(at, pcm, segment=item.item_id)
-        self.enqueue_asr(("frame", item, Frame(pcm, item.played, at)))
+        self.enqueue_asr(
+            (
+                "frame",
+                item,
+                Frame(pcm=pcm, sample_index=item.played, received_mono_ns=at),
+            )
+        )
 
-    def end_agent(self, item, reason):
+    def end_agent(self, item: HeardItem, reason: str) -> None:
+        """Queue recognition of the played prefix and its normal/interrupted end reason."""
         self.enqueue_asr(("end", item, reason))
 
     async def decode(self):
+        """Decode the ordered playback queue and preserve final heard evidence.
+
+        A drain barrier acknowledges preceding end events. Only eligible, complete
+        replies advance reply tracking; interrupted text remains listening evidence.
+        """
         while True:
             kind, item, value = await self.asr_queue.get()
             if kind == "drain":
@@ -361,6 +379,7 @@ class UserRuntime:
                     )
 
     async def transcripts(self):
+        """Apply ASR revisions to their playback item and journal text availability times."""
         async for event in self.asr.events():
             item_id = self.segment_items.get(int(event.event_id.split(":")[-1]))
             self.observations[item_id] = {
@@ -378,6 +397,7 @@ class UserRuntime:
             )
 
     def snapshot(self):
+        """Build B context from heard text, delivered user turns and current private intent."""
         audible = self.playback.audible_item
         item_id = audible.item_id if audible else self.last_heard_item
         observed = self.observations.get(item_id, {})
@@ -474,6 +494,7 @@ class UserRuntime:
         return state
 
     async def backchannel(self, action, state, decision_at, decision_usage):
+        """Choose and enqueue a frozen feedback clip while holding a speech reservation."""
         self.busy = True
         try:
             candidates = self.feedback_library.retrieve(
@@ -492,6 +513,11 @@ class UserRuntime:
             self.busy = False
 
     async def speak(self, action, state, step, decision_at, decision_usage):
+        """Generate one reserved intent and wait for actual transport completion.
+
+        Delivery receipts determine spoken text and private-fact updates. If
+        interrupted, retain only confirmed clauses and save the partial audio.
+        """
         self.speech_attempt += 1
         track_speech = self.cfg.agenda.enabled and self.cfg.agenda.mode == "single"
         evidence_saved = False
@@ -601,12 +627,14 @@ class UserRuntime:
             self.rec.save_json("turns.json", [self.serial_turn(t) for t in self.turns])
 
     def save_sent_audio(self, turn):
+        """Queue the exact transmitted turn PCM and record its byte count and hash."""
         filename = turn.get("audio_file", f"user-{turn['index']:02}.wav")
         self.rec.save_audio(filename, turn["sent_pcm"], self.user_track.rate)
         turn["sent_bytes"] = len(turn["sent_pcm"])
         turn["sent_sha256"] = hashlib.sha256(turn["sent_pcm"]).hexdigest()
 
     async def wait_control(self, deadline):
+        """Wait for new audio evidence or the next real-time decision deadline."""
         event = getattr(self, "control_wakeup", None)
         if event is None:
             return await asyncio.sleep(max(0, (deadline - now()) / 1e9))

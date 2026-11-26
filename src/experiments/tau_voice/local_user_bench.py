@@ -1,5 +1,6 @@
 """Controlled local-user trials through tau's continuous driver and provider."""
 
+import argparse
 import asyncio
 import hashlib
 import inspect
@@ -40,18 +41,19 @@ TARGET_INSTRUCTIONS = (
 )
 
 
-def digest(value):
+def digest(value: object) -> str:
     """Stable UTF-8 JSON digest for configuration and frozen scenes."""
     return hashlib.sha256(
         json.dumps(value, ensure_ascii=False, sort_keys=True).encode()
     ).hexdigest()
 
 
-def git_output(*args):
+def git_output(*args: str) -> str:
+    """Read repository provenance from the actual source checkout."""
     return subprocess.check_output(["git", *args], cwd=ROOT, text=True).strip()
 
 
-def provenance(cfg, case, model):
+def provenance(cfg: LocalUserConfig, case: dict, model: str) -> dict:
     """Capture actual imported source and reproducible trial inputs, no secrets."""
     import importlib.metadata
 
@@ -81,7 +83,7 @@ def provenance(cfg, case, model):
     }
 
 
-def save_tracks(runtime, path, length):
+def save_tracks(runtime: ScenarioRuntime, path: Path, length: int) -> None:
     """Write external lossless audio; keep wall-clock and listening views."""
     for timing in (False, True):
         user = runtime.user_track.render(length, timing=timing)
@@ -105,7 +107,7 @@ def save_tracks(runtime, path, length):
             sf.write(path / "mix.flac", mix, 16000, subtype="PCM_16")
 
 
-async def run_case(cfg, case, output, model):
+async def run_case(cfg: LocalUserConfig, case: dict, output: Path, model: str) -> dict:
     """Preserve partial evidence and attempt every cleanup, including on cancellation.
 
     Cleanup and export failures make a trial fail without hiding its first error.
@@ -118,6 +120,7 @@ async def run_case(cfg, case, output, model):
     failures = []
 
     def record_error(stage, exc):
+        """Retain the first error while journaling all later cleanup failures."""
         nonlocal status, error
         if status != "cancelled":
             status = "error"
@@ -140,6 +143,7 @@ async def run_case(cfg, case, output, model):
             )
 
     async def finalize(stage, operation, *args):
+        """Attempt one finalizer so its failure cannot skip the remaining resources."""
         try:
             result = operation(*args)
             return await result if inspect.isawaitable(result) else result
@@ -259,13 +263,14 @@ async def run_case(cfg, case, output, model):
     return summary
 
 
-async def run_suite(args):
+async def run_suite(args: argparse.Namespace) -> int:
     """Sequential trials avoid contention between B/TTS latency measurements."""
     from experiments.tau_voice.local_user.participant import register_local_user
+    from experiments.tau_voice.local_user_cli import load_config
 
     register_local_user()
     load_dotenv(args.env_file)
-    cfg = LocalUserConfig(asr={"model_path": args.asr_model_path})
+    cfg = load_config(args)
     selected = set(args.scenes.split(",")) if args.scenes else set(SCENE_EVENTS)
     if unknown := selected - set(SCENE_EVENTS):
         raise ValueError(f"Unknown scene IDs: {sorted(unknown)}")

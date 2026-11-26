@@ -2,9 +2,24 @@
 
 import argparse
 import asyncio
+import json
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from tau2.config import DEFAULT_LOCAL_USER_TARGET_MODEL
+
+if TYPE_CHECKING:
+    from experiments.tau_voice.local_user.config import LocalUserConfig
+
+
+def load_config(args: argparse.Namespace) -> "LocalUserConfig":
+    """Validate file settings, with an explicit ASR path overriding the file."""
+    from experiments.tau_voice.local_user.config import LocalUserConfig
+
+    values = json.loads(args.config.read_text()) if args.config else {}
+    if args.asr_model_path is not None:
+        values.setdefault("asr", {})["model_path"] = args.asr_model_path
+    return LocalUserConfig.model_validate(values)
 
 
 def _run(args: argparse.Namespace) -> int:
@@ -20,7 +35,16 @@ def add_parser(commands: argparse._SubParsersAction) -> None:
     )
     parser.add_argument("--scenes", help="Comma-separated IDs; default all 19")
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--asr-model-path", type=Path, required=True)
+    parser.add_argument(
+        "--config",
+        type=Path,
+        help="JSON LocalUserConfig for ASR and local service settings",
+    )
+    parser.add_argument(
+        "--asr-model-path",
+        type=Path,
+        help="X-ASR weights; required unless set in --config",
+    )
     parser.add_argument("--model", default=DEFAULT_LOCAL_USER_TARGET_MODEL)
     parser.add_argument(
         "--max-seconds",
