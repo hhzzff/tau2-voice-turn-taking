@@ -5,6 +5,7 @@ import json
 import httpx
 import numpy as np
 import pytest
+from duplex_runtime_fixture import runtime_json
 
 from experiments.tau_voice.duplex_bench import build_dynamic_user
 from tau2.data_model.message import AssistantMessage
@@ -46,14 +47,16 @@ def test_gateway_user_same_call_annotation_delivers_audio_without_logging_key(
                         "finish_reason": "stop",
                         "message": {
                             "role": "assistant",
-                            "content": json.dumps(
-                                {
-                                    "action": "speak",
-                                    "text": script,
-                                    "reason": "说明目的地。",
-                                    "keyword": annotation,
-                                },
-                                ensure_ascii=False,
+                            "content": runtime_json(
+                                json.dumps(
+                                    {
+                                        "action": "speak",
+                                        "text": script,
+                                        "reason": "说明目的地。",
+                                        "keyword": annotation,
+                                    },
+                                    ensure_ascii=False,
+                                )
                             ),
                         },
                     }

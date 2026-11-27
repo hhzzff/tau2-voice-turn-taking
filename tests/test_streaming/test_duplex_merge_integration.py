@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
+from duplex_runtime_fixture import runtime_json
 
 from experiments.tau_voice import duplex_bench
 from tau2.data_model.audio import (
@@ -183,7 +184,7 @@ def test_explicit_tts_provider_preserves_pause_delivery_and_synthesis_evidence(
     monkeypatch.setattr(
         "tau2.user.duplex_scenario_user.generate",
         lambda **kwargs: AssistantMessage(
-            role="assistant", content=decision.model_dump_json()
+            role="assistant", content=runtime_json(decision.model_dump_json())
         ),
     )
     user = duplex_bench.build_dynamic_user(
@@ -223,7 +224,9 @@ def test_acoustic_memory_observation_keeps_the_complete_answer(monkeypatch, tmp_
         model_calls.append(payload["elapsed_seconds"])
         return AssistantMessage(
             role="assistant",
-            content=json.dumps({"action": "finish", "reason": "The answer ended."}),
+            content=runtime_json(
+                json.dumps({"action": "finish", "reason": "The answer ended."})
+            ),
         )
 
     monkeypatch.setattr("tau2.user.duplex_scenario_user.generate", generate)
@@ -278,7 +281,7 @@ def test_acoustic_backchannel_account_keeps_floor_during_brief_acknowledgement(
     monkeypatch.setattr(
         "tau2.user.duplex_scenario_user.generate",
         lambda **kwargs: AssistantMessage(
-            role="assistant", content=decision.model_dump_json()
+            role="assistant", content=runtime_json(decision.model_dump_json())
         ),
     )
     monkeypatch.setattr(

@@ -22,6 +22,7 @@ from tau2.user.acoustic_clarification import (
     AcousticClarificationConfig,
     KeywordAnnotation,
 )
+from tau2.user.duplex_user_goal import CurrentUserGoal
 
 Family = Literal["interruption", "rejection", "turn_taking", "proactive"]
 Trigger = Literal["assistant_speaking", "assistant_silent", "any"]
@@ -375,6 +376,12 @@ class DuplexDecision(BaseModel):
             ):
                 raise ValueError("Use action=finish, not stop tokens in spoken text")
         return self
+
+
+class DuplexRuntimeDecision(DuplexDecision):
+    """Live decisions require a goal assessment; archived decisions remain valid."""
+
+    current_goal: CurrentUserGoal
 
 
 def terra_llm_args(model: str) -> dict:

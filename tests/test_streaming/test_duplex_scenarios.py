@@ -7,6 +7,7 @@ import wave
 
 import numpy as np
 import pytest
+from duplex_runtime_fixture import runtime_json
 from pydantic import ValidationError
 
 from experiments.tau_voice.duplex_bench import (
@@ -976,7 +977,9 @@ def test_assistant_acknowledgement_does_not_truncate_long_user_turn(
 
     def decide(**kwargs):
         calls.append(kwargs)
-        return AssistantMessage(role="assistant", content=decision.model_dump_json())
+        return AssistantMessage(
+            role="assistant", content=runtime_json(decision.model_dump_json())
+        )
 
     monkeypatch.setattr("tau2.user.duplex_scenario_user.generate", decide)
     user = build_dynamic_user(
@@ -1032,7 +1035,9 @@ def test_runtime_model_controls_order_and_contextual_content(
         else:
             answer = DuplexDecision(action="wait", reason="等待助手提供信息。")
         assert kwargs["model"] == "gpt-6.1-terra"
-        return AssistantMessage(role="assistant", content=answer.model_dump_json())
+        return AssistantMessage(
+            role="assistant", content=runtime_json(answer.model_dump_json())
+        )
 
     monkeypatch.setattr("tau2.user.duplex_scenario_user.generate", decide)
     user = build_dynamic_user(
@@ -1077,9 +1082,11 @@ def test_quiet_item_bearing_audio_cannot_end_the_recording(monkeypatch, tmp_path
         calls.append(kwargs)
         return AssistantMessage(
             role="assistant",
-            content=DuplexDecision(
-                action="finish", reason="All coverage complete."
-            ).model_dump_json(),
+            content=runtime_json(
+                DuplexDecision(
+                    action="finish", reason="All coverage complete."
+                ).model_dump_json()
+            ),
         )
 
     monkeypatch.setattr("tau2.user.duplex_scenario_user.generate", finish)
@@ -1152,7 +1159,7 @@ def test_model_wait_is_respected_without_forcing_an_event(
     monkeypatch.setattr(
         "tau2.user.duplex_scenario_user.generate",
         lambda **kwargs: AssistantMessage(
-            role="assistant", content=wait.model_dump_json()
+            role="assistant", content=runtime_json(wait.model_dump_json())
         ),
     )
     user = build_dynamic_user(
@@ -1221,7 +1228,9 @@ def test_all_event_types_execute_from_runtime_model_actions(
                     else "",
                     reason="此时对话提供了合适的机会。",
                 )
-        return AssistantMessage(role="assistant", content=answer.model_dump_json())
+        return AssistantMessage(
+            role="assistant", content=runtime_json(answer.model_dump_json())
+        )
 
     monkeypatch.setattr("tau2.user.duplex_scenario_user.generate", decide)
     plan = scenario(

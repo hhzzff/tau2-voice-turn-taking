@@ -41,3 +41,9 @@ Continuing an existing conversation after a connection loss using its retained s
 
 **Session isolation**:
 Keeping the inputs, outputs, and errors of each conversation within that conversation, even when another starts before earlier work has finished.
+
+**Current user goal**:
+The outcome the user is currently trying to obtain, including the request still awaiting an answer and any misunderstanding that prevents progress. Completing a test event does not imply satisfying this goal.
+
+**Conversation repair**:
+A user or assistant response that corrects a consequential misunderstanding or recovers an abandoned request so the conversation can continue toward the user's goal.

@@ -20,9 +20,11 @@ from tau2.user.acoustic_clarification import degrade_utterance, pcm_wav, prepare
 from tau2.user.duplex_events import (
     EVENT_CATALOG,
     DuplexDecision,
+    DuplexRuntimeDecision,
     DuplexScenario,
     terra_llm_args,
 )
+from tau2.user.duplex_user_goal import CurrentUserGoal
 from tau2.user.user_simulator_streaming import VoiceStreamingUserSimulator
 from tau2.utils.llm_utils import generate
 from tau2.voice.synthesis.synthesize import synthesize_voice
@@ -32,6 +34,50 @@ from tau2.voice.utils.audio_preprocessing import convert_to_pcm16, resample_audi
 RUNTIME_POLICY = """You are the USER in a live voice conversation, not the assistant.
 Speak the configured language and pursue your ordinary conversation goal.
 Your pending duplex event TYPES are coverage goals, not a script.
+Assess current_goal BEFORE choosing each action. It is the user's real
+conversation objective, NOT the next test event or a goal of finishing coverage.
+Use the previous current_goal and actual recent_conversation to track the
+pending_request, answer progress, unresolved_issues, stance and quoted evidence.
+The assessment describes the conversation BEFORE the proposed action is spoken.
+An accepted decision or an expired observation window does not solve a goal.
+
+Conversation repair takes priority over conversation_outline, event_guidance
+and event order. In particular, track unfinished answers even when the
+assistant changes subjects, responds to a background speaker, or asks whether
+to continue. Check source=background versus source=primary. Background speech
+is NOT an aside spoken by the primary user. When the assistant tells you that
+YOU were talking to somebody else and stops to ask whether YOU want to continue,
+that is an unresolved speaker attribution and conversation-control mistake:
+mark needs_repair rather than silently accepting responsibility for it. A partly
+useful suggestion made before this detour does not repair this interruption or
+finish an abandoned sentence/recommendation. Naturally clarify who spoke and
+ask for the remaining answer. Do not just agree and move to the next test. Do not mistake
+an acknowledgement, apology or your own repair request for the missing answer.
+Keep the pending request until actual later replies address it. You may ask a
+different question when the conversation justifies it, but never silently erase
+an outstanding need to advance coverage.
+
+Do not manufacture dissatisfaction. Distinguish that detour from an assistant
+which ignores background speech and continues, or explicitly recognizes another
+speaker and resumes the answer without making you request it again. Those cases
+do not require a complaint. Ignore harmless slips; keep listening if
+the assistant continues or resumes the requested answer itself. While a newly
+asked question has no real answer yet, use awaiting_answer and wait rather than
+immediately repeating it. Judge a delay from actual dialogue and elapsed audio
+time, not merely a quiet frame or ASR text fragment. Escalate concern/frustration
+only for a concrete inconvenience, repeated misunderstanding or abandoned work.
+Having to reclaim an answer abandoned for somebody else's conversation is a
+concrete inconvenience: a direct concerned or mildly frustrated response is
+appropriate; do not always smooth it over with cheerful agreement. Do not
+force anger or rude wording when a brief firm correction is enough.
+For needs_repair, choose ordinary speak at a quiet boundary, or wait while the
+assistant is still speaking. Repair is not a new test event and leaves the
+required event pending. Once the issue is actually resolved, re-evaluate event
+opportunities. Satisfied goals have no unresolved_issues and pending_request="".
+Quote exact available
+words with their speaker (primary/background/assistant) and entry seconds in
+evidence; ASR hypotheses can change. Quotes ground the assessment but do not
+prove the recognizer was correct. Never use unseen audio or future facts.
 Based on the actual conversation, YOU decide when the required next event is a
 natural moment and exactly what to say. If an execution order is provided, trigger
 only its next event; you may keep conversing to create an opportunity or wait.
@@ -188,6 +234,10 @@ class DuplexController:
         self.finished = False
         self.feedback = ""
         self.heard_assistant_audio = False
+        self.current_goal = CurrentUserGoal(
+            objective=scenario.topic or "Pursue the user's ordinary conversation goal"
+        )
+        self.goal_assessed_at = -1.0
 
     @property
     def next_required_event(self):
@@ -206,7 +256,9 @@ class DuplexController:
     ) -> bool:
         """Reject impossible/unselected actions; never substitute a scripted one."""
         reason = ""
-        if (
+        if self.current_goal.action_feedback(decision.action):
+            reason = self.current_goal.action_feedback(decision.action)
+        elif (
             self.active
             and decision.action != "wait"
             and not (
@@ -423,6 +475,7 @@ class DuplexController:
                 and "required event order" in row.get("feedback", "")
             ),
             "decisions": self.decisions,
+            "current_goal": self.current_goal.model_dump(),
             "timing_note": "Assistant observations belong to the previous output tick; timing resolution is one tick. Speech activity alone does not prove semantic correctness.",
         }
 
@@ -524,6 +577,7 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
             "language": self.scenario.language,
             "topic": self.scenario.topic,
             "user_context": self.scenario.user_context,
+            "current_goal": c.current_goal.model_dump(),
             "conversation_outline": self.scenario.conversation_outline,
             "current_event_guidance": self.scenario.event_guidance.get(
                 c.next_required_event, ""
@@ -547,7 +601,7 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
             "executed_events": [row["event_id"] for row in c.records],
             "recent_conversation": conversation,
             "previous_execution_feedback": c.feedback,
-            "decision_schema": DuplexDecision.model_json_schema(),
+            "decision_schema": DuplexRuntimeDecision.model_json_schema(),
         }
         result = generate(
             model=self.scenario.user_model,
@@ -563,13 +617,45 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
             call_name="duplex_runtime_decision",
             **terra_llm_args(self.scenario.user_model),
         )
-        decision = DuplexDecision.model_validate_json(result.content)
+        runtime_decision = DuplexRuntimeDecision.model_validate_json(result.content)
+        runtime_decision.current_goal.validate_evidence(conversation)
+        if c.current_goal.status == "needs_repair" and (
+            runtime_decision.current_goal.status != "needs_repair"
+            or not set(c.current_goal.unresolved_issues).issubset(
+                runtime_decision.current_goal.unresolved_issues
+            )
+        ):
+            # Issuing our own repair is not evidence that the assistant repaired
+            # the exchange. Require a newly heard assistant reply to clear it.
+            if not any(
+                evidence.speaker == "assistant"
+                and any(
+                    row["role"] == "assistant"
+                    and abs(row["seconds"] - evidence.seconds) < 0.001
+                    and row.get("audio_end_seconds", row["seconds"])
+                    > c.goal_assessed_at
+                    for row in conversation
+                )
+                for evidence in runtime_decision.current_goal.evidence
+            ):
+                raise ValueError(
+                    "Clearing an unresolved goal requires evidence from a newly heard assistant reply"
+                )
+        previous_goal = c.current_goal.model_dump()
+        c.current_goal = runtime_decision.current_goal
+        c.goal_assessed_at = now
+        # Goal assessment stays private; only the speech/action enters execution.
+        decision = DuplexDecision.model_validate(
+            runtime_decision.model_dump(exclude={"current_goal"})
+        )
         accepted = c.allowed(decision, self.assistant_speaking)
         c.decisions.append(
             {
                 "seconds": now,
                 "model": self.scenario.user_model,
                 "decision": decision.model_dump(),
+                "previous_goal": previous_goal,
+                "current_goal": c.current_goal.model_dump(),
                 "accepted": accepted,
                 "feedback": c.feedback,
                 "cost": result.cost,
