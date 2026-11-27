@@ -21,6 +21,7 @@ from tau2.data_model.audio import (
 from tau2.data_model.message import AssistantMessage
 from tau2.data_model.simulation import AudioNativeConfig
 from tau2.user.duplex_events import DuplexScenario
+from tau2.user.duplex_scenario_user import RUNTIME_POLICY
 
 
 def test_complete_tts_dropchunk_crosses_ticks_without_leaking_annotation(
@@ -160,7 +161,13 @@ def test_agent_question_uses_existing_yield_and_clear_natural_reply(
             }
             if event_id:
                 decision["event_id"] = event_id
-        elif "哪个门" in payload and len(uttered) == 1:
+        elif (
+            "哪个门" in payload
+            and len(uttered) == 1
+            and not json.loads(payload[len(RUNTIME_POLICY) + 1 :])[
+                "assistant_turn_open"
+            ]
+        ):
             uttered.append(scripts[1])
             decision = {
                 "action": "speak",

@@ -4,10 +4,11 @@ import json
 
 import numpy as np
 import pytest
+from duplex_runtime_fixture import runtime_json
 from pydantic import ValidationError
 
 from experiments.tau_voice.duplex_bench import build_dynamic_user
-from tau2.data_model.audio import AudioData, AudioEncoding, AudioFormat
+from tau2.data_model.audio import PCM_SAMPLE_RATE, AudioData, AudioEncoding, AudioFormat
 from tau2.data_model.message import AssistantMessage
 from tau2.data_model.simulation import AudioNativeConfig
 from tau2.user.duplex_events import (
@@ -17,6 +18,49 @@ from tau2.user.duplex_events import (
 )
 from tau2.user.duplex_scenario_user import RUNTIME_POLICY, DuplexController
 from tau2.user.duplex_user_goal import CurrentUserGoal
+
+
+@pytest.mark.parametrize("quiet_item", [None, "answer"])
+@pytest.mark.parametrize("action", ["speak", "prepare_event"])
+def test_ordinary_turn_waits_through_a_pause_in_the_assistant_answer(
+    monkeypatch, tmp_path, quiet_item, action
+):
+    user = build_dynamic_user(
+        plan(), tmp_path, AudioNativeConfig(), "nova", "onyx", "test"
+    )
+    state = user.get_init_state()
+    decision = DuplexDecision(
+        action=action,
+        event_id="turn_taking.handoff" if action == "prepare_event" else None,
+        text="How would you carry that on the bus?",
+        reason="Ask for a practical comparison",
+    )
+    monkeypatch.setattr(
+        "tau2.user.duplex_scenario_user.generate",
+        lambda **kwargs: AssistantMessage(
+            role="assistant", content=runtime_json(decision.model_dump_json())
+        ),
+    )
+
+    def step(seconds, speaking=False, item=None):
+        state.elapsed_samples = round(seconds * PCM_SAMPLE_RATE)
+        state.input_turn_taking_buffer.clear()
+        state.input_turn_taking_buffer.append(
+            AssistantMessage(
+                role="assistant",
+                contains_speech=speaking,
+                utterance_ids=[item] if item else None,
+            )
+        )
+        return user._next_turn_taking_action(state).action
+
+    user.next_check = 57.8
+    assert step(57.4, speaking=True, item="answer") == "wait"
+    assert step(57.8, item=quiet_item) == "wait"
+    assert user.pending_decision is None
+    assert step(58, speaking=True, item="answer") == "wait"
+    assert step(59.1) == "generate_message"
+    assert user.pending_decision == decision
 
 
 def plan():

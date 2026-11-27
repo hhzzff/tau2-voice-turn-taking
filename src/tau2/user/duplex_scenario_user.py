@@ -118,6 +118,10 @@ Natural interruption timing is mandatory for primary-user interruptions:
   listening. If you cannot provide both, choose wait.
 Background speech and incidental noise may overlap independently of the
 assistant's meaning; they do not need a semantic reaction to the assistant.
+Use assistant_turn_open to avoid ordinary speech in a pause within an answer.
+It stays true while delivered audio still belongs to an assistant utterance
+or the quiet interval is too short. Use assistant_speaking for tests that
+require audible overlap.
 Ordinary bridging turns and recall requests should follow a completed answer
 and a natural turn boundary. Do not abandon a newly asked question mid-answer
 or say "That makes sense" merely to advance to the next event.
@@ -253,6 +257,8 @@ class DuplexController:
         self,
         decision: DuplexDecision,
         assistant_speaking: bool,
+        *,
+        assistant_turn_open: bool = False,
     ) -> bool:
         """Reject impossible/unselected actions; never substitute a scripted one."""
         reason = ""
@@ -293,8 +299,10 @@ class DuplexController:
                 f"Keep the required event order: trigger {self.next_required_event} next; "
                 f"{decision.event_id} is later. Continue naturally or wait for the required opportunity."
             )
-        elif decision.action in {"speak", "prepare_event"} and assistant_speaking:
-            reason = "Ordinary user speech cannot become an unselected interruption; wait or trigger a selected event."
+        elif decision.action in {"speak", "prepare_event"} and (
+            assistant_speaking or assistant_turn_open
+        ):
+            reason = "The assistant still holds the turn. Wait for the end of its answer before ordinary user speech."
         elif decision.action == "trigger_event":
             trigger = EVENT_CATALOG[decision.event_id].trigger
             if trigger == "assistant_speaking" and not assistant_speaking:
@@ -567,6 +575,11 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
 
     def _decide(self, now):
         c = self.controller
+        assistant_turn_open = (
+            self.last_assistant_audio_seconds >= 0
+            and now - self.last_assistant_audio_seconds
+            < self.scenario.response_quiet_seconds - 1e-6
+        )
         perception = getattr(self, "perception", None)
         conversation = (
             perception.history(c.history, now)
@@ -584,6 +597,7 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
             ),
             "elapsed_seconds": now,
             "assistant_speaking": self.assistant_speaking,
+            "assistant_turn_open": assistant_turn_open,
             "assistant_text_source": (
                 "asr_of_played_audio"
                 if perception is not None
@@ -648,7 +662,11 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
         decision = DuplexDecision.model_validate(
             runtime_decision.model_dump(exclude={"current_goal"})
         )
-        accepted = c.allowed(decision, self.assistant_speaking)
+        accepted = c.allowed(
+            decision,
+            self.assistant_speaking,
+            assistant_turn_open=assistant_turn_open,
+        )
         c.decisions.append(
             {
                 "seconds": now,
@@ -704,7 +722,7 @@ class DuplexUserSimulator(VoiceStreamingUserSimulator):
                     wav.writeframes(decoded.data)
             self.acoustic_assistant_observations.append(observation)
         # A quiet frame within a delivered utterance is not playback completion.
-        # Require a full second without item-bearing audio before ending a run.
+        # Keep the assistant's turn open through quiet frames of its utterance.
         if self.assistant_speaking or (incoming is not None and incoming.utterance_ids):
             self.last_assistant_audio_seconds = now
         if self.perception is not None:
