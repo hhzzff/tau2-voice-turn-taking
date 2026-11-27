@@ -145,6 +145,7 @@ class OpenAIRealtimeProvider:
         self._current_vad_config: Optional[OpenAIVADConfig] = None
         self._audio_format: AudioFormat = TELEPHONY_AUDIO_FORMAT
         self.session_id: Optional[str] = None
+        self.session_config: dict = {}
 
     @property
     def is_connected(self) -> bool:
@@ -282,6 +283,10 @@ class OpenAIRealtimeProvider:
         vad_config: OpenAIVADConfig,
         modality: str = "text",
         audio_format: Optional[AudioFormat] = None,
+        *,
+        voice: str = DEFAULT_OPENAI_VOICE,
+        transcription_language: Optional[str] = "en",
+        max_output_tokens: Optional[int] = None,
     ) -> None:
         """Configure the realtime session with instructions, tools, and settings.
 
@@ -300,6 +305,9 @@ class OpenAIRealtimeProvider:
             audio_format: Audio format for input/output. Defaults to telephony
                 (8kHz μ-law). Must be compatible with OpenAI Realtime API:
                 g711_ulaw (8kHz), g711_alaw (8kHz), or pcm16 (24kHz).
+            voice: Output voice, set before the first response.
+            transcription_language: Input transcription language, or None to disable.
+            max_output_tokens: Optional per-response cap; None preserves API default.
 
         Raises:
             RuntimeError: If not connected or if session configuration fails.
@@ -333,6 +341,8 @@ class OpenAIRealtimeProvider:
             "tools": self._format_tools_for_api(tools),
             "tool_choice": "auto",
         }
+        if max_output_tokens is not None:
+            session["max_output_tokens"] = max_output_tokens
 
         if self.reasoning_effort is not None:
             session["reasoning"] = {"effort": self.reasoning_effort}
@@ -343,17 +353,19 @@ class OpenAIRealtimeProvider:
                     "format": audio_fmt,
                     "transcription": {
                         "model": DEFAULT_OPENAI_TRANSCRIPTION_MODEL,
-                        "language": "en",
+                        "language": transcription_language,
                     },
                     "noise_reduction": {"type": DEFAULT_OPENAI_NOISE_REDUCTION},
                     "turn_detection": self._build_turn_detection_config(vad_config),
                 },
             }
+            if transcription_language is None:
+                session["audio"]["input"]["transcription"] = None
 
         if modality == "audio":
             session.setdefault("audio", {})["output"] = {
                 "format": audio_fmt,
-                "voice": DEFAULT_OPENAI_VOICE,
+                "voice": voice,
             }
 
         await self.ws.send(json.dumps({"type": "session.update", "session": session}))
@@ -365,6 +377,7 @@ class OpenAIRealtimeProvider:
 
             if event_type == "session.updated":
                 self._current_vad_config = vad_config
+                self.session_config = data.get("session", {})
                 break
             elif event_type == "error":
                 error_msg = data.get("error", {}).get("message", "Unknown error")
@@ -431,6 +444,17 @@ class OpenAIRealtimeProvider:
             f"Truncate sent: item_id={item_id}, content_index={content_index}, "
             f"audio_end_ms={audio_end_ms}"
         )
+
+    async def receive_raw_events(self) -> AsyncGenerator[dict, None]:
+        """Receive lossless audit events; use exactly one receiver per connection.
+
+        Continuous drivers need response attribution and status_details that the
+        legacy typed event interface omits. No transcript is routed to the user.
+        """
+        if not self.is_connected:
+            raise RuntimeError("Not connected to API")
+        async for raw in self.ws:
+            yield json.loads(raw)
 
     async def receive_events(self) -> AsyncGenerator[BaseRealtimeEvent, None]:
         """Async generator yielding parsed events from the WebSocket.

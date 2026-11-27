@@ -1,0 +1,13 @@
+{
+  "asr": {
+    "model_path": "/path/to/x-asr-160ms",
+    "execution_provider": "cpu",
+    "num_threads": 2
+  },
+  "llm": {
+    "base_url": "http://127.0.0.1:8778/v1"
+  },
+  "tts": {
+    "url": "http://127.0.0.1:8793/synthesize"
+  }
+}

@@ -529,6 +529,9 @@ def build_parser():
 
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
+    from experiments.tau_voice.local_user_cli import add_parser
+
+    add_parser(commands)
     reporting = commands.add_parser(
         "report", help="Write an offline HTML explanation and topic coverage audit"
     )

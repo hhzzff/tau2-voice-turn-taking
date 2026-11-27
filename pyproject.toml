@@ -36,6 +36,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+local-user = [
+    "websockets>=15,<16",
+    "soxr>=0.5,<2",
+    "soundfile>=0.13,<0.14",
+    "sherpa-onnx==1.13.8",
+    "sherpa-onnx-core==1.13.8",
+]
 voice = [
     "elevenlabs>=1.54.0",
     "deepgram-sdk>=3.7.3",
@@ -64,6 +71,7 @@ gym = [
 ]
 dev = [
     "pytest>=8.3.5",
+    "pytest-asyncio>=1,<2",
     "pytest-xdist>=3.5.0",
     "ruff>=0.9.1",
     "pre-commit>=4.0.0",
@@ -75,7 +83,7 @@ experiments = [
     "scikit-learn>=1.6.1",
 ]
 all = [
-    "tau2[voice,knowledge,gym,dev,experiments]",
+    "tau2[voice,local-user,knowledge,gym,dev,experiments]",
 ]
 [project.urls]
 Homepage = "https://taubench.com/"
