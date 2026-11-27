@@ -46,7 +46,10 @@ def conversation_environment(language):
 
 
 def _load_scenario(path):
-    return DuplexScenario.model_validate_json(path.read_text(encoding="utf-8"))
+    data = json.loads(path.read_text(encoding="utf-8"))
+    # Historical recordings must not acquire opportunities that were never run.
+    data.setdefault("include_proactive_opportunities", False)
+    return DuplexScenario.model_validate(data)
 
 
 def _acoustic_config(args, current=None):
@@ -73,6 +76,7 @@ def prepare(args):
         language=args.language,
         user_model=args.user_model,
         assistant_observation=args.assistant_observation,
+        include_proactive_opportunities=args.proactive_opportunities,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(scenario.model_dump_json(indent=2), encoding="utf-8")
@@ -81,7 +85,14 @@ def prepare(args):
 
 
 def build_dynamic_user(
-    scenario, output, config, primary_voice, background_voice, tts_model, gateway=False
+    scenario,
+    output,
+    config,
+    primary_voice,
+    background_voice,
+    tts_model,
+    gateway=False,
+    tts_provider=None,
 ):
     """Disable unrelated random effects for attribution to the selected events."""
     from tau2.data_model.audio_effects import (
@@ -96,21 +107,39 @@ def build_dynamic_user(
         SynthesisConfig,
         TranscriptionConfig,
         VoiceSettings,
+        VolcengineTTSConfig,
     )
     from tau2.user.duplex_scenario_user import DuplexUserSimulator
 
+    tts_provider = tts_provider or (
+        "elevenlabs"
+        if gateway
+        else "openai"
+        if scenario.acoustic_clarification is not None
+        else "volcengine"
+    )
+    if gateway and tts_provider != "elevenlabs":
+        raise ValueError("--byted-gateway requires ElevenLabs TTS")
+    if tts_provider == "elevenlabs":
+        provider_config = ElevenLabsTTSConfig(
+            model_id=tts_model,
+            voice_id=primary_voice,
+            gateway=gateway,
+            seed=scenario.seed,
+        )
+    elif tts_provider == "openai":
+        provider_config = OpenAITTSConfig(model=tts_model, voice=primary_voice)
+    elif tts_provider == "volcengine":
+        provider_config = VolcengineTTSConfig(
+            resource_id=tts_model, speaker=primary_voice
+        )
+    else:
+        raise ValueError(f"Unsupported user TTS provider: {tts_provider}")
     settings = VoiceSettings(
         transcription_config=None,
         synthesis_config=SynthesisConfig(
-            provider="elevenlabs" if gateway else "openai",
-            provider_config=ElevenLabsTTSConfig(
-                model_id=tts_model,
-                voice_id=primary_voice,
-                gateway=True,
-                seed=scenario.seed,
-            )
-            if gateway
-            else OpenAITTSConfig(model=tts_model, voice=primary_voice),
+            provider=tts_provider,
+            provider_config=provider_config,
             channel_effects_config=ChannelEffectsConfig(enable_frame_drops=False),
             source_effects_config=SourceEffectsConfig(
                 enable_background_noise=False, enable_burst_noise=False
@@ -172,11 +201,16 @@ def _run(args):
         BYTED_DEFAULT_TTS_MODEL,
         BYTED_DEFAULT_VOICE,
         DEFAULT_AUDIO_NATIVE_MODELS,
+        DEFAULT_DUPLEX_BACKGROUND_VOICE,
         DEFAULT_DUPLEX_USER_MODEL,
     )
     from tau2.data_model.simulation import AudioNativeConfig
     from tau2.data_model.tasks import Task, UserScenario
-    from tau2.data_model.voice import OpenAITTSConfig
+    from tau2.data_model.voice import (
+        ElevenLabsTTSConfig,
+        OpenAITTSConfig,
+        VolcengineTTSConfig,
+    )
     from tau2.orchestrator.full_duplex_orchestrator import FullDuplexOrchestrator
     from tau2.runner.build import build_agent, build_environment
     from tau2.user.duplex_evaluation import (
@@ -199,11 +233,6 @@ def _run(args):
         args.user_model = args.user_model or BYTED_DEFAULT_TEXT_MODEL
         if args.judge_model == DEFAULT_DUPLEX_USER_MODEL:
             args.judge_model = BYTED_DEFAULT_TEXT_MODEL
-        if args.primary_voice == "nova":
-            args.primary_voice = BYTED_DEFAULT_VOICE
-        args.tts_model = args.tts_model or BYTED_DEFAULT_TTS_MODEL
-    else:
-        args.tts_model = args.tts_model or OpenAITTSConfig().model
     scenario = (
         _load_scenario(args.scenario)
         if args.scenario
@@ -219,15 +248,42 @@ def _run(args):
     scenario.acoustic_clarification = _acoustic_config(
         args, scenario.acoustic_clarification
     )
+    args.tts_provider = args.tts_provider or (
+        "elevenlabs"
+        if args.byted_gateway
+        else "openai"
+        if scenario.acoustic_clarification is not None
+        else "volcengine"
+    )
+    if args.byted_gateway and args.tts_provider != "elevenlabs":
+        raise ValueError("--byted-gateway requires ElevenLabs TTS")
+    if args.tts_provider == "volcengine":
+        defaults = VolcengineTTSConfig()
+        args.primary_voice = args.primary_voice or defaults.speaker
+        args.background_voice = args.background_voice or DEFAULT_DUPLEX_BACKGROUND_VOICE
+        args.tts_model = args.tts_model or defaults.resource_id
+    elif args.tts_provider == "openai":
+        defaults = OpenAITTSConfig()
+        args.primary_voice = args.primary_voice or defaults.voice
+        args.background_voice = args.background_voice or "onyx"
+        args.tts_model = args.tts_model or defaults.model
+    else:
+        args.primary_voice = args.primary_voice or BYTED_DEFAULT_VOICE
+        args.tts_model = args.tts_model or (
+            BYTED_DEFAULT_TTS_MODEL
+            if args.byted_gateway
+            else ElevenLabsTTSConfig().model_id
+        )
     if (
-        args.byted_gateway
-        and args.background_voice == "onyx"
+        args.tts_provider == "elevenlabs"
+        and (not args.background_voice or args.background_voice == "onyx")
         and set(scenario.selected_events)
         & {"rejection.third_party", "rejection.contextual"}
     ):
         raise ValueError(
             "Provide a distinct available ElevenLabs --background-voice ID for background speaker events"
         )
+    args.background_voice = args.background_voice or "unused-background"
     if args.seed is not None:
         scenario.seed = args.seed
     if args.user_model:
@@ -236,6 +292,8 @@ def _run(args):
         scenario.language = args.language
     if args.assistant_observation:
         scenario.assistant_observation = args.assistant_observation
+    if args.proactive_opportunities is not None:
+        scenario.include_proactive_opportunities = args.proactive_opportunities
     # Refuse accidental reuse of artifacts, including an interrupted earlier run.
     if args.output.exists() and any(args.output.iterdir()):
         raise FileExistsError("Choose an empty output directory for a new trial")
@@ -243,7 +301,7 @@ def _run(args):
     config = AudioNativeConfig(
         provider=args.provider,
         model=args.model or DEFAULT_AUDIO_NATIVE_MODELS[args.provider],
-        max_steps_seconds=args.max_seconds or (60 + 75 * len(scenario.selected_events)),
+        max_steps_seconds=args.max_seconds or (60 + 75 * len(scenario.event_ids)),
     )
     (args.output / "scenario.json").write_text(
         scenario.model_dump_json(indent=2), encoding="utf-8"
@@ -255,6 +313,7 @@ def _run(args):
                 "primary_voice": args.primary_voice,
                 "background_voice": args.background_voice,
                 "tts_model": args.tts_model,
+                "tts_provider": args.tts_provider,
                 "byted_gateway": args.byted_gateway,
             },
             indent=2,
@@ -289,6 +348,7 @@ def _run(args):
                 args.background_voice,
                 args.tts_model,
                 gateway=args.byted_gateway,
+                tts_provider=args.tts_provider,
             )
             agent = build_agent(
                 "discrete_time_audio_native_agent",
@@ -320,6 +380,7 @@ def _run(args):
         )
         raise
     finally:
+        # Save local evidence before any remote judge call can fail or hang.
         if orchestrator is not None and simulation is None:
             orchestrator._cleanup()
         if orchestrator is not None and orchestrator.ticks:
@@ -330,6 +391,11 @@ def _run(args):
                 ),
                 encoding="utf-8",
             )
+            if simulation is None:
+                from types import SimpleNamespace
+
+                partial = SimpleNamespace(mode="full_duplex", ticks=orchestrator.ticks)
+                generate_simulation_audio(partial, args.output / "audio")
         if agent is not None and scenario.acoustic_clarification is not None:
             (args.output / "agent_input_conversion.json").write_text(
                 json.dumps(agent.input_audio_conversions, ensure_ascii=False, indent=2),
@@ -369,6 +435,9 @@ def _run(args):
                     json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
                 )
             assessment = assess_report(scenario, report, config.tick_duration_seconds)
+            (args.output / "assessment.json").write_text(
+                json.dumps(assessment, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
             if args.judge_model:
                 assessment = judge_report(scenario, assessment, args.judge_model)
             (args.output / "assessment.json").write_text(
@@ -378,7 +447,7 @@ def _run(args):
     return (
         0
         if assessment
-        and assessment["summary"]["observed"] == len(scenario.selected_events)
+        and assessment["summary"]["observed"] == len(scenario.event_ids)
         and (
             scenario.acoustic_clarification is None
             or (
@@ -395,6 +464,19 @@ def _run(args):
 
 
 def assess(args):
+    """Preserve every reassessment request/response alongside existing evidence."""
+    from tau2.utils.llm_utils import llm_log_dir, llm_log_mode
+
+    directory_token = llm_log_dir.set(args.output / "llm_calls")
+    mode_token = llm_log_mode.set("all")
+    try:
+        return _assess(args)
+    finally:
+        llm_log_mode.reset(mode_token)
+        llm_log_dir.reset(directory_token)
+
+
+def _assess(args):
     """Reassess saved evidence without opening an agent session or synthesizing."""
     from tau2.user.duplex_evaluation import (
         assess_report,
@@ -493,6 +575,12 @@ def build_parser():
         help="Default: transcribe already played assistant audio before Terra decisions",
     )
     planning.add_argument("--output", type=Path, required=True)
+    planning.add_argument(
+        "--proactive-opportunities",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Add assistant backchannel and completion opportunities alongside the selected events",
+    )
     planning.set_defaults(func=prepare)
     execution = commands.add_parser(
         "run", help="Let Terra choose live duplex actions against a voice model"
@@ -533,16 +621,23 @@ def build_parser():
     )
     execution.add_argument(
         "--provider",
-        choices=["openai", "gemini", "nova", "xai", "qwen"],
+        choices=["openai", "gemini", "nova", "xai", "qwen", "doubao"],
         default="openai",
     )
     execution.add_argument(
         "--model", help="Default: configured model for the chosen provider"
     )
-    execution.add_argument("--primary-voice", default="nova")
-    execution.add_argument("--background-voice", default="onyx")
     execution.add_argument(
-        "--tts-model", help="OpenAI default or ElevenLabs model_id for --byted-gateway"
+        "--primary-voice", help="Voice ID for the chosen TTS provider"
+    )
+    execution.add_argument(
+        "--background-voice", help="Distinct background TTS voice ID"
+    )
+    execution.add_argument("--tts-model", help="Model/resource ID for the TTS provider")
+    execution.add_argument(
+        "--tts-provider",
+        choices=["volcengine", "openai", "elevenlabs"],
+        help="Default: Volcengine for semantic events, OpenAI for acoustic tasks, ElevenLabs for --byted-gateway",
     )
     execution.add_argument(
         "--byted-gateway",
@@ -552,6 +647,12 @@ def build_parser():
     execution.add_argument("--env-file", type=Path, default=Path(".env"))
     execution.add_argument("--seed", type=int, help="Override scenario random seed")
     execution.add_argument("--max-seconds", type=int)
+    execution.add_argument(
+        "--proactive-opportunities",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Override supplemental opportunities; new event selections enable both by default",
+    )
     execution.add_argument(
         "--judge-model",
         default=DEFAULT_DUPLEX_USER_MODEL,

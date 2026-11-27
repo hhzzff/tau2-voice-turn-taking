@@ -6,6 +6,7 @@ import wave
 import httpx
 import numpy as np
 import pytest
+from duplex_runtime_fixture import runtime_json
 
 from experiments.tau_voice.duplex_bench import build_dynamic_user
 from tau2.data_model.audio import AudioData, AudioEncoding, AudioFormat
@@ -47,7 +48,9 @@ def make_user(monkeypatch, output, noise_path, *, target=(0.2, 0.6), repair=Fals
             }
         else:
             decision = {"action": "wait", "reason": "Wait for an actual reply."}
-        return AssistantMessage(role="assistant", content=json.dumps(decision))
+        return AssistantMessage(
+            role="assistant", content=runtime_json(json.dumps(decision))
+        )
 
     def align(*args, **kwargs):
         return httpx.Response(

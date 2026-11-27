@@ -230,3 +230,9 @@ data/simulations/.credentials/
 /example/tts.py
 /test.py
 /artifacts/
+
+# Local experiment outputs and packaged documentation.
+runs/
+.uv-cache/
+/docs/docs.7z
+/docs/background-speaker-audio.html

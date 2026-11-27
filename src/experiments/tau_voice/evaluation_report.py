@@ -96,8 +96,12 @@ return 事件评审("不针对噪声作答；继续原回答不算误响应", �
 if not 刺激开始前助手发声:
     时序 = fail if 观察窗内助手发声 else pass
 return 事件评审("核对已说约定与刺激，再判断是否遵守不回应条件", 时序)""",
-    "proactive.completion": """return 事件评审("补出上下文支持的内容，而非泛泛回答")""",
-    "proactive.backchannel": """return 事件评审("用户仍持有话轮时简短附和，不接管话轮")""",
+    "proactive.completion": """记录(卡壳后机会窗口内的发声与延迟)
+时序 = fail if 机会窗口内无发声 else inconclusive
+return 事件评审("补出共享上下文确定的含义，允许同义措辞", 时序)""",
+    "proactive.backchannel": """记录(用户持续陈述期间的助手发声)
+时序 = fail if 机会窗口内无发声 else inconclusive
+return 事件评审("用户仍持有话轮时简短附和，不接管话轮", 时序)""",
     "proactive.clarification": """return 事件评审("主动提出针对性澄清，不假定缺失意图")""",
     "proactive.contextual_interruption": """提前 = 存在助手发声(t < marker - tick)
 重叠 = 存在助手发声(marker <= t < stimulus_end)
@@ -171,34 +175,39 @@ EVENT_CHOICE_GUIDANCE = {
     "interruption.shut_up": "仅有事件契约；没有单独的停止请求时机 prompt。",
     "interruption.clarification": "clarification asks about an unclear meaning：对不清楚的含义提问；具体时机由模型判断。",
     "rejection.backchannel": "prompt 要求简短附和、保持用户在听的角色；模型选择时机。没有独立的语义完成点检测器。",
-    "rejection.pause": "候选含未完前缀、至少 0.4 秒停顿和非空 continuation；字段由 schema 硬检查，未完句语义由模型组织。",
+    "rejection.pause": "候选含未完前缀、至少 0.4 秒停顿和非空 continuation；校验后统一为 0.75 秒。默认豆包单次 SSML 合成并测量波形，其他 TTS 使用显式 PCM 停顿。",
     "rejection.third_party": "用背景声线播放候选台词，prompt 要求明确对别人说话。",
     "rejection.talking_to_others": "用主用户声线播放候选台词，prompt 要求明确对旁人说话。",
     "rejection.noise": "候选选择敲门、电话铃或窸窣声之一；生成对应音频，不合成台词。",
     "rejection.contextual": "先实际说出不回应约定，再由模型选择背景或主用户声线产生匹配刺激；语义匹配不由调度器硬检查。",
-    "proactive.completion": "prompt 要求用户留下上下文支持、可明确补全的未完句。",
-    "proactive.backchannel": "prompt 要求用户连贯长发言并保留话轮，为助手创造附和机会。",
+    "proactive.completion": "用户留下由共享前情确定含义的未完句；私有 expected_completion 不读给助手，统一 0.75 秒停顿，continuation 必须为空。",
+    "proactive.backchannel": "用户连贯长发言并保留话轮；默认检查至少 8 秒实际有声语音，过短不播放、不登记触发。",
     "proactive.clarification": "prompt 要求用户说完一个在当前上下文中意图含糊的请求。",
     "proactive.contextual_interruption": "prompt 要求先约定唯一触发语，将其置于 text 末尾并继续说话。按计划音频 marker 到达后，若助手发声，控制器清空剩余用户音频；不检测触发语是否实际读出。",
 }
 
-EVENT_SCHEDULER_PSEUDOCODE = """共用决策检查():  # 每 tick 进入，默认 1 秒才有一次决策机会
+EVENT_SCHEDULER_PSEUDOCODE = """共用决策检查():  # 默认 tick 0.1 秒；新决策机会默认间隔 1 秒
     now = 已经过的模拟音频采样数 / 采样率
     incoming = 最近收到的助手音频块  # 上一输出 tick
     助手发声快照 = is_audible_chunk(incoming)
     收集已播放音频，记录当前事件观察
-    if 用户音频队列非空: return keep_talking
+    if 约定主动插话已过触发点 and 助手有声: 清空用户剩余音频，记录让渡
+    if 用户音频队列非空:
+        if 声学任务 and 非记忆/助手附和事件: 检查共享让话策略
+        return keep_talking  # 已决定让话时返回 stop_talking
     更新当前事件的观察完成状态()
-    if 当前事件仍在观察 or now < next_check: return wait
+    if 当前事件仍受观察保护 or now < next_check: return wait
+    # 声学任务可在非记忆事件的观察期回答追问；记忆回答仍受保护
+    if 助手有声 and 所有待测事件要求安静: return wait
     if 待测事件为空 and 最近助手音频结束不足1秒: return wait
     next_check = now + decision_interval_seconds  # 默认 1.0
 
     对已播放助手音频前缀做ASR，更新最近60条对话
     候选 = 用户模型(
         RUNTIME_POLICY, 主题, 私有用户背景, now, 助手发声快照,
-        待测事件契约, 已准备事件, 已执行事件,
+        待测事件契约, 已准备事件, 已执行事件, 可选事件顺序及剧情指导,
         最近对话, 上次拒绝或错误反馈, 决策JSON schema)
-    # 模型自行判断此刻是否自然；可返回 wait 或任一待测事件
+    # 模型判断此刻是否自然；配置顺序时只能正式触发下一事件
     # reason 要求引用当前上下文，保存到 events.json 的 decisions
     校验候选JSON，再执行表内的物理准入检查
     if 拒绝: 保存原因，返回 wait  # 不替换为预设事件
@@ -218,15 +227,14 @@ if 有观察记录 and 目录要求助手发声 and 没有真实重叠:
     return not_evaluated
 
 事件评审(要求, 时序=inconclusive):
+    if 未配置Judge: return 时序
     try:
-        语义 = Judge(共用prompt, 本事件expected_behavior, 真实证据)
+        结果 = Judge(共用prompt, 本事件expected_behavior, 真实证据, 时序初判及指标)
         # “要求”是该事件 expected_behavior 的中文概述
         # 刺激不成立或证据不足 → inconclusive
     except:
-        return 时序
-    if 时序 == fail and 语义 == pass:
-        return fail
-    return 语义
+        return inconclusive
+    return 结果.verdict  # 模型综合内容与时机，可修正规则初判
 
 # 变量与证据范围
 # tick：轨迹的实际步长；marker：停顿或触发语标记时刻

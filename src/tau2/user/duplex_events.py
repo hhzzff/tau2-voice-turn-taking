@@ -10,18 +10,24 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from tau2.config import (
     DEFAULT_ACOUSTIC_KEYWORD_LIMIT,
+    DEFAULT_DUPLEX_BACKCHANNEL_MIN_SPEECH_SECONDS,
     DEFAULT_DUPLEX_MEMORY_RESPONSE_TIMEOUT_SECONDS,
+    DEFAULT_DUPLEX_PAUSE_SECONDS,
     DEFAULT_DUPLEX_RESPONSE_QUIET_SECONDS,
+    DEFAULT_DUPLEX_TRANSCRIPTION_MODEL,
     DEFAULT_DUPLEX_USER_MODEL,
 )
+from tau2.data_model.voice import TranscriptionModel
 from tau2.user.acoustic_clarification import (
     AcousticClarificationConfig,
     KeywordAnnotation,
 )
+from tau2.user.duplex_user_goal import CurrentUserGoal
 
 Family = Literal["interruption", "rejection", "turn_taking", "proactive"]
 Trigger = Literal["assistant_speaking", "assistant_silent", "any"]
 Speaker = Literal["primary", "background", "noise"]
+SUPPLEMENTAL_PROACTIVE_EVENTS = ("proactive.backchannel", "proactive.completion")
 
 
 class EventSpec(BaseModel):
@@ -158,14 +164,14 @@ EVENT_CATALOG = {
             "proactive",
             "补全用户未完句",
             "assistant_silent",
-            "Offer the context-supported completion of the unfinished sentence, rather than a generic answer.",
+            "After the user gets stuck at an unfinished phrase whose meaning is effectively determined by shared spoken facts or a conventional expression, offer a brief supported completion during the listening opportunity. Broad topical plausibility is insufficient; materially different natural completions make the stimulus invalid. Do not give an unrelated answer or speak before the hesitation. The private expected_completion is a semantic reference, not a word the assistant has heard; equivalent completions are acceptable.",
         ),
         _spec(
             "proactive.backchannel",
             "proactive",
             "助手附和",
             "assistant_silent",
-            "Give a brief acknowledgement while the user still holds the floor; do not take over.",
+            "Give a brief acknowledgement such as mm-hm while the user is still delivering a sustained account and retains the floor. A full answer after the user finishes is not a backchannel; do not take over or interrupt with advice.",
         ),
         _spec(
             "proactive.clarification",
@@ -212,11 +218,19 @@ class DuplexScenario(BaseModel):
     version: Literal[1] = 1
     selected_events: list[str] = Field(default_factory=list)
     acoustic_clarification: AcousticClarificationConfig | None = None
+    event_order: list[str] | None = None
+    include_proactive_opportunities: bool = True
+    backchannel_min_speech_seconds: float = Field(
+        default=DEFAULT_DUPLEX_BACKCHANNEL_MIN_SPEECH_SECONDS, ge=0.2
+    )
     seed: int = 42
     language: Literal["Chinese", "English"] = "Chinese"
     user_model: str = DEFAULT_DUPLEX_USER_MODEL
     topic: str = ""
     user_context: str = ""
+    conversation_outline: str = ""
+    event_guidance: dict[str, str] = Field(default_factory=dict)
+    transcription_model: TranscriptionModel = DEFAULT_DUPLEX_TRANSCRIPTION_MODEL
     decision_interval_seconds: float = Field(default=1.0, ge=0.2, le=10)
     assistant_observation: Literal["played_audio", "proportional"] = "played_audio"
     memory_response_timeout_seconds: float = Field(
@@ -228,10 +242,34 @@ class DuplexScenario(BaseModel):
 
     @model_validator(mode="after")
     def canonical_events(self):
-        """Normalize the selected subset without defining an execution order."""
+        """Normalize coverage and validate an optional execution order."""
         if self.selected_events or self.acoustic_clarification is None:
             self.selected_events = select_events(self.selected_events)
+        if set(self.event_guidance) - set(self.event_ids):
+            raise ValueError("event_guidance keys must be selected event IDs")
+        if self.event_order is not None:
+            self.event_order = select_events(self.event_order)
+            if len(self.event_order) != len(self.event_ids) or set(
+                self.event_order
+            ) != set(self.event_ids):
+                raise ValueError("event_order must contain every event_id exactly once")
         return self
+
+    @property
+    def supplemental_events(self) -> list[str]:
+        """Add listening opportunities without replacing or duplicating the selection."""
+        if self.acoustic_clarification is not None and not self.selected_events:
+            return []
+        return [
+            key
+            for key in SUPPLEMENTAL_PROACTIVE_EVENTS
+            if self.include_proactive_opportunities and key not in self.selected_events
+        ]
+
+    @property
+    def event_ids(self) -> list[str]:
+        """All coverage targets; their list order is not a playback schedule."""
+        return self.selected_events + self.supplemental_events
 
 
 class DuplexTopic(BaseModel):
@@ -260,6 +298,7 @@ class DuplexDecision(BaseModel):
     event_id: str | None = None
     text: str = ""
     continuation: str = ""
+    expected_completion: str = ""
     keyword: KeywordAnnotation | None = None
     keywords: list[KeywordAnnotation] = Field(
         default_factory=list, max_length=DEFAULT_ACOUSTIC_KEYWORD_LIMIT
@@ -292,6 +331,23 @@ class DuplexDecision(BaseModel):
                 raise ValueError(
                     "Pause handling requires continuation and an actual pause"
                 )
+        if self.action == "trigger_event" and self.event_id == "proactive.completion":
+            if not self.expected_completion.strip() or self.pause_seconds < 0.4:
+                raise ValueError(
+                    "Completion requires a private expected_completion and an actual hesitation pause"
+                )
+        if self.action == "trigger_event" and self.event_id in {
+            "rejection.pause",
+            "proactive.completion",
+        }:
+            # Keep both the plan and the recorded evidence deterministic. The
+            # runtime model may propose another duration, but the test contract
+            # always uses the same natural hesitation.
+            self.pause_seconds = DEFAULT_DUPLEX_PAUSE_SECONDS
+        elif self.expected_completion:
+            raise ValueError(
+                "expected_completion is only used for proactive completion"
+            )
         if (
             self.action == "trigger_event"
             and self.event_id == "proactive.contextual_interruption"
@@ -309,7 +365,8 @@ class DuplexDecision(BaseModel):
                 "Continuation is only used for pause or contextual interruption"
             )
         if self.pause_seconds and not (
-            self.action == "trigger_event" and self.event_id == "rejection.pause"
+            self.action == "trigger_event"
+            and self.event_id in {"rejection.pause", "proactive.completion"}
         ):
             raise ValueError("A deliberate pause requires the selected pause event")
         for text in (self.text, self.continuation):
@@ -321,10 +378,18 @@ class DuplexDecision(BaseModel):
         return self
 
 
+class DuplexRuntimeDecision(DuplexDecision):
+    """Live decisions require a goal assessment; archived decisions remain valid."""
+
+    current_goal: CurrentUserGoal
+
+
 def terra_llm_args(model: str) -> dict:
     """Match this project's Terra configuration for responsive user decisions."""
     if model == DEFAULT_DUPLEX_USER_MODEL:
         return {"custom_llm_provider": "openai", "reasoning_effort": "none"}
+    if model.startswith("gemini/"):
+        return {"reasoning_effort": "low"}
     return {}
 
 
@@ -351,10 +416,7 @@ def generate_topic(scenario: DuplexScenario) -> DuplexTopic:
                     + str(scenario.seed)
                     + ". Selected events: "
                     + json.dumps(
-                        [
-                            EVENT_CATALOG[key].model_dump()
-                            for key in scenario.selected_events
-                        ],
+                        [EVENT_CATALOG[key].model_dump() for key in scenario.event_ids],
                         ensure_ascii=False,
                     )
                 ),

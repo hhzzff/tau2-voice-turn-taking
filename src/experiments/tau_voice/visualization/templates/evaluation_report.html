@@ -25,7 +25,8 @@
 <div class="table-wrap"><table><thead><tr><th>路径</th><th>实际评估对象</th><th>解释边界</th></tr></thead><tbody>
 <tr><td><strong>当前动态 duplex bench</strong></td><td>让渡话轮、抑制误响应、跨轮记忆、主动参与；时序证据 + 逐事件语义判断。</td><td>自由生活对话，无工具和账号查询。不是客服任务完成率，也没有自动生成统一自然度／音质分数。</td></tr>
 <tr><td>旧 contextual interruption 实验</td><td>5 类打断；固定主题计划／可选事件顺序；独立 A prompt 评助手回复，B prompt 评整场用户自然度。</td><td>这套旧 judge 仍可单独运行；当前主脚本未自动调用 A/B 评分。{{SOURCE_旧主题池}}</td></tr>
-<tr><td>开源模型 frozen-time demo</td><td>SALMONN / MiniCPM 的音频交换、ASR 观察、纠正与附和机会、同协议录音。</td><td>6 个场景 ID 均围绕北京旅行，不能当成 6 个主题。原生 tick 为 80 ms / 1000 ms；本次合并保留其独立入口。{{SOURCE_开源模型场景}}</td></tr>
+<tr><td>开源模型 100ms 异步 demo</td><td>SALMONN / MiniCPM 的音频交换、ASR 观察、纠正与附和机会、同协议录音。</td><td>6 个场景 ID 均围绕北京旅行，不能当成 6 个主题。调度窗口为 100 ms，原生输入块为 80 ms / 1000 ms；独立入口保留，历史 frozen 对照不代表实时性能。{{SOURCE_开源模型场景}}</td></tr>
+<tr><td>声学澄清任务</td><td>在实际交付音频中损坏指定关键词，检查助手是否恰当追问、修复及使用信息。</td><td>与语义歧义事件分开；可独立运行，也可与双工事件组合。私有原文不作为助手已听到的证据。</td></tr>
 <tr><td>原 τ-bench / τ-voice</td><td>业务任务成功、工具／策略遵循；另有响应／让渡延迟、响应率、让渡率、误打断、选择性指标。</td><td>这些框架能力不等于当前自由讨论 bench 已自动计算全部指标；不要混用分母或对外合并排名。{{SOURCE_原框架交互指标}}</td></tr>
 </tbody></table></div>
 </section>

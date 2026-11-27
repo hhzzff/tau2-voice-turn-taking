@@ -7,6 +7,7 @@ import wave
 import httpx
 import numpy as np
 import pytest
+from duplex_runtime_fixture import runtime_json
 
 from experiments.tau_voice.duplex_bench import build_dynamic_user
 from tau2.data_model.audio import AudioData, AudioEncoding, AudioFormat
@@ -52,7 +53,9 @@ def test_three_keywords_share_full_alignment_and_preserve_other_tick_samples(
             if len(prompts) == 1
             else {"action": "wait", "reason": "等待对方回答。"}
         )
-        return AssistantMessage(role="assistant", content=json.dumps(decision))
+        return AssistantMessage(
+            role="assistant", content=runtime_json(json.dumps(decision))
+        )
 
     def align(url, **kwargs):
         alignment_calls.append(kwargs)

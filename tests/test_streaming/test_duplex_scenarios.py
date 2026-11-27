@@ -7,6 +7,7 @@ import wave
 
 import numpy as np
 import pytest
+from duplex_runtime_fixture import runtime_json
 from pydantic import ValidationError
 
 from experiments.tau_voice.duplex_bench import (
@@ -33,6 +34,7 @@ from tau2.user.duplex_scenario_user import RUNTIME_POLICY, DuplexController
 def scenario(events):
     return DuplexScenario(
         selected_events=events,
+        include_proactive_opportunities=False,  # Isolate the explicitly tested events.
         assistant_observation="proportional",  # Explicit offline text-only fixtures.
         topic="讨论一次野餐的安排",
         user_context="三个人，预算八百元，准备在周末出发。",
@@ -57,6 +59,100 @@ def test_catalog_and_selection_do_not_create_a_script():
         select_events(["follow_up", "interruption.follow_up"])
 
 
+def test_five_selected_events_get_two_separate_opportunities_without_duplicates():
+    selected = [
+        "interruption.follow_up",
+        "interruption.denial",
+        "rejection.pause",
+        "rejection.noise",
+        "turn_taking.handoff",
+    ]
+    plan = DuplexScenario(selected_events=selected)
+    assert plan.selected_events == selected
+    assert plan.supplemental_events == ["proactive.backchannel", "proactive.completion"]
+    controller = DuplexController(plan, 0.2)
+    assert controller.pending == set(plan.event_ids)
+    assert len(controller.report()["events"]) == 7
+    assert not controller.allowed(
+        DuplexDecision(action="finish", reason="Too early"), False
+    )
+    assert len(DuplexScenario(selected_events=["proactive.backchannel"]).event_ids) == 2
+    legacy = DuplexScenario(
+        selected_events=selected, include_proactive_opportunities=False
+    )
+    assert legacy.event_ids == selected
+
+
+def test_fixed_event_order_must_be_a_permutation_of_all_coverage_events():
+    selected = ["follow_up", "rejection.pause"]
+    plan = DuplexScenario(
+        selected_events=selected,
+        include_proactive_opportunities=True,
+        event_order=[
+            "rejection.pause",
+            "proactive.completion",
+            "interruption.follow_up",
+            "proactive.backchannel",
+        ],
+    )
+    assert plan.event_order[0] == "rejection.pause"
+    with pytest.raises(ValidationError, match="event_order must contain every"):
+        DuplexScenario(
+            selected_events=selected,
+            include_proactive_opportunities=True,
+            event_order=["follow_up", "rejection.pause"],
+        )
+
+
+def test_historical_scenario_does_not_gain_new_events(tmp_path):
+    from experiments.tau_voice.duplex_bench import _load_scenario
+
+    path = tmp_path / "scenario.json"
+    path.write_text(
+        json.dumps({"selected_events": ["rejection.noise"]}), encoding="utf-8"
+    )
+    assert _load_scenario(path).event_ids == ["rejection.noise"]
+
+
+def test_matched_scenario_uses_shared_story_and_audio_perception():
+    from pathlib import Path
+
+    from experiments.tau_voice.duplex_bench import _load_scenario
+
+    plan = _load_scenario(
+        Path("src/experiments/tau_voice/scenarios/picnic_matched_three_models.json")
+    )
+    assert plan.assistant_observation == "played_audio"
+    assert plan.user_model == "gpt-6.1-terra"
+    assert plan.transcription_model == "gpt-4o-mini-transcribe"
+    assert set(plan.event_guidance) == set(plan.event_order)
+    assert plan.event_order[0] == "interruption.follow_up"
+    assert plan.event_order[-1] == "proactive.completion"
+    assert plan.conversation_outline
+
+
+def test_completion_requires_hesitation_and_private_target():
+    for kwargs in ({"pause_seconds": 0.5}, {"expected_completion": "lentils"}):
+        with pytest.raises(ValidationError, match="Completion requires"):
+            DuplexDecision(
+                action="trigger_event",
+                event_id="proactive.completion",
+                text="I mean the ingredient we discussed, the...",
+                reason="Shared topic",
+                **kwargs,
+            )
+    with pytest.raises(ValidationError, match="Continuation"):
+        DuplexDecision(
+            action="trigger_event",
+            event_id="proactive.completion",
+            text="The...",
+            continuation="lentils",
+            expected_completion="lentils",
+            pause_seconds=0.5,
+            reason="Target must not be spoken",
+        )
+
+
 def test_prepare_saves_only_event_types_and_options(tmp_path):
     path = tmp_path / "scenario.json"
     args = build_parser().parse_args(
@@ -66,8 +162,16 @@ def test_prepare_saves_only_event_types_and_options(tmp_path):
     saved = DuplexScenario.model_validate_json(path.read_text(encoding="utf-8"))
     assert saved.topic == ""
     assert saved.selected_events == ["interruption.follow_up", "rejection.noise"]
+    assert len(saved.event_ids) == 4
+    assert saved.include_proactive_opportunities is True
     assert (
         build_parser().parse_args(["run", "--events", "follow_up"]).user_model is None
+    )
+    assert (
+        build_parser()
+        .parse_args(["run", "--events", "follow_up", "--no-proactive-opportunities"])
+        .proactive_opportunities
+        is False
     )
 
 
@@ -131,6 +235,7 @@ def test_structured_topic_context_preserves_facts():
 
 def test_controller_does_not_pick_events_or_consume_proposals():
     c = DuplexController(scenario(["follow_up", "rejection.noise"]), 0.2)
+    assert c.next_required_event is None
     decision = DuplexDecision(
         action="trigger_event",
         event_id="interruption.follow_up",
@@ -143,6 +248,47 @@ def test_controller_does_not_pick_events_or_consume_proposals():
     assert not c.records
     assert not c.allowed(DuplexDecision(action="finish", reason="想结束。"), False)
     assert c.report()["status"] == "incomplete"
+
+
+def test_controller_rejects_out_of_order_event_and_reports_observed_order():
+    plan = DuplexScenario(
+        selected_events=["follow_up", "rejection.noise"],
+        include_proactive_opportunities=False,
+        assistant_observation="proportional",
+        event_order=["rejection.noise", "interruption.follow_up"],
+    )
+    c = DuplexController(plan, 0.2)
+    follow_up = DuplexDecision(
+        action="trigger_event",
+        event_id="interruption.follow_up",
+        text="One more question.",
+        reason="The assistant is explaining the location.",
+    )
+    assert not c.allowed(follow_up, True)
+    assert "rejection.noise next" in c.feedback
+    assert c.allowed(
+        DuplexDecision(
+            action="trigger_event",
+            event_id="rejection.noise",
+            reason="A natural quiet moment.",
+        ),
+        False,
+    )
+    c.begin(
+        DuplexDecision(
+            action="trigger_event",
+            event_id="rejection.noise",
+            reason="A natural quiet moment.",
+        ),
+        1,
+        1,
+        1,
+        False,
+    )
+    report = c.report()
+    assert report["required_event_order"] == plan.event_order
+    assert report["observed_event_order"] == ["rejection.noise"]
+    assert report["out_of_order_proposals"] == 0
 
 
 def test_contextual_event_requires_an_actual_spoken_prerequisite():
@@ -418,6 +564,25 @@ def test_response_activity_does_not_count_as_semantic_success():
     assert result["events"][0]["verdict"] == "not_evaluated"
 
 
+@pytest.mark.parametrize(
+    "event_id,early", [("proactive.backchannel", 1.4), ("proactive.completion", 2.4)]
+)
+def test_proactive_opportunities_require_audio_in_the_right_window(event_id, early):
+    report = _report(event_id, [{"seconds": early, "speaking": True, "text": "Mm-hm"}])
+    report["events"][0]["observation_end_seconds"] = 6.0
+    config = scenario([event_id])
+    row = assess_report(config, report, 0.2)["events"][0]
+    assert row["metrics"]["agent_speech_in_opportunity_seconds"] == pytest.approx(0.2)
+    assert row["verdict"] == "inconclusive"  # Speech must still be judged semantically.
+    late = 4.0 if event_id == "proactive.backchannel" else 1.4
+    report["events"][0]["observations"] = [
+        {"seconds": late, "speaking": True, "text": "A full answer"}
+    ]
+    row = assess_report(config, report, 0.2)["events"][0]
+    assert row["verdict"] == "fail"
+    assert row["metrics"]["agent_speech_in_opportunity_seconds"] == 0
+
+
 def test_background_overlapping_ongoing_answer_is_not_automatically_a_failure():
     report = _report(
         "rejection.third_party",
@@ -438,6 +603,40 @@ def test_failed_judge_and_missing_observations_never_pass(monkeypatch):
     assert result["summary"]["pass"] == 0
     result = judge_report(config, result, "test-model")
     assert result["events"][0]["verdict"] == "inconclusive"
+
+
+def test_event_judge_returns_one_integrated_semantic_timing_verdict(monkeypatch):
+    config = scenario(["rejection.pause"])
+    report = _report(
+        "rejection.pause", [{"seconds": 2.4, "speaking": True, "text": "Sure."}]
+    )
+
+    def judge(**kwargs):
+        prompt = kwargs["messages"][0].content
+        assert "one integrated verdict" in prompt
+        payload = json.loads(prompt.split("\n")[-1])
+        assert payload["timing_evidence"]["rule_verdict"] == "fail"
+        assert (
+            payload["timing_evidence"]["metrics"]["speech_during_user_pause_seconds"]
+            > 0
+        )
+        return AssistantMessage(
+            role="assistant",
+            content=json.dumps(
+                {
+                    "verdict": "fail",
+                    "reason": "The assistant spoke during the user's hesitation.",
+                }
+            ),
+        )
+
+    monkeypatch.setattr("tau2.utils.llm_utils.generate", judge)
+    row = judge_report(config, assess_report(config, report, 0.2), "test-model")[
+        "events"
+    ][0]
+    assert row["event_judgment"]["verdict"] == row["verdict"] == "fail"
+    assert "timing_verdict" not in row
+    assert "semantic_judgment" not in row
 
 
 @pytest.mark.parametrize("overlap", [True, False])
@@ -586,9 +785,21 @@ def fake_tts(monkeypatch):
     calls = []
 
     def synthesize(text, provider, config):
-        calls.append((text, config.voice))
+        calls.append((text, config.voice, config.ssml))
+        samples = (1200 * np.sin(2 * np.pi * 220 * np.arange(160000) / 16000)).astype(
+            "<i2"
+        )
+        if config.ssml:
+            samples = np.concatenate(
+                [samples, np.zeros(12000, dtype="<i2")]
+                + (
+                    [samples[:16000]]
+                    if config.ssml.split("/>")[-1] != "</speak>"
+                    else []
+                )
+            )
         return AudioData(
-            data=np.full(16000, 1200, dtype="<i2").tobytes(),
+            data=samples.tobytes(),
             format=AudioFormat(encoding=AudioEncoding.PCM_S16LE, sample_rate=16000),
         )
 
@@ -633,6 +844,167 @@ def test_preserve_original_tts_before_resampling(monkeypatch, tmp_path):
     assert first["audio_file"] != second["audio_file"]
 
 
+def test_ctc_plays_only_prefix_and_pause_not_expected_completion(tmp_path, fake_tts):
+    user = build_dynamic_user(
+        scenario(["proactive.completion"]),
+        tmp_path,
+        AudioNativeConfig(),
+        "nova",
+        "onyx",
+        "test-tts",
+    )
+    state = user.get_init_state()
+    user.pending_decision = DuplexDecision(
+        action="trigger_event",
+        event_id="proactive.completion",
+        text="I mean the ingredient we discussed, the...",
+        expected_completion="lentils",
+        pause_seconds=0.5,
+        reason="The earlier discussion identifies lentils.",
+    )
+    message, state = user._generate_full_duplex_voice_message(None, state)
+    assert len(fake_tts) == 1
+    assert "lentils" not in message.content
+    assert "lentils" not in message.audio_script_gold
+    event = user.controller.records[0]
+    assert fake_tts[0][2] == (
+        '<speak>I mean the ingredient we discussed, the...<break time="750ms"/></speak>'
+    )
+    assert event["stimulus"]["pause_seconds"] == pytest.approx(0.75)
+    assert event["stimulus"]["expected_completion"] == "lentils"
+    assert event["marker_seconds"] == pytest.approx(10.0)
+    assert event["pause_audio_evidence"]["duration_seconds"] == pytest.approx(0.75)
+
+
+def test_ssml_pause_marker_is_inside_utterance(tmp_path, fake_tts):
+    user = build_dynamic_user(
+        scenario(["rejection.pause"]),
+        tmp_path,
+        AudioNativeConfig(),
+        "nova",
+        "onyx",
+        "test-tts",
+    )
+    state = user.get_init_state()
+    user.pending_decision = DuplexDecision(
+        action="trigger_event",
+        event_id="rejection.pause",
+        text="I was thinking about...",
+        continuation="packing something else.",
+        pause_seconds=0.75,
+        reason="Thinking.",
+    )
+    user._generate_full_duplex_voice_message(None, state)
+    event = user.controller.records[0]
+    assert event["marker_seconds"] == pytest.approx(10.0)
+    assert event["end_seconds"] == pytest.approx(11.75)
+    assert event["marker_seconds"] < event["end_seconds"]
+
+
+def test_ambiguous_ssml_pause_does_not_create_false_timing_evidence(
+    monkeypatch, tmp_path
+):
+    user = build_dynamic_user(
+        scenario(["rejection.pause"]),
+        tmp_path,
+        AudioNativeConfig(),
+        "nova",
+        "onyx",
+        "test-tts",
+    )
+    state = user.get_init_state()
+    speech = np.full(PCM_SAMPLE_RATE, 1200, dtype="<i2")
+    pause = np.zeros(round(PCM_SAMPLE_RATE * 0.75), dtype="<i2")
+    monkeypatch.setattr(
+        user,
+        "_speech",
+        lambda *args: np.concatenate([speech, pause, speech, pause, speech]),
+    )
+    user.pending_decision = DuplexDecision(
+        action="trigger_event",
+        event_id="rejection.pause",
+        text="I was thinking about...",
+        continuation="packing something else.",
+        pause_seconds=0.75,
+        reason="Thinking.",
+    )
+    user._generate_full_duplex_voice_message(None, state)
+    assert not user.controller.records
+    assert "rejection.pause" in user.controller.pending
+
+
+def test_short_backchannel_stimulus_stays_pending(monkeypatch, tmp_path):
+    user = build_dynamic_user(
+        scenario(["proactive.backchannel"]),
+        tmp_path,
+        AudioNativeConfig(),
+        "nova",
+        "onyx",
+        "test-tts",
+    )
+    state = user.get_init_state()
+    # Long silence padding must not turn a short utterance into a long account.
+    samples = np.concatenate(
+        [
+            np.full(PCM_SAMPLE_RATE, 1200, dtype="<i2"),
+            np.zeros(PCM_SAMPLE_RATE * 10, dtype="<i2"),
+        ]
+    )
+    monkeypatch.setattr(user, "_speech", lambda *args: samples)
+    user.pending_decision = DuplexDecision(
+        action="trigger_event",
+        event_id="proactive.backchannel",
+        text="A short account.",
+        reason="Try a listening opportunity.",
+    )
+    message, _ = user._generate_full_duplex_voice_message(None, state)
+    assert not message.content
+    assert user.controller.pending == {"proactive.backchannel"}
+    assert not user.controller.records
+    assert "too short" in user.controller.feedback
+
+
+def test_assistant_acknowledgement_does_not_truncate_long_user_turn(
+    monkeypatch, tmp_path, fake_tts
+):
+    calls = []
+    decision = DuplexDecision(
+        action="trigger_event",
+        event_id="proactive.backchannel",
+        text="I want to describe the full plan and the constraints before we choose.",
+        reason="Offer a sustained account.",
+    )
+
+    def decide(**kwargs):
+        calls.append(kwargs)
+        return AssistantMessage(
+            role="assistant", content=runtime_json(decision.model_dump_json())
+        )
+
+    monkeypatch.setattr("tau2.user.duplex_scenario_user.generate", decide)
+    user = build_dynamic_user(
+        scenario(["proactive.backchannel"]),
+        tmp_path,
+        AudioNativeConfig(),
+        "nova",
+        "onyx",
+        "test-tts",
+    )
+    state = user.get_init_state()
+    _, state = user.get_next_chunk(
+        state, AssistantMessage(role="assistant", content="", contains_speech=False)
+    )
+    pending = len(state.output_streaming_queue)
+    assert pending > 1
+    _, state = user.get_next_chunk(
+        state, AssistantMessage(role="assistant", content="Mm-hm", contains_speech=True)
+    )
+    assert len(state.output_streaming_queue) == pending - 1
+    assert len(calls) == 1
+    assert user.controller.records[0]["observations"][-1]["user_speaking"] is True
+    assert user.controller.active is not None
+
+
 @pytest.mark.parametrize("assistant_text", ["周六九点在南门集合", "周日十点在北门集合"])
 def test_runtime_model_controls_order_and_contextual_content(
     monkeypatch, tmp_path, fake_tts, assistant_text
@@ -663,7 +1035,9 @@ def test_runtime_model_controls_order_and_contextual_content(
         else:
             answer = DuplexDecision(action="wait", reason="等待助手提供信息。")
         assert kwargs["model"] == "gpt-6.1-terra"
-        return AssistantMessage(role="assistant", content=answer.model_dump_json())
+        return AssistantMessage(
+            role="assistant", content=runtime_json(answer.model_dump_json())
+        )
 
     monkeypatch.setattr("tau2.user.duplex_scenario_user.generate", decide)
     user = build_dynamic_user(
@@ -708,9 +1082,11 @@ def test_quiet_item_bearing_audio_cannot_end_the_recording(monkeypatch, tmp_path
         calls.append(kwargs)
         return AssistantMessage(
             role="assistant",
-            content=DuplexDecision(
-                action="finish", reason="All coverage complete."
-            ).model_dump_json(),
+            content=runtime_json(
+                DuplexDecision(
+                    action="finish", reason="All coverage complete."
+                ).model_dump_json()
+            ),
         )
 
     monkeypatch.setattr("tau2.user.duplex_scenario_user.generate", finish)
@@ -744,6 +1120,38 @@ def test_quiet_item_bearing_audio_cannot_end_the_recording(monkeypatch, tmp_path
     assert len(calls) == 1
 
 
+def test_no_remote_decision_when_all_pending_events_require_silence(
+    monkeypatch, tmp_path
+):
+    from unittest.mock import Mock
+
+    user = build_dynamic_user(
+        scenario(["rejection.pause", "proactive.completion"]),
+        tmp_path,
+        AudioNativeConfig(),
+        "nova",
+        "onyx",
+        "test-tts",
+    )
+    state = user.get_init_state()
+    decide = Mock(return_value=DuplexDecision(action="wait", reason="Listen."))
+    monkeypatch.setattr(user, "_decide", decide)
+    for _ in range(20):
+        _, state = user.get_next_chunk(
+            state,
+            AssistantMessage(
+                role="assistant", content="Still explaining.", contains_speech=True
+            ),
+        )
+    decide.assert_not_called()
+    assert not user.controller.records
+    for _ in range(10):
+        _, state = user.get_next_chunk(
+            state, AssistantMessage(role="assistant", content="", contains_speech=False)
+        )
+    assert decide.called
+
+
 def test_model_wait_is_respected_without_forcing_an_event(
     monkeypatch, tmp_path, fake_tts
 ):
@@ -751,7 +1159,7 @@ def test_model_wait_is_respected_without_forcing_an_event(
     monkeypatch.setattr(
         "tau2.user.duplex_scenario_user.generate",
         lambda **kwargs: AssistantMessage(
-            role="assistant", content=wait.model_dump_json()
+            role="assistant", content=runtime_json(wait.model_dump_json())
         ),
     )
     user = build_dynamic_user(
@@ -775,8 +1183,9 @@ def test_model_wait_is_respected_without_forcing_an_event(
     assert not fake_tts
 
 
+@pytest.mark.parametrize("add_opportunities", [False, True])
 def test_all_event_types_execute_from_runtime_model_actions(
-    monkeypatch, tmp_path, fake_tts
+    monkeypatch, tmp_path, fake_tts, add_opportunities
 ):
     def decide(**kwargs):
         payload = json.loads(kwargs["messages"][0].content[len(RUNTIME_POLICY) + 1 :])
@@ -811,14 +1220,33 @@ def test_all_event_types_execute_from_runtime_model_actions(
                         in {"rejection.pause", "proactive.contextual_interruption"}
                         else ""
                     ),
-                    pause_seconds=0.8 if event_id == "rejection.pause" else 0,
+                    pause_seconds=0.8
+                    if event_id in {"rejection.pause", "proactive.completion"}
+                    else 0,
+                    expected_completion="the picnic"
+                    if event_id == "proactive.completion"
+                    else "",
                     reason="此时对话提供了合适的机会。",
                 )
-        return AssistantMessage(role="assistant", content=answer.model_dump_json())
+        return AssistantMessage(
+            role="assistant", content=runtime_json(answer.model_dump_json())
+        )
 
     monkeypatch.setattr("tau2.user.duplex_scenario_user.generate", decide)
+    plan = scenario(
+        [
+            "follow_up",
+            "denial",
+            "rejection.noise",
+            "rejection.pause",
+            "rejection.third_party",
+        ]
+        if add_opportunities
+        else list(EVENT_CATALOG)
+    )
+    plan.include_proactive_opportunities = add_opportunities
     user = build_dynamic_user(
-        scenario(list(EVENT_CATALOG)),
+        plan,
         tmp_path,
         AudioNativeConfig(),
         "nova",
@@ -853,7 +1281,9 @@ def test_all_event_types_execute_from_runtime_model_actions(
             break
     else:
         pytest.fail("Not all model-selected events finished")
-    assert len(user.controller.records) == len(EVENT_CATALOG)
+    assert len(user.controller.records) == len(plan.event_ids)
+    if add_opportunities:
+        assert len(plan.selected_events) == 5 and len(user.controller.records) == 7
     assert all(record["status"] == "observed" for record in user.controller.records)
     assert {"background", "noise", "primary"} <= sources
     user.save_report()

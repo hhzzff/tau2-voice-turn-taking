@@ -101,10 +101,12 @@ def test_mixing_does_not_wrap_int16():
     assert actual.tolist() == [32767, -32768]
 
 
-@pytest.fixture
-def prepared_user(tmp_path, monkeypatch):
+@pytest.fixture(params=[0.1, 0.2])
+def prepared_user(tmp_path, monkeypatch, request):
     scenario = ThirdPartyScenario()
-    user = build_user(scenario, tmp_path, AudioNativeConfig())
+    user = build_user(
+        scenario, tmp_path, AudioNativeConfig(tick_duration_seconds=request.param)
+    )
     voices = []
 
     def fake_tts(text, provider, config):
@@ -146,14 +148,14 @@ def test_audio_injection_keeps_third_party_out_of_primary_history(prepared_user)
     state = user.get_init_state()
     user.normal_turns = 1
     # Feed speech ticks through the actual streaming mixin and telephony pipeline.
-    for _ in range(11):
+    for _ in range(round(2.0 / user.tick_duration_seconds) + 1):
         chunk, state = user.get_next_chunk(state, assistant(True, "旅行"))
     assert len(user.controller.events) == 1
     assert chunk.content == ""
     assert chunk.audio_script_gold == ""
     assert chunk.contains_speech is False
     assert chunk.audio_format.encoding == AudioEncoding.ULAW
-    assert len(chunk.get_audio_bytes()) == 1600
+    assert len(chunk.get_audio_bytes()) == round(8000 * user.tick_duration_seconds)
     assert any(value != 127 for value in chunk.get_audio_bytes())
     primary = b"".join(user._speaker_taps["primary_user"]._chunks)
     background = b"".join(user._speaker_taps["third_party"]._chunks)
@@ -182,7 +184,7 @@ def test_background_waits_for_audible_audio_when_provider_flag_leads(prepared_us
     assert user.controller.events == []
     assert user.consecutive_audible_agent_seconds == 0
 
-    for _ in range(10):
+    for _ in range(round(2.0 / user.tick_duration_seconds)):
         chunk = assistant_with_pcm(voice, False, "audible transcript")
         assert user.speech_detection(chunk)
         state.input_turn_taking_buffer = [chunk]
@@ -223,10 +225,10 @@ def test_live_reply_correction_overlaps_assistant_and_allows_second(
     monkeypatch.setattr(
         user, "_judge", lambda _: ReplyJudgment(verdict="yes", reason="回答鸡蛋问题")
     )
-    for _ in range(3):
+    for _ in range(round(0.6 / user.tick_duration_seconds)):
         _, state = user.get_next_chunk(state, assistant(False))
     # Resume while the third-party clip still plays; correct after clip ends.
-    for _ in range(22):
+    for _ in range(round(4.4 / user.tick_duration_seconds)):
         chunk, state = user.get_next_chunk(
             state, assistant(True, "冰箱里还有三个鸡蛋，你可以做番茄炒蛋。")
         )
@@ -353,7 +355,7 @@ def test_primary_generation_uses_primary_voice_and_normal_turn_counter(
 
     monkeypatch.setattr("tau2.agent.base.voice.synthesize_voice", fake_tts)
     # The dummy assistant tick gives the real generator a valid linearized context.
-    for _ in range(30):
+    for _ in range(round(6.0 / user.tick_duration_seconds)):
         chunk, state = user.get_next_chunk(state, assistant(False))
         if chunk.contains_speech:
             break

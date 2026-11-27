@@ -88,7 +88,9 @@ from tau2.voice.audio_native.tick_result import TickResult
 from tau2.voice.utils.audio_activity import is_audible_chunk
 
 # Provider type alias
-AudioNativeProvider = Literal["openai", "gemini", "xai", "nova", "qwen", "livekit"]
+AudioNativeProvider = Literal[
+    "openai", "gemini", "xai", "nova", "qwen", "livekit", "doubao"
+]
 
 # VAD config union type (string annotations for lazy resolution)
 VADConfig = Union[
@@ -319,6 +321,8 @@ class DiscreteTimeAudioNativeAgent(FullDuplexAgent[DiscreteTimeAgentState]):
             )
 
             self.vad_config = LiveKitVADConfig()
+        elif provider == "doubao":
+            self.vad_config = None  # Seeduplex owns turn detection.
         else:  # nova
             from tau2.voice.audio_native.nova.provider import NovaVADConfig
 

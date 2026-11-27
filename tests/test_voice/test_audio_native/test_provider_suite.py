@@ -77,10 +77,11 @@ PROVIDERS = [
         marks=pytest.mark.skipif(
             not (
                 os.environ.get("GEMINI_API_KEY")
+                or os.environ.get("GEMINI_LIVE_API_KEY")
                 or os.environ.get("GOOGLE_SERVICE_ACCOUNT_KEY")
                 or os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
             ),
-            reason="No Gemini credentials (GEMINI_API_KEY, GOOGLE_SERVICE_ACCOUNT_KEY, or GOOGLE_APPLICATION_CREDENTIALS)",
+            reason="No Gemini credentials (GEMINI_API_KEY, GEMINI_LIVE_API_KEY, GOOGLE_SERVICE_ACCOUNT_KEY, or GOOGLE_APPLICATION_CREDENTIALS)",
         ),
     ),
     pytest.param(
@@ -121,8 +122,8 @@ PROVIDERS = [
     pytest.param(
         "xai",
         marks=pytest.mark.skipif(
-            not os.environ.get("XAI_API_KEY"),
-            reason="XAI_API_KEY not set",
+            not (os.environ.get("XAI_API_KEY") or os.environ.get("GROK_API_KEY")),
+            reason="XAI_API_KEY or GROK_API_KEY not set",
         ),
     ),
 ]

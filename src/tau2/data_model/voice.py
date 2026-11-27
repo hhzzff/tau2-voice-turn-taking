@@ -41,6 +41,7 @@ TranscriptionModel = Literal[
     "whisper-1",
     "gpt-4o-transcribe",
     "gpt-4o-mini-transcribe",
+    "gemini-3.8-flash",
     "doubao-asr",
     "scribe_v1",
 ]
@@ -126,6 +127,13 @@ class VolcengineTTSConfig(BaseModel):
     sample_rate: int = Field(default=16000)
     enable_subtitle: bool = Field(default=False)
     additions: dict[str, Any] = Field(default_factory=dict)
+    # Optional SSML payload used for a pause inside one synthesized utterance.
+    ssml: Optional[str] = None
+
+    @property
+    def voice(self) -> str:
+        """Compatibility alias for synthesis test doubles and voice metadata."""
+        return self.speaker
 
     @property
     def output_audio_format(self) -> AudioFormat:

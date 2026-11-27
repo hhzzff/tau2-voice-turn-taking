@@ -203,11 +203,32 @@ def test_native_listen_state_is_preserved_alongside_delivered_audio():
         adapter.disconnect()
 
 
-def test_default_salmonn_runtime_uses_selected_checkpoint_and_training_audio_contract():
+def test_default_salmonn_runtime_uses_selected_checkpoint_and_training_audio_contract(
+    monkeypatch, tmp_path
+):
+    import json
+    from pathlib import Path
+
+    from tau2.voice.audio_native.open_model import adapter
     from tau2.voice.audio_native.open_model.adapter import load_runtime_config
 
-    config = load_runtime_config("salmonn")
     selected = "/mnt/bn/audio-visual-llm-data2/yuwenyi/playground/exp_results/cu12_stage2-0519_fc-180_aes_er0_chunk30_llama31/checkpoint-44000"
+    runtime = tmp_path / "runtime.json"
+    runtime.write_text(
+        json.dumps({"checkpoint": "wrong-default", "assets": {}, "settings": {}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setitem(adapter.OPEN_MODEL_RUNTIME_MANIFESTS, "salmonn", str(runtime))
+    original_read = Path.read_text
+    training_config = selected.rsplit("/", 1)[0] + "/config.json"
+
+    def read_text(path, *args, **kwargs):
+        if path.as_posix() == training_config:
+            return json.dumps({"data_args": {"simple_mode_echo_ratio": 0.0}})
+        return original_read(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", read_text)
+    config = load_runtime_config("salmonn")
     assert config["checkpoint"] == selected
     assert (
         config["assets"]["training_config"]

@@ -5,9 +5,11 @@ import base64
 import json
 import os
 import uuid
+from contextlib import suppress
 from types import SimpleNamespace
 from typing import Any, List, Optional
 
+import numpy as np
 import websockets
 from loguru import logger
 
@@ -20,12 +22,15 @@ from tau2.config import (
     DEFAULT_OPENAI_LIVE_MODEL,
     DEFAULT_OPENAI_LIVE_VOICE,
     DEFAULT_SEND_AUDIO_INSTANT,
+    DEFAULT_VOICE_STREAM_IDLE_SECONDS,
 )
-from tau2.data_model.audio import TELEPHONY_AUDIO_FORMAT, AudioFormat
+from tau2.data_model.audio import TELEPHONY_AUDIO_FORMAT, AudioData, AudioFormat
 from tau2.environment.tool import Tool
 from tau2.voice.audio_native.adapter import DiscreteTimeAdapter
 from tau2.voice.audio_native.async_loop import BackgroundAsyncLoop
 from tau2.voice.audio_native.tick_result import TickResult, UtteranceTranscript
+from tau2.voice.utils.audio_activity import AUDIO_RMS_THRESHOLD
+from tau2.voice.utils.audio_preprocessing import convert_to_pcm16
 
 
 class DiscreteTimeOpenAILiveAdapter(DiscreteTimeAdapter):
@@ -57,6 +62,9 @@ class DiscreteTimeOpenAILiveAdapter(DiscreteTimeAdapter):
         self._socket = None
         self._reader_task = None
         self._events = None
+        self._idle_task = None
+        self._sending_audio = False
+        self._last_input_send = 0.0
         self.session_id: Optional[str] = None
         self.session_closed: Optional[dict] = None
         self.latest_usage: Optional[dict] = None
@@ -124,6 +132,19 @@ class DiscreteTimeOpenAILiveAdapter(DiscreteTimeAdapter):
         if event.get("type") != "session.started":
             raise RuntimeError(f"Expected session.started, got {event.get('type')}")
         self.session_id = event.get("session", {}).get("id")
+        self._last_input_send = asyncio.get_running_loop().time()
+        self._idle_task = asyncio.create_task(self._keep_input_running())
+
+    async def _keep_input_running(self):
+        """Keep the documented continuous audio stream alive during LLM/TTS stalls."""
+        silence = bytes([255]) * self._chunk_size
+        while True:
+            await asyncio.sleep(self._voip_interval_ms / 1000)
+            if not self._sending_audio and (
+                asyncio.get_running_loop().time() - self._last_input_send
+                >= DEFAULT_VOICE_STREAM_IDLE_SECONDS
+            ):
+                await self._send_audio(silence)
 
     def _session_config(self, system_prompt: str) -> dict:
         """Build the immutable Live model, audio, and backend settings."""
@@ -177,12 +198,19 @@ class DiscreteTimeOpenAILiveAdapter(DiscreteTimeAdapter):
         result: TickResult,
         tick_start: float,
     ) -> None:
-        if user_audio:
-            await self._send_audio_chunked(
-                user_audio,
-                self._send_audio,
-                self._chunk_size,
-            )
+        self._sending_audio = True
+        try:
+            if user_audio:
+                await self._send_audio_chunked(
+                    user_audio, self._send_audio, self._chunk_size
+                )
+        finally:
+            self._last_input_send = asyncio.get_running_loop().time()
+            self._sending_audio = False
+        # Sending paced audio can consume the tick. Always drain events that
+        # already arrived, or output remains stuck forever in the reader queue.
+        while not self._events.empty():
+            self._process_event(result, self._events.get_nowait())
         deadline = tick_start + self.tick_duration_ms / 1000
         while True:
             remaining = deadline - asyncio.get_running_loop().time()
@@ -211,8 +239,24 @@ class DiscreteTimeOpenAILiveAdapter(DiscreteTimeAdapter):
             decoded = base64.b64decode(event.get("delta", ""))
             if decoded:
                 item_id = self._current_output_item or self._new_output_item()
-                result.agent_audio_chunks.append((decoded, item_id))
-                self._utterance_transcripts[item_id].add_audio(len(decoded))
+                # Live emits a continuous stream, including silence. Silence
+                # must retain its place in playback without holding the floor
+                # indefinitely merely because an output item exists.
+                for offset in range(0, len(decoded), self._chunk_size):
+                    frame = decoded[offset : offset + self._chunk_size]
+                    pcm = convert_to_pcm16(
+                        AudioData(data=frame, format=self.audio_format)
+                    )
+                    samples = np.frombuffer(pcm.data, dtype="<i2").astype(float)
+                    audible = bool(
+                        samples.size
+                        and np.sqrt(np.mean(samples**2)) >= AUDIO_RMS_THRESHOLD
+                    )
+                    result.agent_audio_chunks.append(
+                        (frame, item_id if audible else None)
+                    )
+                    if audible:
+                        self._utterance_transcripts[item_id].add_audio(len(frame))
         elif event_type == "session.output_transcript.delta":
             delta = event.get("delta", "")
             if delta:
@@ -283,6 +327,10 @@ class DiscreteTimeOpenAILiveAdapter(DiscreteTimeAdapter):
             self.clear_buffers()
 
     async def _async_disconnect(self) -> None:
+        if self._idle_task:
+            self._idle_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await self._idle_task
         if self._socket is None:
             return
         try:

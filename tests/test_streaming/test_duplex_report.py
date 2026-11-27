@@ -56,6 +56,10 @@ def test_main_report_is_offline_and_escapes_saved_topic(tmp_path, monkeypatch):
     assert '<script>alert("topic")</script>' not in page
     assert "&lt;script&gt;alert(&quot;topic&quot;)&lt;/script&gt;" in page
     assert "{{SOURCE_" not in page
+    assert "100ms 异步" in page
+    assert "声学澄清任务" in page
+    assert "模型综合内容与时机，可修正规则初判" in page
+    assert "if 时序 == fail and 语义 == pass" not in page
     evidence = json.loads(output.with_suffix(".evidence.json").read_text())
     assert len(evidence["event_catalog"]) == 19
     assert evidence["run_audit"]["included_run_count"] == 1

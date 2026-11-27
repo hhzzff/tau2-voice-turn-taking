@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>用户模拟器 · 决策流程</title>
+<style>
+:root{color-scheme:light;--paper:#fff;--bg:#f1f5fa;--ink:#233348;--muted:#596c83;--line:#dce4ee;--blue:#234fa3;--teal:#176f69;--mono:"Cascadia Code","Consolas","Microsoft YaHei",monospace;--sans:"Segoe UI","Microsoft YaHei",sans-serif}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.7 var(--sans)}[hidden]{display:none!important}
+a{color:var(--blue);text-underline-offset:4px}a:hover{color:#142e66}a:focus-visible,button:focus-visible{outline:3px solid #337ddb;outline-offset:4px;border-radius:2px}
+.shell{max-width:1060px;margin:auto;padding:0 32px}.top{border-bottom:1px solid var(--line);background:var(--paper)}.top .shell{display:flex;justify-content:space-between;align-items:center;min-height:62px;gap:16px}.brand{font-weight:650;font-size:15px;text-decoration:none;color:var(--ink)}.top-note{font-size:13px;color:var(--muted)}main{padding-top:32px;padding-bottom:48px}h1{font-size:30px;line-height:1.35;letter-spacing:-.5px;margin:0 0 10px;font-weight:650}h2{font-size:18px;margin:26px 0 10px}p{margin:0 0 14px}.intro{color:var(--muted);max-width:730px}.guide{display:flex;justify-content:space-between;gap:16px;align-items:center;margin:24px 0 0;padding:12px 18px;border:1px solid var(--line);border-bottom:0;background:#f8fafd;font-size:13px}.guide strong{font-weight:600}.link-sample{color:var(--blue);text-decoration:underline dotted;text-underline-offset:4px}
+.code-frame{background:var(--paper);border:1px solid var(--line);overflow-x:auto}.code-frame pre{margin:0;padding:17px 18px 20px 0;min-width:max-content;tab-size:4;font:14px/1.85 var(--mono)}.code-line{display:block;white-space:pre;min-height:1.85em;padding-right:10px}.code-line::before{content:attr(data-line);display:inline-block;width:48px;margin-right:18px;padding-right:12px;text-align:right;color:#8796a8;border-right:1px solid #edf1f6;user-select:none;font-size:12px}.kw{color:#7650a3;font-weight:600}.comment{color:#718095}.code-link{color:var(--blue);text-decoration:underline dotted;text-decoration-thickness:1px;text-underline-offset:4px;border-radius:2px}.code-link:hover{background:#eaf1ff;text-decoration-style:solid}.section-line{color:var(--teal)}.footnote{font-size:13px;color:var(--muted);margin-top:14px}.footer{border-top:1px solid var(--line);padding-top:16px;margin-top:24px;display:flex;gap:12px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.detail{max-width:800px;margin:0 auto}.back{display:inline-block;margin-bottom:22px;text-decoration:none;font-size:14px}.detail .lead{font-size:17px;color:var(--muted);margin-bottom:22px}.detail pre{overflow-x:auto;padding:18px 20px;background:#f7f9fc;border-left:3px solid #8aa6cf;font:14px/1.9 var(--mono);color:var(--ink);margin:20px 0}.detail code:not(pre code){font:14px var(--mono);background:#edf2f8;padding:2px 5px;border-radius:3px}.detail ul{padding-left:22px;margin:12px 0 20px}.detail li{margin:7px 0}.detail table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14px}.detail th,.detail td{text-align:left;vertical-align:top;border-bottom:1px solid var(--line);padding:10px 12px}.detail th{background:#f7f9fc;font-weight:600}.source{margin-top:28px;border-top:1px solid var(--line);padding-top:16px;font-size:13px;color:var(--muted);overflow-wrap:anywhere}.detail-title:focus{outline:none}.noscript{padding:20px;background:#fff}.print-note{display:none}
+@media(max-width:600px){.shell{padding-left:16px;padding-right:16px}.top .shell{min-height:54px}.top-note{display:none}main{padding-top:24px}h1{font-size:25px}.intro{font-size:14px}.guide{padding:10px 12px;display:block}.guide span{display:block;margin-top:3px}.code-frame pre{font-size:13px}.code-line::before{width:32px;margin-right:10px;padding-right:8px}.detail pre{padding:14px;font-size:13px}.detail table{table-layout:fixed}.detail th,.detail td{padding:9px 6px;overflow-wrap:anywhere}}
+@media print{body{background:white}.top,.back,.guide span{display:none}.shell{max-width:none;padding:0}main{padding-top:0}.code-frame{overflow:visible}.code-frame pre{font-size:10px;min-width:0}.code-link{text-decoration:none}.print-note{display:block;font-size:12px}}
+</style>
+</head>
+<body>
+<header class="top"><div class="shell"><a class="brand" href="#main">用户模拟器 / 决策逻辑</a><span class="top-note">基于当前工作区源码 · 可离线阅读</span></div></header>
+<main class="shell">
+<section id="main-view" aria-labelledby="main-title">
+<h1 id="main-title">先听，再决定是否开口。</h1>
+<p class="intro">程序判断能否执行，用户模型选择时机和台词。点击伪代码中的蓝色链接，查看该步骤的解释。</p>
+<div class="guide"><strong>每个音频步检查一次，默认间隔 1 秒才有一次决策机会。</strong><span><span class="link-sample">蓝色下划线</span> = 解释子页面</span></div>
+<div class="code-frame" role="region" aria-label="用户模拟器主流程伪代码" tabindex="0"><pre><code id="main-code"></code></pre></div>
+<p class="footnote">等待时仍接收音频。已触发、观察完成、评审通过是三个阶段。<a href="#detail/state">查看状态含义</a></p>
+<p class="print-note">解释子页面可在 HTML 中点击蓝色链接查看。</p>
+<footer class="footer"><span>默认参数可由配置调整</span><a href="#detail/timing">时间与默认值</a><a href="duplex-user-decision-logic.md">Markdown 版本</a></footer>
+</section>
+<section id="detail-view" class="detail" hidden aria-labelledby="detail-title">
+<a class="back" href="#main">← 返回主流程</a>
+<h1 id="detail-title" class="detail-title" tabindex="-1"></h1>
+<div id="detail-body"></div>
+<div id="detail-source" class="source"></div>
+<footer class="footer"><a href="#main">返回主流程，继续阅读</a></footer>
+</section>
+<noscript><p class="noscript">请启用 JavaScript 以浏览伪代码及解释子页面，或打开同目录的 <a href="duplex-user-decision-logic.md">Markdown 文档</a>。</p></noscript>
+</main>
+
+<template id="detail-state" data-title="先区分四种事件状态" data-source="duplex_scenario_user.py：DuplexController.__init__()、begin()、report()；duplex_events.py：DuplexScenario">
+<p class="lead">调度器关心事件运行到哪一步；是否通过，由后续评审决定。</p>
+<table><thead><tr><th>状态</th><th>含义</th></tr></thead><tbody><tr><td>待测事件</td><td>尚未正式触发的覆盖目标，包含配置启用的补充事件。</td></tr><tr><td>已铺垫事件</td><td>已经安排表达前置事实或约定，仍然待测。</td></tr><tr><td>已触发事件</td><td>音频已就绪并登记执行，不代表整句已播完。</td></tr><tr><td>当前事件</td><td>正在播放刺激或观察回应的事件，同一时刻最多一个。</td></tr></tbody></table>
+<p>新配置默认额外提供“助手附和”和“补全用户未完句”机会，已选中的不重复加入。若规定事件顺序，它必须包含全部覆盖目标。</p>
+<p><strong>有铺垫标记不证明前情语义有效；观察完成不证明回答正确。</strong></p>
+</template>
+
+<template id="detail-timing" data-title="两种时间：音频步与决策间隔" data-source="duplex_scenario_user.py：_next_turn_taking_action()；config.py；duplex_events.py：DuplexScenario、DuplexDecision">
+<p class="lead">每步都检查状态，只有符合条件时才调用用户模型。</p>
+<pre>now = state.elapsed_samples / PCM_SAMPLE_RATE  # 模拟时间
+incoming = 助手上一音频步的输出
+if 可以开始新决策:
+    next_check = now + 决策间隔</pre>
+<table><thead><tr><th>参数</th><th>默认值</th><th>用途</th></tr></thead><tbody><tr><td>音频步 tick</td><td>0.2 秒</td><td>双方收到对方上一音频步的输出。</td></tr><tr><td>决策间隔</td><td>1 秒</td><td>限制新决策机会的频率。</td></tr><tr><td>普通事件观察</td><td>6 秒</td><td>从用户音频队列播完后开始。</td></tr><tr><td>记忆回答静默</td><td>1 秒</td><td>推断回答播放结束。</td></tr><tr><td>记忆观察超时</td><td>120 秒</td><td>从请求结束时间计算。</td></tr></tbody></table>
+<p><code>now</code> 是模拟时钟；每一步接收的 <code>incoming</code> 是助手上一音频步的输出。同步模型、ASR 和 TTS 的现实等待时间，不会按相同时长自动推进模拟时钟，不能据此直接比较真实端到端延迟。</p>
+</template>
+
+<template id="detail-listen" data-title="接收音频：等待时也在听" data-source="duplex_scenario_user.py：_next_turn_taking_action()、DuplexController.observe()；duplex_perception.py：observe()；voice/utils/audio_activity.py">
+<p class="lead">即使这一音频步不调用模型，也先收集助手音频和事件证据。</p>
+<pre>incoming = 助手上一音频步的输出
+speaking = 音频能量 RMS ≥ 80
+if 音频无法解析: speaking = contains_speech
+
+保存已交付音频
+更新对话和当前事件观察
+if speaking or 音频携带话语标识:
+    更新最近助手音频时间</pre>
+<p>发声状态针对当前整块音频。<strong>当前块无声，不等于整个回答结束。</strong>话语标识还会保护仍在交付的低能量音频。</p>
+<p>音频收集发生在提前等待之前；ASR 通常在进入下一次决策时才执行。</p>
+</template>
+
+<template id="detail-yield" data-title="什么时候用户会停下来让助手说" data-source="duplex_scenario_user.py：_next_turn_taking_action() 中 proactive.contextual_interruption 分支">
+<p class="lead">用户通常把队列里的话播完。源码有一个明确的特殊让渡分支。</p>
+<pre>if 当前事件 == 按约定主动打断:
+    if 已经过约定触发点 and 助手发声 and 用户仍有待播音频:
+        清空用户剩余音频
+        标记用户因助手插话而停止
+        更新刺激结束时间，标记本句被截断</pre>
+<p>例如，先约定听到某句话时助手提醒用户，再在长发言中说出该触发语。助手介入后，模拟用户停止剩余发言。</p>
+<p>这不是所有事件共用的自动让渡规则；一般情况下，队列非空就继续播放。</p>
+</template>
+
+<template id="detail-gates" data-title="哪些情况直接等待，不调用用户模型" data-source="duplex_scenario_user.py：_next_turn_taking_action()">
+<p class="lead">先排除不能做新决定的情况，避免无意义地反复调用模型。</p>
+<ul><li>用户音频没播完：继续输出下一块。</li><li>当前事件仍在观察：等待回应，禁止新事件干扰。</li><li>还没到下一次决策时间：继续等。</li><li>助手有声，而所有剩余事件都要求安静：继续听。</li><li>事件已触发完，但助手音频停止不足 1 秒：保护最后的回答。</li></ul>
+<p>通过这些条件后，设置 <code>next_check = now + 决策间隔</code>。这是最早的下一次机会，不代表到点就必须说话。</p>
+</template>
+
+<template id="detail-observation" data-title="观察何时结束" data-source="duplex_scenario_user.py：DuplexController.observe()、advance_observation()">
+<p class="lead">先等用户刺激播完，再保护一段助手回应时间。记忆事件额外保护完整回答。</p>
+<pre>if 用户音频未播完: return 继续播放
+if 未设置截止时间: 截止时间 = now + 观察时长
+if now &lt; 截止时间: return 继续观察
+
+if 普通事件:
+    标记观察完成，释放当前事件
+else:  # 记忆事件
+    if 已看到请求结束后的回答 and 回答音频停止 ≥ 1 秒:
+        标记回答播放完成，释放当前事件
+    elif 距请求结束 ≥ 120 秒:
+        标记观察不完整，释放当前事件
+    else:
+        继续观察，禁止新的用户发言</pre>
+<p>记忆回答中，有声或携带话语标识的音频都会刷新最后音频时间。仅有句中短暂停顿，不足以证明回答完成。</p>
+<p>普通事件默认观察 6 秒，<strong>不是所有普通发言都额外等 6 秒</strong>；只有正式触发的事件才创建观察状态。观察完成也不等于评审通过。</p>
+</template>
+
+<template id="detail-perception" data-title="模型能看到哪些对话内容" data-source="duplex_perception.py：observe()、history()；duplex_scenario_user.py：_decide()">
+<p class="lead">默认只识别实际已交付的助手音频，不提前读取助手未来台词。</p>
+<pre>for 音频有新增的助手片段:
+    新文本 = ASR(截至当前已交付的完整音频前缀)
+    替换该片段的旧识别结果
+
+最近对话 = 按时间合并(用户历史, 助手最新识别文本)[-60:]</pre>
+<p>60 条是混合历史记录，不是 60 个 tick 或严格的 60 轮问答。ASR 假设可能修订，不能把同一片段的多次识别当增量拼接。</p>
+<p>识别失败会中止本次决策，不自动退回近似文本。配置也可显式选择近似文本模式。</p>
+<p>用户历史保存的是合成计划台词；TTS 可能漏读、发言也可能截断，因此它不自动证明整句已被助手听到。</p>
+</template>
+
+<template id="detail-model" data-title="用户模型如何选择动作" data-source="duplex_scenario_user.py：RUNTIME_POLICY、_decide()；duplex_events.py：DuplexDecision">
+<p class="lead">程序提供上下文和约束，用户模型一次返回一个动作、台词及私有理由。</p>
+<table><thead><tr><th>输入</th><th>作用</th></tr></thead><tbody><tr><td>行为要求、主题、语言、私有背景</td><td>说明用户角色、目标和偏好。</td></tr><tr><td>最近对话、时间、助手发声状态</td><td>判断现在听到了什么、适不适合开口。</td></tr><tr><td>待测事件契约、已铺垫和已触发事件</td><td>了解剩余覆盖目标与前情。</td></tr><tr><td>可选顺序和剧情指导</td><td>约束下一个正式事件与主题方向。</td></tr><tr><td>上次反馈、JSON Schema</td><td>修正被拒绝的动作并按格式输出。</td></tr></tbody></table>
+<pre>decision = {
+    action: wait / speak / prepare_event / trigger_event / finish,
+    event_id, text, reason, 其他事件字段
+}</pre>
+<p>提示词要求理由引用已听内容，并解释为何此刻自然地插话。<strong>自然度主要靠模型判断；程序不独立验证理由的语义。</strong></p>
+<p>私有背景须通过实际发言传达后，才算助手知道。上述要求和上下文拼成一条消息发给模拟用户模型，不直接发送给被测助手。</p>
+</template>
+
+<template id="detail-validation" data-title="程序如何检查决定" data-source="duplex_events.py：DuplexDecision.valid_action()；duplex_scenario_user.py：DuplexController.allowed()">
+<p class="lead">先检查结构，再检查当前条件。拒绝后记录原因并等待，不替模型换一个事件。</p>
+<pre>检查 JSON、动作枚举、字段范围和事件专用规则
+if 格式不合法: 抛出决策异常
+
+if 仍在观察 and 动作 != wait: 拒绝
+if 事件不在待测集合: 拒绝铺垫或触发
+if 仍有待测事件或观察: 拒绝 finish
+if 配置了顺序 and 触发的不是下一事件: 拒绝
+if 助手有声: 拒绝普通发言或铺垫
+if 触发条件与当前发声状态不符: 拒绝
+if 特定上下文事件尚未铺垫: 拒绝</pre>
+<p>必须先铺垫的三类：记忆 <code>turn_taking.handoff</code>、上下文不回复 <code>rejection.contextual</code>、按约定主动打断 <code>proactive.contextual_interruption</code>。</p>
+<p>顺序只限制正式触发，仍可提前铺垫后续待测事件。记忆触发类型是 <code>any</code>，不因提问本身与助手重叠而拒绝。</p>
+</template>
+
+<template id="detail-errors" data-title="决策失败和候选被拒绝的区别" data-source="duplex_scenario_user.py：_next_turn_taking_action() 中 try/except、_decide()">
+<p class="lead">调用或解析异常会累计错误；正常的准入拒绝不会。</p>
+<pre>try:
+    decision = 决策并校验()
+    连续异常 = 0
+except:
+    记录错误并反馈
+    连续异常 += 1
+    if 连续异常 ≥ 3: 终止运行
+    return wait
+
+if 候选被准入拒绝 or action == wait:
+    return wait</pre>
+<p>该异常范围包含感知 ASR、模型调用和结构解析，但不包含后续 TTS、播放等执行异常。合成后长度或停顿检查失败则返回空消息，事件保持待测。</p>
+</template>
+
+<template id="detail-audio" data-title="为什么模型决定了，还可能不播放" data-source="duplex_scenario_user.py：_generate_full_duplex_voice_message()、_speech()、_audible_seconds()">
+<p class="lead">候选通过准入后，还要验证合成音频能否形成有效刺激。</p>
+<pre>audio = 合成主用户 / 背景语音，或生成噪声
+if 助手附和机会 and 实际有声长度 &lt; 8 秒:
+    反馈长度不足，不播放，事件仍待测
+if 测试停顿无法从波形唯一定位:
+    反馈停顿无效，不播放，事件仍待测
+else:
+    登记并开始输出</pre>
+<p>附和机会按 20 毫秒音频帧统计有声长度，不能用填充静音满足要求。停顿和 CTC 统一请求 750 毫秒 SSML 停顿，实际波形还需测量。</p>
+<p>CTC 的预期缺失短语只供评审，不读给助手。音频就绪后也不重新运行准入检查，真实重叠仍需结合轨迹核验。</p>
+</template>
+
+<template id="detail-commit" data-title="什么时候算正式触发事件" data-source="duplex_scenario_user.py：DuplexController.begin()、_generate_full_duplex_voice_message()；user_simulator_streaming.py：_perform_turn_taking_action()">
+<p class="lead">在音频就绪、即将交给输出链路时登记，不是在模型刚提出动作时登记。</p>
+<pre>写入用户历史
+if 普通发言: 不创建测试事件
+if 铺垫事件: 加入已铺垫集合，仍保留在待测集合
+if 触发事件:
+    移出待测集合，追加已触发记录
+    设置当前事件，保存时间和触发前对话
+
+音频切块入队，本步输出第一块
+后续音频步继续输出队列</pre>
+<p>队列清空后才开始事件的最小观察窗口。普通发言和铺垫不创建正式测试事件，因此没有同样的固定观察窗口。</p>
+<p><strong>登记触发 ≠ 整句完整播放 ≠ 观察完成 ≠ 评审通过。</strong></p>
+</template>
+
+<template id="detail-finish" data-title="对话什么时候结束" data-source="duplex_scenario_user.py：_next_turn_taking_action()、DuplexController.allowed()、_generate_full_duplex_voice_message()、report()">
+<p class="lead">事件触发完不会立即自动停录，仍保护观察和助手最后一段音频。</p>
+<pre>待测事件为空
+and 当前观察已结束
+and 最近至少 1 秒没有助手有声或携带话语标识的音频
+    ↓
+用户模型选择 finish
+    ↓
+程序接受并发送内部 STOP 消息</pre>
+<p>内部停止标记不会作为用户台词合成。外部最大步数、网络或执行异常也可能提前结束。</p>
+<p>记忆观察超时后虽然会释放调度，但报告仍是不完整观察，不能因最后正常结束就变成完整样本。</p>
+</template>
+
+<template id="detail-postreview" data-title="运行结束后的事后评审" data-source="duplex_bench.py：_run()、_assess()；duplex_scenario_user.py：report()；duplex_evaluation.py：attach_asr_evidence()、assess_report()、judge_report()、judge_memory_event()">
+<p class="lead">运行时负责产生交互和证据；事后评审读取保存的音频、轨迹、事件记录和识别结果，不会改变已经发生的对话。</p>
+<pre>运行结束或中断后（finally）：
+    保存已有 tick / 音频、events.json、perception.json
+    if 有已播放音频 ASR:
+        附加事件窗口内的 ASR 证据
+        # 记忆回答另回看至下一次用户动作或 finish
+
+    assessment = 按事件观察窗口计算规则结果
+    for 每个事件:
+        if status != observed:
+            verdict = not_evaluated
+        elif 缺少音频活动观察记录:
+            verdict = inconclusive
+        elif 打断事件没有真实重叠:
+            status, verdict = invalid_trigger, not_evaluated
+        else:
+            计算时序指标；可明确判定的规则事件直接给 pass / fail
+            # 其余语义行为暂记 inconclusive
+    保存规则版 assessment.json
+
+    if 配置了 judge_model:
+        for 每个 status == observed 的事件:
+            if 是记忆事件:
+                专门评审有效前情、间隔交流和逐条事实遵循
+            else:
+                集成评审事件有效性、语义表现和时序证据
+        # 普通 Judge 调用失败 -> inconclusive
+        # 记忆 Judge 失败 -> 记录错误，保留规则阶段 verdict
+    保存最终 assessment.json 和汇总</pre>
+<h2>三种结果</h2>
+<table><thead><tr><th>结果</th><th>含义</th></tr></thead><tbody><tr><td><code>not_evaluated</code></td><td>事件未触发、观察未完成，或正式触发未满足物理条件（例如要求与助手发声重叠，实测却没有重叠）。不能据此说助手失败。</td></tr><tr><td><code>inconclusive</code></td><td>事件已观察，但刺激无效、证据不足、语义未评审或评审服务失败，无法可靠判定。</td></tr><tr><td><code>pass / fail</code></td><td>有足够有效证据，规则或集成评审认为预期行为满足或未满足。</td></tr></tbody></table>
+<p><strong>只完成时序测量不等于语义通过。</strong> 助手有发声不代表回答正确；先前对话中出现事实，也不代表后续记忆回答遵守了它。</p>
+<h2>规则层判定例子</h2>
+<ul><li>静默类拒绝事件：刺激开始时助手未发声且观察完整；窗口内保持静默为 <code>pass</code>，检测到发声为 <code>fail</code>。</li><li><code>rejection.pause</code>：在测得的用户停顿区间说话为 <code>fail</code>，完整等过停顿为 <code>pass</code>。</li><li><code>proactive.backchannel</code> / <code>proactive.completion</code>：机会窗口内完全没有助手发声为 <code>fail</code>；有发声仍需 Judge 判断是否为恰当的附和或补全。</li><li><code>proactive.contextual_interruption</code>：约定触发前就插话，或触发后没有插话，规则判 <code>fail</code>；触发后发生重叠只证明时机，语义仍需评审。</li><li>其余完整观察的事件会记录发声时长、首次回应或打断延迟；这些指标本身不能证明语义合格。</li></ul>
+<h2>评审阶段</h2>
+<ul><li>规则层记录刺激期间/之后的发声时长、首次回应延迟、打断延迟及主动机会内是否发声；只有部分事件能仅靠这些时序规则判定。</li><li>配置 <code>judge_model</code> 后，仅评审 <code>status == observed</code> 的事件。普通事件由一次集成评审结合有效刺激、对话内容、预期行为和时序证据，输出一个 verdict；它可以修正规则阶段的初判。</li><li>记忆事件单独评审：核实用户先前实际表达的事实、期间是否有间隔交流、问题是否依赖前情，再逐条核对完整回答是否遵循事实或更正。</li><li>记忆回答的 ASR 回看可延伸至下一次用户动作或 finish；这只补充离线评审证据，不会提供给运行中的模型，也不扩展原时序窗口。</li><li>不配置 Judge 时，规则无法判定的事件保留 <code>inconclusive</code>。普通 Judge 调用失败会记为 <code>inconclusive</code>；记忆 Judge 失败会记录错误并保留规则阶段结果（当前记忆事件的规则结果为 <code>inconclusive</code>）。无效刺激或不足证据不能记作助手失败。</li></ul>
+<p>事件 <code>status</code> 表示是否触发及观察是否完成；<code>verdict</code> 表示评估结论。运行异常时，系统也会先保存已有证据；之后可用 <code>assess</code> 命令重新评审已保存的运行，不必重新发起对话。</p>
+</template>
+
+<script>
+'use strict';
+const lines = [
+'待测事件, 已铺垫, 已触发 = [[state|初始化事件状态]]',
+'当前事件, 用户音频队列 = None, []',
+'',
+'def 每个音频步(state):',
+'    now = state.elapsed_samples / PCM_SAMPLE_RATE',
+'    incoming = 助手上一音频步的输出',
+'    [[listen|接收上一音频步输出，更新发声、历史和观察记录]](incoming, now)',
+'',
+'    if 当前事件 == [[yield|proactive.contextual_interruption]]:',
+'        if 已过触发点 and 助手发声 and 用户音频队列非空:',
+'            清空用户剩余音频，记录让渡',
+'    if 用户音频队列非空:',
+'        return 播放下一块',
+'',
+'    [[observation|更新当前事件的观察状态]]',
+'    if 仍在观察 or 未到下次决策时间:',
+'        return 等待',
+'    if 助手有声 and 待测事件非空 and [[gates|剩余事件都要求安静]]:',
+'        return 等待',
+'    if 待测事件为空 and 助手音频停止不足 1 秒:',
+'        return 等待',
+'',
+'    下次决策时间 = now + [[timing|决策间隔]]',
+'    try:',
+'        对话 = [[perception|整理最近对话（默认识别已交付音频）]]',
+'        决定 = [[model|用户模型(对话, 背景, 事件状态, 约束)]]',
+'        接受 = [[validation|检查格式与执行条件(决定)]]',
+'        连续异常 = 0',
+'    except:',
+'        return [[errors|记录异常并等待；连续 3 次则终止]]',
+'',
+'    if not 接受 or 决定.action == wait:',
+'        return 记录反馈并等待',
+'    if 决定.action == finish:',
+'        return [[finish|发送停止消息]]',
+'',
+'    音频 = [[audio|合成语音或噪声，并检查刺激音频]]',
+'    if 音频检查未通过:',
+'        return 反馈并等待  # 事件仍待测',
+'',
+'    [[commit|记录发言，更新铺垫或触发状态]]',
+'    音频切块入队',
+'    return 播放第一块',
+'',
+'# 对话结束后（非实时）：[[postreview|保存证据并做事后评审]]'
+];
+const escapeHTML = value => value.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+function highlight(text) {
+  const parts = text.split(/(#.*)/);
+  return parts.map((part,index) => index % 2 ? '<span class="comment">'+escapeHTML(part)+'</span>' : escapeHTML(part).replace(/\b(def|if|or|and|not|return|try|except|None)\b/g,'<span class="kw">$1</span>')).join('');
+}
+function codeMarkup(line) {
+  let output = '', position = 0;
+  for (const match of line.matchAll(/\[\[([a-z-]+)\|([^\]]+)\]\]/g)) {
+    output += highlight(line.slice(position,match.index));
+    output += '<a class="code-link" href="#detail/'+match[1]+'" aria-label="查看解释：'+escapeHTML(match[2])+'">'+escapeHTML(match[2])+'</a>';
+    position = match.index + match[0].length;
+  }
+  return output + highlight(line.slice(position));
+}
+document.getElementById('main-code').innerHTML = lines.map((line,index) => '<span class="code-line" data-line="'+(index+1)+'">'+codeMarkup(line)+'</span>').join('');
+const mainView = document.getElementById('main-view');
+const detailView = document.getElementById('detail-view');
+let mainScroll = 0, lastLink = null, showingDetail = false;
+if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+document.addEventListener('click', event => {
+  const link = event.target.closest('a');
+  if (link && link.getAttribute('href')?.startsWith('#detail/') && !showingDetail) {
+    mainScroll = window.scrollY;
+    lastLink = link;
+  }
+});
+function route() {
+  const match = location.hash.match(/^#detail\/([a-z-]+)$/);
+  const template = match ? document.getElementById('detail-'+match[1]) : null;
+  const wasDetail = showingDetail;
+  showingDetail = Boolean(match);
+  mainView.hidden = showingDetail;
+  detailView.hidden = !showingDetail;
+  if (showingDetail) {
+    const heading = document.getElementById('detail-title');
+    heading.textContent = template ? template.dataset.title : '未找到这段解释';
+    const body = document.getElementById('detail-body');
+    body.replaceChildren();
+    if (template) body.appendChild(template.content.cloneNode(true));
+    else body.textContent = '请返回主流程，点击蓝色链接继续阅读。';
+    document.getElementById('detail-source').textContent = template ? '源码定位：'+template.dataset.source : '';
+    document.title = heading.textContent+' · 用户模拟器';
+    heading.focus({preventScroll:true});
+    window.scrollTo(0,0);
+  } else {
+    document.title = '用户模拟器 · 决策流程';
+    if (wasDetail && lastLink) lastLink.focus({preventScroll:true});
+    window.scrollTo(0,wasDetail ? mainScroll : 0);
+  }
+}
+window.addEventListener('hashchange',route);
+route();
+</script>
+</body>
+</html>

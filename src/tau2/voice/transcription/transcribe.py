@@ -12,7 +12,6 @@ from dotenv import load_dotenv
 from tau2.config import (
     DEFAULT_OPENAI_OUTPUT_SAMPLE_RATE,
     DEFAULT_OPENAI_REALTIME_BASE_URL,
-    DEFAULT_WHISPER_MODEL,
 )
 from tau2.data_model.audio import AudioData, AudioEncoding, AudioFormat
 from tau2.data_model.voice import TranscriptionConfig, TranscriptionResult
@@ -37,6 +36,16 @@ def transcribe_audio(
         if conversion_error:
             return TranscriptionResult(transcript="", error=conversion_error)
 
+        # Digital silence cannot contain speech. Do not ask an ASR model to
+        # invent text for empty input or silent initialization placeholders.
+        if config.model in {
+            "whisper-1",
+            "gpt-4o-mini-transcribe",
+            "gpt-4o-transcribe",
+            "gemini-3.8-flash",
+        } and not pcm_audio_data.data.strip(b"\x00"):
+            return TranscriptionResult(transcript="")
+
         if config.model == "scribe_v1":
             return transcribe_scribe(pcm_audio_data, config)
 
@@ -49,8 +58,11 @@ def transcribe_audio(
         elif config.model == "whisper-1":
             return transcribe_whisper(pcm_audio_data, config)
 
+        elif config.model.startswith("gemini-"):
+            return transcribe_gemini(pcm_audio_data, config)
+
         elif config.model in ["gpt-4o-transcribe", "gpt-4o-mini-transcribe"]:
-            return asyncio.run(transcribe_gpt4o_realtime(pcm_audio_data, config))
+            return transcribe_openai_file(pcm_audio_data, config)
 
         else:
             return TranscriptionResult(
@@ -153,9 +165,83 @@ def transcribe_deepgram(
         )
 
 
+def transcribe_gemini(
+    audio_data: AudioData, config: TranscriptionConfig
+) -> TranscriptionResult:
+    """Transcribe only supplied audio using Gemini, without dialogue context."""
+    _validate_pcm16_mono_24000(audio_data.format)
+    key = os.getenv("GEMINI_API_KEY") or os.getenv("GEMINI_LIVE_API_KEY")
+    if not key:
+        return TranscriptionResult(transcript="", error="Gemini API key is missing")
+    buffer = io.BytesIO()
+    with wave.open(buffer, "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(audio_data.format.sample_rate)
+        wav.writeframes(audio_data.data)
+    try:
+        response = requests.post(
+            f"https://generativelanguage.googleapis.com/v1beta/models/{config.model}:generateContent",
+            headers={"x-goog-api-key": key},
+            json={
+                "contents": [
+                    {
+                        "parts": [
+                            {
+                                "text": (
+                                    f"Transcribe verbatim the speech in this audio (language: {config.language or 'auto'}). "
+                                    "Return only the transcription. Do not answer, explain, infer missing words, "
+                                    "or complete unfinished phrases. Preserve audible partial words. "
+                                    "Return an empty string if there is no intelligible speech."
+                                )
+                            },
+                            {
+                                "inlineData": {
+                                    "mimeType": "audio/wav",
+                                    "data": base64.b64encode(buffer.getvalue()).decode(
+                                        "ascii"
+                                    ),
+                                }
+                            },
+                        ]
+                    }
+                ],
+                "generationConfig": {
+                    "temperature": 0,
+                    "thinkingConfig": {"thinkingLevel": "low"},
+                },
+            },
+            timeout=40,
+        )
+        if not response.ok:
+            return TranscriptionResult(
+                transcript="", error=f"Gemini transcription HTTP {response.status_code}"
+            )
+        candidates = response.json().get("candidates", [])
+        if not candidates:
+            return TranscriptionResult(
+                transcript="", error="Gemini transcription returned no candidate"
+            )
+        parts = candidates[0].get("content", {}).get("parts", [])
+        text = "".join(p.get("text", "") for p in parts if not p.get("thought"))
+        return TranscriptionResult(transcript=text.strip())
+    except Exception as exc:
+        return TranscriptionResult(
+            transcript="", error=f"Gemini transcription failed: {type(exc).__name__}"
+        )
+
+
 def transcribe_whisper(
     audio_data: AudioData, config: TranscriptionConfig
 ) -> TranscriptionResult:
+    """Transcribe a complete audio prefix with the legacy Whisper model."""
+    return transcribe_openai_file(audio_data, config)
+
+
+def transcribe_openai_file(
+    audio_data: AudioData, config: TranscriptionConfig
+) -> TranscriptionResult:
+    """Send only the supplied WAV to the configured dedicated OpenAI ASR."""
     try:
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
@@ -179,7 +265,7 @@ def transcribe_whisper(
         url = "https://api.openai.com/v1/audio/transcriptions"
         headers = {"Authorization": f"Bearer {api_key}"}
         files = {"file": ("audio.wav", wav_data, "audio/wav")}
-        data = {"model": DEFAULT_WHISPER_MODEL}
+        data = {"model": config.model}
 
         if config.language:
             lang_code = (
@@ -191,12 +277,14 @@ def transcribe_whisper(
 
         data.update(config.extra_options)
 
-        response = requests.post(url, headers=headers, files=files, data=data)
+        response = requests.post(
+            url, headers=headers, files=files, data=data, timeout=40
+        )
 
         if response.status_code != 200:
             return TranscriptionResult(
                 transcript="",
-                error=f"OpenAI API error {response.status_code}: {response.text}",
+                error=f"OpenAI transcription HTTP {response.status_code}",
             )
 
         result = response.json()
@@ -204,7 +292,7 @@ def transcribe_whisper(
 
     except Exception as e:
         return TranscriptionResult(
-            transcript="", error=f"OpenAI transcription failed: {str(e)}"
+            transcript="", error=f"OpenAI transcription failed: {type(e).__name__}"
         )
 
 

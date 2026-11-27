@@ -177,8 +177,12 @@ class GeminiLiveProvider:
         import json
         import tempfile
 
-        # Try API key first
-        self.api_key = api_key or os.environ.get("GEMINI_API_KEY")
+        # Try both the repository's generic name and the explicit Live alias.
+        self.api_key = (
+            api_key
+            or os.environ.get("GEMINI_API_KEY")
+            or os.environ.get("GEMINI_LIVE_API_KEY")
+        )
 
         # Check for service account credentials (JSON content or file path)
         service_account_json = os.environ.get("GOOGLE_SERVICE_ACCOUNT_KEY")

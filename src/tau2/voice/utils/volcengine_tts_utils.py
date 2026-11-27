@@ -10,7 +10,12 @@ from tau2.data_model.voice import VolcengineTTSConfig
 
 def tts_volcengine(text: str, config: VolcengineTTSConfig) -> AudioData:
     """Text to speech using Volcengine OpenSpeech TTS."""
-    api_key = config.api_key or os.getenv("VOLCENGINE_TTS_API_KEY")
+    api_key = (
+        config.api_key
+        or os.getenv("VOLCENGINE_TTS_API_KEY")
+        or os.getenv("DOUBAO_TTS_API_KEY")
+        or os.getenv("DOUBAO_SEED_API_KEY")
+    )
     if not api_key:
         raise ValueError("VOLCENGINE_TTS_API_KEY not found in config or environment")
 
@@ -20,18 +25,19 @@ def tts_volcengine(text: str, config: VolcengineTTSConfig) -> AudioData:
         "enable_latex_tn": True,
         **config.additions,
     }
-    payload = {
-        "req_params": {
-            "text": text,
-            "speaker": config.speaker,
-            "additions": json.dumps(additions),
-            "audio_params": {
-                "format": config.audio_format,
-                "sample_rate": config.sample_rate,
-                "enable_subtitle": config.enable_subtitle,
-            },
-        }
+    params = {
+        "text": text,
+        "speaker": config.speaker,
+        "additions": json.dumps(additions),
+        "audio_params": {
+            "format": config.audio_format,
+            "sample_rate": config.sample_rate,
+            "enable_subtitle": config.enable_subtitle,
+        },
     }
+    if config.ssml:
+        params["ssml"] = config.ssml
+    payload = {"req_params": params}
     headers = {
         "X-Api-Key": api_key,
         "X-Api-Resource-Id": config.resource_id,

@@ -8,6 +8,7 @@ import wave
 import httpx
 import numpy as np
 import pytest
+from duplex_runtime_fixture import runtime_json
 
 from experiments.tau_voice.duplex_bench import build_dynamic_user
 from tau2.data_model.audio import (
@@ -20,6 +21,7 @@ from tau2.data_model.audio import (
 from tau2.data_model.message import AssistantMessage
 from tau2.data_model.simulation import AudioNativeConfig
 from tau2.user.duplex_events import DuplexScenario
+from tau2.user.duplex_scenario_user import RUNTIME_POLICY
 
 
 def test_complete_tts_dropchunk_crosses_ticks_without_leaking_annotation(
@@ -41,7 +43,9 @@ def test_complete_tts_dropchunk_crosses_ticks_without_leaking_annotation(
             if len(payloads) == 1
             else {"action": "wait", "reason": "等待实际回答。"}
         )
-        return AssistantMessage(role="assistant", content=json.dumps(decision))
+        return AssistantMessage(
+            role="assistant", content=runtime_json(json.dumps(decision))
+        )
 
     def align(url, **kwargs):
         alignment_calls.append((url, kwargs))
@@ -128,17 +132,18 @@ def test_complete_tts_dropchunk_crosses_ticks_without_leaking_annotation(
     assert '"start_char": 7' not in future
 
 
+@pytest.mark.parametrize("tts_provider", [None, "volcengine"])
 @pytest.mark.parametrize(
     "query_at,event_id,span_step",
     [
         (0.3, None, 0.025),
         (2.2, None, 0.025),
-        (0.3, "proactive.backchannel", 0.025),
+        (0.3, "proactive.clarification", 0.025),
         (0.3, None, 0.3),
     ],
 )
 def test_agent_question_uses_existing_yield_and_clear_natural_reply(
-    monkeypatch, tmp_path, query_at, event_id, span_step
+    monkeypatch, tmp_path, query_at, event_id, span_step, tts_provider
 ):
     scripts, calls = ["我先去南门，然后等大家一起出发。", "南门。"], []
     uttered = []
@@ -156,7 +161,13 @@ def test_agent_question_uses_existing_yield_and_clear_natural_reply(
             }
             if event_id:
                 decision["event_id"] = event_id
-        elif "哪个门" in payload and len(uttered) == 1:
+        elif (
+            "哪个门" in payload
+            and len(uttered) == 1
+            and not json.loads(payload[len(RUNTIME_POLICY) + 1 :])[
+                "assistant_turn_open"
+            ]
+        ):
             uttered.append(scripts[1])
             decision = {
                 "action": "speak",
@@ -166,9 +177,12 @@ def test_agent_question_uses_existing_yield_and_clear_natural_reply(
             }
         else:
             decision = {"action": "wait", "reason": "等待对方。"}
-        return AssistantMessage(role="assistant", content=json.dumps(decision))
+        return AssistantMessage(
+            role="assistant", content=runtime_json(json.dumps(decision))
+        )
 
-    def tts(text, *args):
+    def tts(text, provider, config):
+        assert provider == (tts_provider or "openai")
         return AudioData(
             data=np.full(
                 (96000 if span_step == 0.3 else 32000) if text == scripts[0] else 8000,
@@ -201,7 +215,13 @@ def test_agent_question_uses_existing_yield_and_clear_natural_reply(
         language="Chinese",
     )
     user = build_dynamic_user(
-        scenario, tmp_path, AudioNativeConfig(), "nova", "onyx", "test"
+        scenario,
+        tmp_path,
+        AudioNativeConfig(),
+        "nova",
+        "onyx",
+        "test",
+        tts_provider=tts_provider,
     )
     state, outputs = user.get_init_state(), []
     for tick in range(120):
@@ -271,7 +291,9 @@ def test_gateway_alignment_uses_repeated_english_word_time_after_resampling(
             "keyword": {"text": "red", "start_char": 7, "end_char": 10},
             "reason": "Choose a color.",
         }
-        return AssistantMessage(role="assistant", content=json.dumps(decision))
+        return AssistantMessage(
+            role="assistant", content=runtime_json(json.dumps(decision))
+        )
 
     def align(url, **kwargs):
         calls.append((url, kwargs))
@@ -357,19 +379,23 @@ def test_invalid_acoustic_input_is_explicit_and_never_claimed_as_delivered_damag
     def generate(**kwargs):
         return AssistantMessage(
             role="assistant",
-            content=json.dumps(
-                {
-                    "action": "speak",
-                    "text": script,
-                    "keyword": None
-                    if failure == "missing"
-                    else {
-                        "text": "blue" if failure == "invalid_occurrence" else "red",
-                        "start_char": 7,
-                        "end_char": 10,
-                    },
-                    "reason": "Choose a color.",
-                }
+            content=runtime_json(
+                json.dumps(
+                    {
+                        "action": "speak",
+                        "text": script,
+                        "keyword": None
+                        if failure == "missing"
+                        else {
+                            "text": "blue"
+                            if failure == "invalid_occurrence"
+                            else "red",
+                            "start_char": 7,
+                            "end_char": 10,
+                        },
+                        "reason": "Choose a color.",
+                    }
+                )
             ),
         )
 
@@ -440,7 +466,9 @@ def test_standalone_conversation_cannot_finish_before_an_ordinary_exchange(
         "tau2.user.duplex_scenario_user.generate",
         lambda **kwargs: AssistantMessage(
             role="assistant",
-            content=json.dumps({"action": "finish", "reason": "No pending events."}),
+            content=runtime_json(
+                json.dumps({"action": "finish", "reason": "No pending events."})
+            ),
         ),
     )
     user = build_dynamic_user(
@@ -549,13 +577,15 @@ def test_acoustic_ticks_reach_native_provider_in_its_configured_codec(
         "tau2.user.duplex_scenario_user.generate",
         lambda **kwargs: AssistantMessage(
             role="assistant",
-            content=json.dumps(
-                {
-                    "action": "speak",
-                    "text": "red",
-                    "keyword": {"text": "red", "start_char": 0, "end_char": 3},
-                    "reason": "Choose a color.",
-                }
+            content=runtime_json(
+                json.dumps(
+                    {
+                        "action": "speak",
+                        "text": "red",
+                        "keyword": {"text": "red", "start_char": 0, "end_char": 3},
+                        "reason": "Choose a color.",
+                    }
+                )
             ),
         ),
     )
@@ -628,7 +658,9 @@ def test_audio_only_assistant_reply_can_complete_a_standalone_conversation(
             if len(calls) == 1
             else {"action": "finish", "reason": "The ordinary exchange is complete."}
         )
-        return AssistantMessage(role="assistant", content=json.dumps(decision))
+        return AssistantMessage(
+            role="assistant", content=runtime_json(json.dumps(decision))
+        )
 
     monkeypatch.delenv("TERUMI_BT_AK", raising=False)
     monkeypatch.setenv("ELEVENLABS_API", "test")

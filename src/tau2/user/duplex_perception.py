@@ -5,9 +5,9 @@ import time
 import wave
 from pathlib import Path
 
-from tau2.config import DEFAULT_WHISPER_MODEL
+from tau2.config import DEFAULT_DUPLEX_TRANSCRIPTION_MODEL
 from tau2.data_model.audio import PCM_SAMPLE_RATE, AudioData, AudioEncoding, AudioFormat
-from tau2.data_model.voice import TranscriptionConfig
+from tau2.data_model.voice import TranscriptionConfig, TranscriptionModel
 from tau2.voice.transcription.transcribe import transcribe_audio
 from tau2.voice.utils.audio_activity import is_audible_chunk
 from tau2.voice.utils.audio_preprocessing import convert_to_pcm16, resample_audio
@@ -22,9 +22,15 @@ class PlayedAudioPerception:
     transcription latency; it is not a low-latency streaming ASR implementation.
     """
 
-    def __init__(self, language: str, config: TranscriptionConfig | None = None):
+    def __init__(
+        self,
+        language: str,
+        config: TranscriptionConfig | None = None,
+        *,
+        model: TranscriptionModel = DEFAULT_DUPLEX_TRANSCRIPTION_MODEL,
+    ):
         self.config = config or TranscriptionConfig(
-            model=DEFAULT_WHISPER_MODEL,
+            model=model,
             language="zh" if language == "Chinese" else "en",
         )
         self.segments = []
@@ -51,6 +57,12 @@ class PlayedAudioPerception:
             PCM_SAMPLE_RATE,
         )
         if not audio.data:
+            return
+        if not audio.data.strip(b"\x00") and (
+            self.current is None or self.current["utterance_ids"] != ids
+        ):
+            # A text greeting with silent placeholder audio is not heard speech.
+            # Preserve zero frames inside an existing utterance for timing.
             return
         if self.current is None or self.current["utterance_ids"] != ids:
             self.current = {

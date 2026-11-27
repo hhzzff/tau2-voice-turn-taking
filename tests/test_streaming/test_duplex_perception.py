@@ -25,6 +25,42 @@ def chunk(value=1000, *, text="proportional text", uid="reply"):
     )
 
 
+def test_silent_text_greeting_cannot_become_heard_speech(monkeypatch):
+    perception = PlayedAudioPerception("English")
+
+    def forbidden(*args):
+        pytest.fail("The silent initial greeting must not be transcribed")
+
+    monkeypatch.setattr("tau2.user.duplex_perception.transcribe_audio", forbidden)
+    greeting = chunk(0, text="Hi! How can I help you today?", uid=None)
+    greeting.contains_speech = False
+    perception.observe(greeting, 0)
+    assert perception.history([], 0.2) == []
+    assert perception.segments == []
+    assert perception.snapshots == []
+
+
+def test_zero_frames_inside_real_utterance_preserve_audio_timing(monkeypatch):
+    perception = PlayedAudioPerception("English")
+    delivered = []
+
+    def recognize(audio, config):
+        delivered.append(audio.data)
+        return TranscriptionResult(transcript="Keep the dressing separate.")
+
+    monkeypatch.setattr("tau2.user.duplex_perception.transcribe_audio", recognize)
+    perception.observe(chunk(1000), 0)
+    perception.observe(chunk(0), 0.2)
+    perception.observe(chunk(1000), 0.4)
+    history = perception.history([], 0.6)
+    assert delivered == [
+        chunk(1000).get_audio_bytes()
+        + chunk(0).get_audio_bytes()
+        + chunk(1000).get_audio_bytes()
+    ]
+    assert history[0]["audio_end_seconds"] == pytest.approx(0.6)
+
+
 def test_recognition_uses_only_played_audio_not_proportional_or_future_text(
     monkeypatch,
 ):

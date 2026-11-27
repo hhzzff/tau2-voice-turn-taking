@@ -1,5 +1,55 @@
 # 动态双工事件 bench（实验版）
 
+## 用户当前目标
+
+用户每次决策必须返回 `current_goal`：实际目标、仍等待的请求、进展、未解决问题、态度和上下文引文。重要误解或漏答需要先修复，再推进测试；观察窗口结束不等于用户目标满足。普通修复发言不消耗下一项测试事件，目标状态不提供给被测助手。模型与保存字段详见 [用户当前目标](../../../docs/duplex-user-current-goal.md)。
+
+## 合并后的语音与声学配置
+
+默认调度 tick 为 100 ms，用户新决策机会默认仍间隔 1 秒；开源模型保持独立的 100 ms 异步入口和原生音频块缓存。
+
+用户 TTS 可用 `--tts-provider volcengine|openai|elevenlabs` 显式选择。普通双工事件默认保留 Volcengine Seed TTS 2.0 及原主用户/背景音色；声学任务默认使用 OpenAI；`--byted-gateway` 使用 ElevenLabs、Scribe 转写及远端原有网关配置。不同提供方的 model/resource ID 和 voice ID 需要匹配；ElevenLabs 的背景人物事件需显式配置另一个可用 voice ID。`run_config.json` 会保存实际 TTS 提供方。
+
+Volcengine 的停顿和 CTC 仍在单次 SSML 请求中插入 750 ms 停顿；显式选择其他 TTS 时使用分段合成与 PCM 静音，并在刺激播放前测量波形中的停顿。两条合成路径不可作为完全相同的输入条件混用比较。
+
+声学任务可独立运行，也可与事件组合。没有普通事件的独立声学任务不自动加入附和或 CTC；已有语义事件默认仍补充这两个机会，并支持 `--no-proactive-opportunities` 关闭。组合场景中的用户可在非记忆事件观察期间回答澄清追问；记忆回答仍保护至播放完成，助手的简短附和不会截断用户长陈述。
+
+普通双工场景默认使用专用 ASR `gpt-4o-mini-transcribe`，通过 OpenAI `/v1/audio/transcriptions` 上传已播放音频，使用本地 `OPENAI_API_KEY`。ASR 既支持场景的 `transcription_model`（保留 Gemini 等兼容项），也支持注入完整 `TranscriptionConfig`；显式完整配置优先。网关继续使用 Scribe。纯数字静音直接返回空转写；带文字但无声音的初始化占位消息不进入听觉历史，真实话语内部的静音帧仍保留以维持时间位置。关键词标注、实际声学扰动和最终评审证据保持隔离。
+
+## 三模型同顺序、同剧情比较
+
+场景模板 `scenarios/picnic_matched_three_models.json` 用于 Grok、Gemini Live、Doubao Seeduplex。`event_order` 必须是全部覆盖目标（含附和、CTC）的完整排列；控制器拒绝越序触发。`conversation_outline` 给出共同主题阶段，`event_guidance` 约束各事件的语义目标，台词和插入时机仍由用户 LLM 根据实际已播放音频决定。`prepare_event` 可提前建立记忆事实，不推进事件顺序。背景问话固定为向 Jamie 询问门口钥匙；CTC 使用此前共享的 sesame 过敏事实，不能只凭私有计划判断刺激有效。
+
+此模板显式使用 `gpt-6.1-terra` 作为用户决策模型，控制等待、打断时机和发言内容；下方命令显式选择 `gemini/gemini-3.8-flash` 作为综合 Judge，音频转写使用 `gpt-4o-mini-transcribe`。Terra 与转写均使用本地配置中的 `OPENAI_API_KEY`。转写只接收实际已播放音频，不接收剧情或预期补全；仍可能误识别，需结合原音频审查。Gemini Judge 的 LiteLLM 文本调用使用 `GEMINI_API_KEY`，启动进程时可从现有 Live Key 映射，不要把凭证写入模板或报告。用户 TTS 仍为豆包 Seed TTS 2.0，两个停顿事件仍为单次 SSML `<break time="750ms"/>`。
+
+```powershell
+uv run python -m experiments.tau_voice.duplex_bench run --scenario src/experiments/tau_voice/scenarios/picnic_matched_three_models.json --provider xai --judge-model gemini/gemini-3.8-flash --output data/simulations/matched_grok
+```
+
+分别替换 provider 为 `gemini`、`doubao` 并使用新目录，建议串行运行。三者共用输入条件，但不能保证助手回答、总话轮和事件时刻相同。与历史 Terra/Whisper 批次比较时要注明模拟器、转写和评审均已变化；每模型一个样本用于案例检查，不能推断总体排名。Judge 与 Gemini 被测模型来自同一提供商，也应结合音频人工核查其判断。
+
+## 统一评审与停顿校准
+
+每个事件由一次 LM 评审结合回答内容、说话时机和音频活动证据，输出一个 `event_judgment`，其 `verdict` 和 `reason` 即最终结论。规则计算出的时序指标只作为 `timing_evidence` 输入，不再与 LM 结果分别计分。记忆事件沿用逐事实检查，输出同一格式的事件结论；请求与上一轮助手的重叠本身不影响记忆判定。未成功调用 Judge 的事件保留为 `inconclusive`。
+
+句内停顿与 CTC 都以豆包单次 SSML 的 `<break time="750ms"/>` 合成。750ms 是请求值，实际波形需测量：`pause_audio_evidence` 保存 10ms 帧 RMS 检测出的唯一匹配静默区间。`marker_seconds` 应指向这个区间起点，不能使用包含前缀、停顿、后续内容的整句音频末尾；无法唯一定位时不播放该刺激，事件保留待重试。该方法是声学检测，不是逐词强制对齐。
+
+历史比较曾混入 OpenAI TTS 的 1.5 秒分段拼接样本，而 Grok/Gemini 已使用豆包 750ms SSML，不能将这两种输入条件直接比较。已保存的 SSML 音频可用下列命令测量和校正时间戳，再重新评审；原始 `events.json` 首次修改前保存在 `events.before_pause_alignment.json`，录音与历史 LM 日志保持原样。
+
+```powershell
+uv run python scripts/audit_duplex_pauses.py data/simulations/你的样本目录 --apply
+uv run python -m experiments.tau_voice.duplex_bench assess --output data/simulations/你的样本目录 --judge-model gpt-6.1-terra
+```
+
+## 豆包 Seeduplex 实时语音与本地对比
+
+豆包测试入口为 `--provider doubao --model 1.2.6.1`，采用 Seeduplex 3.0 的原生 JSON WebSocket 全双工协议，而非角色助手接口。环境变量保存在本地 `.env`：`DOUBAO_REALTIME_API_KEY`；若使用旧式 Access Key，还需 `DOUBAO_APP_ID`，适配器自动使用 AppID/Access-Key 请求头；新式 API Key 不设置 AppID。不要在源码、报告或日志中写入实际密钥。
+
+协议依据：[全双工文档](https://docs.volcengine.com/docs/doubao-voice/end-to-end-real-time-voice-full-duplex-version?lang=zh)。输入 16 kHz PCM、输出 24 kHz PCM，通过共享转换器接入框架的 8 kHz μ-law 通路。音频按 20 ms 发送；模拟器生成等待时发送 mute，恢复时 unmute。本实验适配器仅支持无工具的音频对话。
+
+当前统一条件的四模型本地比较批次为 `data/simulations/voice_compare_20261103_003/`。以 `manifest.json` 明确选择样本，使用 `python scripts/render_voice_comparison.py data/simulations/voice_compare_20261103_003` 重建中文 HTML。音轨、事件、ASR、评审与调用证据保留在各样本目录中；生成目录被 Git 忽略。`voice_compare_20261103_002/comparison.html` 也已更新为相同样本集。
+
+运行先保存录音和轨迹，再调用语义评审；也可用 `--no-semantic-judge` 先录制，之后单独 `assess`。网络断连产生的部分录音保留为诊断，未观察完的事件不算模型失败。模拟时间在同步 LLM/TTS/ASR 调用时暂停，远端语音服务仍运行，不能据此比较真实端到端延迟。GPT-Live 的连续静音保留时间位置，但不携带话语 ID，避免记忆回答永不结束。所有剩余事件均要求助手安静时，助手说话期间直接倾听，避免反复调用 LLM 得到相同的等待决策。
 当前评估范围与 Topic 覆盖解释见 [HTML 报告](../../../docs/duplex-evaluation-report.html)。
 报告已接入同一主入口，可以离线重新生成；不会启动对话或付费评审：
 
@@ -13,6 +63,10 @@ python -m experiments.tau_voice.duplex_bench report --output docs/duplex-evaluat
 
 输入是一组事件类型。默认使用项目里的 `gpt-6.1-terra` 自动生成 Topic，并在实际对话过程中决定何时说话、执行哪个待测事件、具体说什么。没有预写事件台词、固定事件顺序或“说够多少字就打断”的事件时间表。
 
+用户模拟器的打断决策必须以已听到的具体内容为依据：先听清相关建议、主张或表达，再在自然的分句边界插入；仅检测到助手正在出声、事件待执行或顺序轮到该事件，都不足以触发打断。私有 `reason` 必须引用已听内容，并解释为什么此刻需要打断；证据不足时选择 `wait`。普通衔接和记忆请求应等待当前回答结束，背景第三者及噪声仍可独立重叠。这是运行时 prompt 约束，控制器不新增固定等待秒数或语义硬门槛；实际自然度仍需新录音验证，历史结果保持原样。
+
+对比页模板位于 `scripts/templates/voice_comparison.html`，使用明色布局。transcript 支持说话人筛选、搜索、点击时间跳转、播放高亮及重叠标记；助手文本可切换音轨标签与去重后的已播放音频 ASR。ASR 是检查点前缀识别，可能误识别或缺少后续尾句，不能当作逐词对齐。可在批次根目录放置 `review_notes.json`，按模型目录名和事件 ID 记录评审争议；页面会标出待复核项，保留原始 LM 分数。
+
 ```powershell
 uv run python -m experiments.tau_voice.duplex_bench run --events interruption.follow_up,rejection.talking_to_others,proactive.clarification
 ```
@@ -25,6 +79,27 @@ uv run python -m experiments.tau_voice.duplex_bench run --events interruption.de
 
 这里的 `rejection.backchannel` 是用户对助手的简短附和，预期助手保留话轮继续讲。每个所选事件最多执行一次；具体时机、台词和顺序由 Terra 在运行时决定。
 
+## 原选定事件之外的附和与 CTC 机会
+
+新建 `prepare` 配置或直接 `run --events` 时，默认保留原来的事件选择，并额外加入 `proactive.backchannel` 和 `proactive.completion` 各一次。例如从原 15 类中选 5 类，仍然保存为 5 个 `selected_events`，实际覆盖目标为 5 + 2 个；显式选过的 proactive 类型不会重复添加。Terra 根据实际对话选择穿插位置和台词，不固定放在开头、末尾或某个事件之后。
+
+- **助手附和**：用户讲述一段与当前话题相关、保持话轮的较长经历或约束，给助手说“嗯哼 / mm-hm”之类简短回应的机会。默认要求合成音频至少有 8 秒可听活动（`backchannel_min_speech_seconds`），不能靠补静音满足长度；过短的合成不会播放，也不计覆盖，Terra 会收到反馈重选表达。用户不会因为助手的简短附和而截断自己的发言。
+- **CTC 补全**：用户在已经有明确语义线索的句子中途卡壳，`text` 只含说出的前缀，`pause_seconds` 统一为 750 ms，`continuation` 必须为空。停顿通过豆包 TTS 单次 SSML 请求中的 `<break time="750ms"/>` 插入，随后观察窗口继续保持倾听。私有 `expected_completion` 保存预期缺失短语，只供评审参考，不进入 TTS 或被测助手策略；同义补全也可通过。
+
+CTC 与 `rejection.pause` 的区别在于语义：前者具备可预测的补全，后者是不能据此推断缺失内容的思考停顿，预期助手等待用户继续。两者由 Terra 按实际共享上下文设计，并由语义 Judge 检查刺激是否有效；不会把普通附和误算成补全。用户模拟器统一使用豆包 TTS，CTC 和 `rejection.pause` 都在同一次请求中用 `<break time="750ms"/>` 插入停顿，不把停顿拆成后处理静音。
+
+CTC 要求缺失含义由已说出的事实或固定表达基本确定，允许同义措辞；仅仅符合话题不足以构成有效样本。例如，只提到野餐，再说 “head to the…” 并不能确定是 park，也可能是 beach 或 lake。应先自然明确目的地，如用户说 “Let's make Riverside Park our destination.”，助手确认 “Riverside Park it is.”，随后用户说 “Great, after lunch we'll take the bus straight to…” 并停顿，此时补全 “Riverside Park” 才有明确依据。示例不固定写入运行剧本。模拟器在私有 reason 中引用依据；评审同时获得先前双方对话，不把私有预期答案当作共享知识。若仍有多个含义不同的自然补全，该刺激判为无效（inconclusive），不能因猜中预设词而通过，也不能因助手等待而判失败。
+
+评估单独记录 `opportunity_window`：附和要求发生在用户长段发言期间；CTC 检查卡壳之后、下一次用户动作之前的观察窗口。时序命中还需语义评审确认是简短附和或相关补全。`summary.selected` 是原选定数量，`supplemental` 是额外数量，`total` 是合计目标，`selected_observed` 和 `supplemental_observed` 分别记录完成观察的数量。记忆回答的保护期间不会插入这两类机会。
+
+示例（5 个原事件 + 2 个额外机会）：
+
+```powershell
+uv run python -m experiments.tau_voice.duplex_bench run --events interruption.follow_up,interruption.denial,rejection.pause,rejection.third_party,turn_taking.handoff --language English --model gpt-realtime
+```
+
+使用 `--no-proactive-opportunities` 可关闭额外机会。读取缺少 `include_proactive_opportunities` 字段的旧配置时，默认保留原有覆盖范围，以免重评历史录音时多出未运行事件；新运行若复用旧配置，增加 `--proactive-opportunities` 可启用。更新展示或重评不会自动重跑原对话。
+
 去掉 `proactive` 后共有 15 类任务，选 5 类共有 `C(15,5)=3003` 种组合。`turn_taking.handoff` 包含跨话轮记忆：Terra 先用 `prepare_event` 自然说出具体事实或约束，经过其他交流后，再询问依赖这些信息的问题，提问时不重复待记忆值。提问可发生在助手正在说话或安静时，不设置提问前的静默门槛，也不评估提问是否打断助手。提问后保护完整回答，期间禁止后续用户发言或事件；观察到回答后，至少连续 `response_quiet_seconds`（默认 1 秒）没有可听或携带话语 ID 的助手音频，才推断回答结束。超时保留为未完成观察。没有建立前情或没有间隔交流，不能当成有效记忆测试。
 
 记忆评审使用独立的 `duplex_memory_judge` 调用，逐项比较先前事实、后来更正与完整回答，输出 `memory_assessment.facts`，记忆判定直接作为事件判定。提问与先前助手语音的重叠不参与评分，不生成 `handoff_assessment`。回答是否逐字复述前情不是标准；评审检查实际建议是否遵循相关约束，并区分违背、未证明和无关。预算、用时等不能仅凭助手自称满足就判为已证明。
@@ -35,7 +110,7 @@ uv run python -m experiments.tau_voice.duplex_bench run --events interruption.de
 
 结束录音时，仍携带话语 ID 的音频帧（包括低能量帧）会阻止结束；完成所有观察后，至少连续一秒没有助手音频交付，才允许 Terra 选择结束。此保护用于避免单个低能量帧截断录音，不把能量阈值解释为真实语义停顿。
 
-结果自动保存到 `data/simulations/duplex_<时间>/`。默认被测语音模型沿用 `config.py` 的 OpenAI 模型配置；用户决策、Topic 生成和语义评审默认使用 Terra，TTS 使用 OpenAI TTS。使用项目现有 `.env` 中的凭证。可用 `--model` 改被测模型，`--user-model` 改用户决策模型，`--provider` 切换已有语音提供方。
+结果自动保存到 `data/simulations/duplex_<时间>/`。默认被测语音模型沿用 `config.py` 的 OpenAI 模型配置；用户决策、Topic 生成和语义评审默认使用 Terra，用户模拟器 TTS 统一使用豆包 Seeduplex TTS。使用项目现有 `.env` 中的凭证。可用 `--model` 改被测模型，`--user-model` 改用户决策模型，`--provider` 切换已有语音提供方。
 
 ## 运行逻辑
 

@@ -124,7 +124,9 @@ class XAIRealtimeProvider:
         Raises:
             ValueError: If no API key is provided or found in environment.
         """
-        self.api_key = api_key or os.environ.get("XAI_API_KEY")
+        self.api_key = (
+            api_key or os.environ.get("XAI_API_KEY") or os.environ.get("GROK_API_KEY")
+        )
         if not self.api_key:
             raise ValueError("xAI API key not provided. Set XAI_API_KEY env var.")
 

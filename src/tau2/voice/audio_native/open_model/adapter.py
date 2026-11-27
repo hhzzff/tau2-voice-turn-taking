@@ -24,7 +24,7 @@ def load_runtime_config(model):
             for key, value in config["assets"].items()
             if not key.startswith(("before_sft_", "after_sft_"))
         }
-        config["assets"]["training_config"] = str(training_path)
+        config["assets"]["training_config"] = training_path.as_posix()
         training = json.loads(training_path.read_text())
         config["settings"]["echo_ratio"] = float(
             training["data_args"].get("simple_mode_echo_ratio", 1.0)

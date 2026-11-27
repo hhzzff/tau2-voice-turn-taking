@@ -308,7 +308,7 @@ def source_hashes():
     files += sorted((root / "scripts/open_model_workers").glob("*.py"))
     files += sorted((root / "src/tau2/voice/audio_native/open_model").glob("*.py"))
     return {
-        str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest()
+        path.relative_to(root).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
         for path in files
     }
 
